@@ -1,0 +1,9 @@
+/* Ensure Select2 dropdowns fit nicely */
+.select2-container {
+    width: 100% !important;
+}
+
+/* Optional: Add some padding */
+.container {
+    max-width: 900px;
+}
