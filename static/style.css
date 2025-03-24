@@ -1,11 +1,13 @@
-/* Ensure Select2 dropdowns fit nicely */
-.select2-container {
-    width: 100% !important;
+.sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
 }
 
-/* Optional: Add some padding */
-.container {
-    max-width: 900px;
+.content {
+    margin-left: 250px;
 }
 
 .progress {

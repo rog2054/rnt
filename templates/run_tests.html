@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+{% block title %}Run Tests{% endblock %}
+{% block content %}
+<h1>Run Tests</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Parameter</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for test in tests %}
+        <tr>
+            <td>{{ test.id }}</td>
+            <td>{{ test.test_name }}</td>
+            <td>{{ test.category }}</td>
+            <td>{{ test.parameter }}</td>
+            <td>{{ test.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<div id="progress-container" class="mt-3"></div>
+<button id="runTests" class="btn btn-success">Run Tests</button>
+
+<div class="modal fade" id="passwordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Enter Passwords</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="passwordInputs"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="submitPasswords">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.1/socket.io.js"></script>
+<script>
+    $(document).ready(function () {
+        const socket = io.connect('/test');
+
+        socket.on('password_prompt', function (data) {
+            let inputs = '';
+            data.devices.forEach(device => {
+                inputs += `
+                    <div class="mb-3">
+                        <label>${device.device_name} (${device.username})</label>
+                        <input type="password" class="form-control" data-device-id="${device.id}" name="password-${device.id}">
+                    </div>
+                `;
+            });
+            $('#passwordInputs').html(inputs);
+            $('#passwordModal').modal('show');
+        });
+
+        $('#submitPasswords').on('click', function () {
+            let passwords = {};
+            $('#passwordInputs input').each(function () {
+                const deviceId = $(this).data('device-id');
+                passwords[deviceId] = $(this).val();
+            });
+            socket.emit('submit_passwords', { passwords: passwords }, () => {
+                $('#passwordModal').modal('hide');
+            });
+        });
+
+        socket.on('progress', function (data) {
+            let progressDiv = $('#progress-' + data.group);
+            if (!progressDiv.length) {
+                $('#progress-container').append(`
+                    <div id="progress-${data.group}">
+                        <p>Group: ${data.group}</p>
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" style="width: ${data.percentage}%;" 
+                                 aria-valuenow="${data.completed}" aria-valuemin="0" aria-valuemax="${data.total}">
+                                ${data.completed}/${data.total}
+                            </div>
+                        </div>
+                    </div>
+                `);
+            } else {
+                progressDiv.find('.progress-bar')
+                    .css('width', data.percentage + '%')
+                    .attr('aria-valuenow', data.completed)
+                    .text(`${data.completed}/${data.total}`);
+            }
+        });
+
+        socket.on('start_tests', function () {
+            $.get('/start_tests', function (response) {
+                alert(response.message);
+            });
+        });
+
+        $('#runTests').on('click', function () {
+            $('#progress-container').empty();
+            $.get('/run_tests', function (response) {
+                alert(response.message);
+            });
+        });
+    });
+</script>
+{% endblock %}

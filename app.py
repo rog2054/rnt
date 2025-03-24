@@ -2,34 +2,94 @@ from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 import threading
-from time import sleep
+from time import sleep  # Simulated test execution
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tests.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///config.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'your-secret-key'  # Needed for SocketIO
+app.config['SECRET_KEY'] = 'your-secret-key'
 db = SQLAlchemy(app)
 socketio = SocketIO(app)
 
-# Database Model
-class TestConfig(db.Model):
+# Models
+
+class DeviceCredential(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    test_name = db.Column(db.String(100), nullable=False)
-    category = db.Column(db.String(50), nullable=False)
-    parameter = db.Column(db.String(200))
-    status = db.Column(db.String(20), default='pending')
+    uname = db.Column(db.String(100), nullable=False)
+    pw = db.Column(db.String(100), nullable=True)
+    pwexpiry = db.Column(db.Boolean, default=False)
+    
 class Device(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    device_name = db.Column(db.String(100), nullable=False)
-    username = db.Column(db.String(50), nullable=False)
-    password = db.Column(db.String(100))  # None if dynamic
-    is_dynamic = db.Column(db.Boolean, default=False)
+    devicehostname = db.Column(db.String(100), nullable=False)
+    devicemgmtip = db.Column(db.String(100), nullable=False)
+    devicesiteinfo = db.Column(db.String(100))
+    deviceusername = DeviceCredential.uname
+    devicelanip = db.Column(db.String(100))
+    # traceroute 10.174.88.1 source 10.55.33.253 numeric
 
-# Create the database
+class ASPathTest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    devicehostname = Device.devicehostname
+    testprefix = db.Column(db.String(100), nullable=False)
+    checkASinpath = db.Column(db.String(30), nullable=False)
+    checkASwantresult = db.Column(db.Boolean)
+    testtext = db.Column(db.String(200))
+    status = db.Column(db.String(20), default='pending')
+
+class TracerouteTest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    devicehostname = Device.devicehostname
+    testdest = db.Column(db.String(100), nullable=False)
+    testtext = db.Column(db.String(200))
+    status = db.Column(db.String(20), default='pending')
+    
 with app.app_context():
     db.create_all()
 
-# Delete a test
+# Routes
+@app.route('/credentials', methods=['GET', 'POST'])
+def credentials():
+    if request.method == 'POST':
+        uname = request.form['uname']
+        pw = request.form['pw']
+        is_pwexpiry = 'pwexpiry' in request.form
+        new_credential = DeviceCredential(uname=uname, pw=pw, pwexpiry=is_pwexpiry)
+        db.session.add(new_credential)
+        db.session.commit()
+        return jsonify({'message': 'Credentails added'})
+    credentials = DeviceCredential.query.all()
+    return render_template('credentials.html', credentials=credentials)
+
+@app.route('/devices', methods=['GET', 'POST'])
+def devices():
+    if request.method == 'POST':
+        device_name = request.form['device_name']
+        device_mgmtip = request.form['device_mgmtip']
+        device_username = request.form['device_username']
+        device_siteinfo = request.form['device_siteinfo']
+        device_lanip = request.form['device_lanip']
+        new_device = Device(devicehostname=device_name, devicemgmtip=device_mgmtip, deviceusername=device_username, devicesiteinfo=device_siteinfo, devicelanip=device_lanip)
+        db.session.add(new_device)
+        db.session.commit()
+        return jsonify({'message': 'Device added'})
+    devices = Device.query.all()
+    return render_template('devices.html', devices=devices)
+
+@app.route('/tests', methods=['GET', 'POST'])
+def tests():
+    if request.method == 'POST':
+        test_name = request.form['test_name']
+        category = request.form['category']
+        parameter = request.form['parameter']
+        new_test = TestConfig(test_name=test_name, category=category, parameter=parameter)
+        db.session.add(new_test)
+        db.session.commit()
+        return jsonify({'message': 'Test added successfully'})
+    categories = [cat[0] for cat in db.session.query(TestConfig.category).distinct().all()]
+    tests = TestConfig.query.all()
+    return render_template('tests.html', categories=categories, tests=tests)
+
 @app.route('/delete_test/<int:test_id>', methods=['POST'])
 def delete_test(test_id):
     test = TestConfig.query.get_or_404(test_id)
@@ -37,57 +97,23 @@ def delete_test(test_id):
     db.session.commit()
     return jsonify({'message': 'Test deleted successfully'})
 
-# Homepage with test config editor
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    if request.method == 'POST':
-        test_name = request.form['test_name']
-        category = request.form['category']
-        parameter = request.form['parameter']
-        
-        new_test = TestConfig(test_name=test_name, category=category, parameter=parameter)
-        db.session.add(new_test)
-        db.session.commit()
-        return jsonify({'message': 'Test added successfully'})
-    
-    categories = db.session.query(TestConfig.category).distinct().all()
-    categories = [cat[0] for cat in categories]
+@app.route('/run_tests', methods=['GET', 'POST'])
+def run_tests():
     tests = TestConfig.query.all()
-    return render_template('index.html', categories=categories, tests=tests)
-
-# API to add new category dynamically (for validation)
-@app.route('/add_category', methods=['POST'])
-def add_category():
-    new_category = request.json.get('category')
-    if new_category and new_category not in [c.category for c in TestConfig.query.distinct(TestConfig.category)]:
-        return jsonify({'message': 'Category available', 'category': new_category})
-    return jsonify({'error': 'Category already exists'}), 400
-
-# Device management route
-@app.route('/devices', methods=['GET', 'POST'])
-def manage_devices():
-    if request.method == 'POST':
-        device_name = request.form['device_name']
-        username = request.form['username']
-        password = request.form.get('password')
-        is_dynamic = 'is_dynamic' in request.form
-        new_device = Device(device_name=device_name, username=username, password=None if is_dynamic else password, is_dynamic=is_dynamic)
-        db.session.add(new_device)
-        db.session.commit()
-        return jsonify({'message': 'Device added'})
-    
     devices = Device.query.all()
-    return render_template('devices.html', devices=devices)
+    dynamic_devices = [d for d in devices if d.is_dynamic]
+    if dynamic_devices:
+        socketio.emit('password_prompt', {
+            'devices': [{'id': d.id, 'device_name': d.device_name, 'username': d.username} for d in dynamic_devices]
+        }, namespace='/test')
+    return render_template('run_tests.html', tests=tests)
 
-# Simulate test execution (replace with your Netmiko logic)
 def run_test_group(group_name, tests):
     total = len(tests)
     for i, test in enumerate(tests, 1):
-        # Simulate work (replace with real Netmiko test)
-        sleep(1)  # Simulate time taken
+        sleep(1)  # Replace with Netmiko logic
         test.status = 'passed' if hash(test.test_name) % 2 == 0 else 'failed'
         db.session.commit()
-        # Emit progress update
         socketio.emit('progress', {
             'group': group_name,
             'completed': i,
@@ -95,71 +121,32 @@ def run_test_group(group_name, tests):
             'percentage': (i / total) * 100
         }, namespace='/test')
 
-@app.route('/run_tests')
-def run_tests_endpoint():
-    tests = TestConfig.query.all()
-    devices = Device.query.all()
-    dynamic_devices = [d for d in devices if d.is_dynamic]
-    
-    if dynamic_devices:
-        # Emit event to prompt for passwords
-        socketio.emit('password_prompt', {
-            'devices': [{'id': d.id, 'device_name': d.device_name, 'username': d.username} for d in dynamic_devices]
-        }, namespace='/test')
-        # Note: Test execution will proceed after passwords are submitted via SocketIO
-    
-    # Group tests (e.g., by category)
-    grouped_tests = {}
-    for test in tests:
-        test.status = 'running'  # Mark as running before grouping
-        grouped_tests.setdefault(test.category, []).append(test)
-    db.session.commit()
-
-    # If no dynamic devices, start tests immediately; otherwise, wait for passwords
-    if not dynamic_devices:
-        threads = []
-        max_threads = 3
-        for group_name, group_tests in list(grouped_tests.items())[:max_threads]:
-            t = threading.Thread(target=run_test_group, args=(group_name, group_tests))
-            threads.append(t)
-            t.start()
-
-        # Optionally wait for threads (uncomment if you want synchronous response)
-        # for t in threads:
-        #     t.join()
-
-    return jsonify({'message': 'Tests started'})
-
-@socketio.on('submit_passwords', namespace='/test')
-def handle_passwords(data):
-    passwords = data['passwords']  # {device_id: password}
-    for device_id, password in passwords.items():
-        device = Device.query.get(device_id)
-        if device and device.is_dynamic:
-            device.password = password  # Temporarily store for this run
-    db.session.commit()
-
-    # Now start the test execution after passwords are provided
+@app.route('/start_tests', methods=['GET'])
+def start_tests():
     tests = TestConfig.query.all()
     grouped_tests = {}
     for test in tests:
+        test.status = 'running'
         grouped_tests.setdefault(test.category, []).append(test)
-
+    db.session.commit()
     threads = []
     max_threads = 3
     for group_name, group_tests in list(grouped_tests.items())[:max_threads]:
         t = threading.Thread(target=run_test_group, args=(group_name, group_tests))
         threads.append(t)
         t.start()
+    return jsonify({'message': 'Tests started'})
 
-    # Optionally wait for threads (uncomment if needed)
-    # for t in threads:
-    #     t.join()
-
-# SocketIO background task (optional for cleanup)
-@socketio.on('connect', namespace='/test')
-def test_connect():
-    print('Client connected for test updates')
+@socketio.on('submit_passwords', namespace='/test')
+def handle_passwords(data):
+    passwords = data['passwords']
+    for device_id, password in passwords.items():
+        device = Device.query.get(device_id)
+        if device and device.is_dynamic:
+            device.password = password
+    db.session.commit()
+    socketio.emit('start_tests', namespace='/test')
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)
+    

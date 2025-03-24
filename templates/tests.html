@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% block title %}Tests{% endblock %}
+{% block head %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
+{% block content %}
+<h1>Create/Delete Tests</h1>
+<form id="testForm" class="mb-4">
+    <div class="mb-3">
+        <label for="test_name" class="form-label">Test Name</label>
+        <input type="text" class="form-control" id="test_name" name="test_name" required>
+    </div>
+    <div class="mb-3">
+        <label for="category" class="form-label">Category</label>
+        <select class="form-select" id="category" name="category" required></select>
+    </div>
+    <div class="mb-3">
+        <label for="parameter" class="form-label">Parameter</label>
+        <input type="text" class="form-control" id="parameter" name="parameter">
+    </div>
+    <button type="submit" class="btn btn-primary">Add Test</button>
+</form>
+<h2>Current Tests</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Parameter</th>
+            <th>Status</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for test in tests %}
+        <tr>
+            <td>{{ test.id }}</td>
+            <td>{{ test.test_name }}</td>
+            <td>{{ test.category }}</td>
+            <td>{{ test.parameter }}</td>
+            <td>{{ test.status }}</td>
+            <td><button class="btn btn-danger btn-sm delete-test" data-id="{{ test.id }}">Delete</button></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#category').select2({
+            data: {{ categories| tojson | safe }},
+        tags: true,
+        placeholder: "Select or type a new category",
+        allowClear: true,
+        width: '100%'
+        });
+
+    $('#testForm').submit(function (e) {
+        e.preventDefault();
+        $.ajax({
+            url: '/tests',
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function (response) {
+                alert(response.message);
+                location.reload();
+            },
+            error: function () {
+                alert('Error adding test');
+            }
+        });
+    });
+
+    $('.delete-test').on('click', function () {
+        const testId = $(this).data('id');
+        if (confirm('Are you sure you want to delete this test?')) {
+            $.ajax({
+                url: '/delete_test/' + testId,
+                type: 'POST',
+                success: function (response) {
+                    alert(response.message);
+                    location.reload();
+                },
+                error: function () {
+                    alert('Error deleting test');
+                }
+            });
+        }
+    });
+    });
+</script>
+{% endblock %}
