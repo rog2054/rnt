@@ -1,54 +1,58 @@
 {% extends 'base.html' %}
-{% block title %}Devices{% endblock %}
+{% block title %}BGP AS Path Tests{% endblock %}
 {% block head %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
 {% block content %}
-<h2>Add Device</h2>
-<form id="deviceForm" method="POST">
+<h2>Add BGP AS Path Test</h2>
+<form id="bgpASpathTestForm" method="POST">
     {{ form.hidden_tag() }}
 
     <div class="mb-3">
-        <label for="device_name" class="form-label">Hostname</label>
-        <input type="text" class="form-control w-25" id="device_name" name="device_name" required>
-        {% if form.device_name.errors %}
-        <div class="text-danger">{{ form.device_name.errors[0] }}</div>
+        <label for="test_device_hostname" class="form-label">Device to test from</label>
+        {{ form.test_device_hostname(class="form-control w-25") }}
+        {% if form.test_device_hostname.errors %}
+        <div class="text-danger">{{ form.test_device_hostname.errors[0] }}</div>
         {% endif %}
     </div>
 
     <div class="mb-3">
-        <label for="device_mgmtip" class="form-label">Mgmt IP</label>
-        <input type="text" class="form-control w-25" id="device_mgmtip" name="device_mgmtip" required>
-        {% if form.device_mgmtip.errors %}
-        <div class="text-danger">{{ form.device_mgmtip.errors[0] }}</div>
+        <label for="test_testprefix" class="form-label">Prefix to check</label>
+        <input type="text" class="form-control w-25" id="test_testprefix" name="test_testprefix" required>
+        {% if form.test_testprefix.errors %}
+        <div class="text-danger">{{ form.test_testprefix.errors[0] }}</div>
         {% endif %}
     </div>
 
     <div class="mb-3">
-        <label for="device_username" class="form-label">SSH user</label>
-        {{ form.device_username(class="form-control w-25") }}
-        {% if form.device_username.errors %}
-        <div class="text-danger">{{ form.device_username.errors[0] }}</div>
+        <label for="test_checkASinpath" class="form-label">ASN to check for</label>
+        <input type="text" class="form-control w-25" id="test_checkASinpath" name="test_checkASinpath" required>
+        {% if form.test_checkASinpath.errors %}
+        <div class="text-danger">{{ form.test_checkASinpath.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3 form-check">
+        {{ form.test_checkASwantresult(class="form-check-input") }}
+        {{ form.test_checkASwantresult.label(class="form-check-label") }}
+        {% if form.test_checkASwantresult.errors %}
+        <div class="text-danger">
+            {% for error in form.test_checkASwantresult.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
 
     <div class="mb-3">
-        <label for="device_siteinfo" class="form-label">Site info/type</label>
-        <input type="text" class="form-control w-25" id="device_siteinfo" name="device_siteinfo">
-        {% if form.device_siteinfo.errors %}
-        <div class="text-danger">{{ form.device_siteinfo.errors[0] }}</div>
+        <label for="test_testtext" class="form-label">Purpose of this test</label>
+        <input type="text" class="form-control w-25" id="test_testtext" name="test_testtext">
+        {% if form.test_testtext.errors %}
+        <div class="text-danger">{{ form.test_testtext.errors[0] }}</div>
         {% endif %}
     </div>
 
-    <div class="mb-3">
-        <label for="device_lanip" class="form-label">LAN interface IP</label>
-        <input type="text" class="form-control w-25" id="device_lanip" name="device_lanip">
-        {% if form.device_lanip.errors %}
-        <div class="text-danger">{{ form.device_lanip.errors[0] }}</div>
-        {% endif %}
-    </div>
-
-    <button type="submit" class="btn btn-primary">Save Device</button>
+    <button type="submit" class="btn btn-primary">Save Test</button>
 </form>
 
 {% endblock %}

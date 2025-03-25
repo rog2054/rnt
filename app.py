@@ -4,8 +4,8 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 import threading
 from time import sleep  # Simulated test execution
-from models import db, DeviceCredential, Device, ASPathTest, TracerouteTest
-from forms import DeviceForm
+from models import db, DeviceCredential, Device, bgpASpathTest, tracerouteTest
+from forms import DeviceForm, CredentialForm, bgpASpathTestForm
 
 socketio = SocketIO()
 
@@ -30,6 +30,7 @@ CSRFProtect(app)
 # Routes
 @app.route('/credentials', methods=['GET', 'POST'])
 def credentials():
+    form = CredentialForm()
     if request.method == 'POST':
         uname = request.form['uname']
         pw = request.form['pw']
@@ -39,9 +40,9 @@ def credentials():
         db.session.commit()
         return jsonify({'message': 'Credentails added'})
     credentials = DeviceCredential.query.all()
-    return render_template('credentials.html', credentials=credentials)
+    return render_template('credentials.html', credentials=credentials, form=form)
 
-# Delete credentials
+# Delete credential
 @app.route('/delete_credential/<int:credential_id>', methods=['POST'])
 def delete_credential(credential_id):
     credential = DeviceCredential.query.get_or_404(credential_id)
@@ -80,6 +81,52 @@ def device_add():
         error_messages = {field: error for field, error in form.errors.items()}
         return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
     return render_template("add_device.html", form=form)  # If GET request, render form
+
+# Delete device
+@app.route('/delete_device/<int:device_id>', methods=['POST'])
+def delete_device(device_id):
+    device = Device.query.get_or_404(device_id)
+    db.session.delete(device)
+    db.session.commit()
+    return jsonify({'message': 'Device removed successfully'})
+
+@app.route('/tests/bgpaspath', methods=['GET'])
+def showtests_bgpaspath():
+    bgpaspathtests=bgpASpathTest.query.all()
+    return render_template('bgpaspathtests.html', bgpaspathtests=bgpaspathtests)
+
+@app.route('/tests/addtest_bgpaspath', methods=['GET', 'POST'])
+def addtest_bgpaspath():
+    form = bgpASpathTestForm()
+    if request.method == 'POST':
+        if form.validate_on_submit():  # Form validation
+            try:
+                # Create a new bgp as-path test using the form data
+                new_test = bgpASpathTest(
+                    devicehostname_id=form.test_device_hostname.data,
+                    testprefix=form.test_testprefix.data,
+                    checkASinpath=form.test_checkASinpath.data,
+                    checkASwantresult=form.test_checkASwantresult.data,
+                    testtext=form.test_testtext.data
+                )
+                db.session.add(new_test)
+                db.session.commit()
+                ''' return jsonify({'redirect': url_for('showtests_bgpaspath')})  # Redirect back to BGP as-path tests list '''
+                return redirect(url_for('showtests_bgpaspath'))
+            except Exception as e:
+                db.session.rollback()  # In case of any error, rollback the session
+                print("Error adding device:", str(e))
+                return jsonify({'message': 'Database error: ' + str(e)}), 500
+        # If form validation fails, return specific errors
+        error_messages = {field: error for field, error in form.errors.items()}
+        return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
+    return render_template("addtest_bgpaspath.html", form=form)  # If GET request, render form
+
+@app.route('/tests/traceroute', methods=['GET'])
+def showtests_traceroute():
+    traceroutetests=tracerouteTest.query.all()
+    return render_template('traceroutetests.html', traceroutetests=traceroutetests)
+
 
 @app.route('/tests', methods=['GET', 'POST'])
 def tests():

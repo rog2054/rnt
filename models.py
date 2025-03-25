@@ -23,16 +23,21 @@ class Device(db.Model):
     devicelanip = db.Column(db.String(100))
     # traceroute 10.174.88.1 source 10.55.33.253 numeric
 
-class ASPathTest(db.Model):
+class bgpASpathTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    devicehostname = Device.devicehostname
+    devicehostname_id = db.Column(
+        db.Integer,
+        db.ForeignKey('device.id', name='fk_device_hostname'),
+        nullable=True
+    )
+    devicehostname = db.relationship('Device', backref='bgpASpathTests')
     testprefix = db.Column(db.String(100), nullable=False)
     checkASinpath = db.Column(db.String(30), nullable=False)
-    checkASwantresult = db.Column(db.Boolean)
+    checkASwantresult = db.Column(db.Boolean, default=False, nullable=False)
     testtext = db.Column(db.String(200))
     status = db.Column(db.String(20), default='pending')
 
-class TracerouteTest(db.Model):
+class tracerouteTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     devicehostname = Device.devicehostname
     testdest = db.Column(db.String(100), nullable=False)

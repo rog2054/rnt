@@ -1,14 +1,17 @@
 <nav class="sidebar bg-dark text-white p-3" style="min-width: 250px; height: 100vh;">
-    <h4 class="mb-4">Network Toolkit</h4>
+    <h4 class="mb-4">Network Testkit</h4>
     <ul class="nav flex-column">
         <li class="nav-item">
             <a class="nav-link text-white" href="{{ url_for('credentials') }}">Credentials</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('device_list') }}">Devices</a>
+            <a class="nav-link text-white" href="{{ url_for('device_list') }}">Manage Devices</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('tests') }}">Tests</a>
+            <a class="nav-link text-white" href="{{ url_for('showtests_bgpaspath') }}">BGP AS-Path Tests</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-white" href="{{ url_for('showtests_traceroute') }}">Traceroute Tests</a>
         </li>
         <li class="nav-item">
             <a class="nav-link text-white" href="{{ url_for('run_tests') }}">Run Tests</a>

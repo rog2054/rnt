@@ -29,3 +29,25 @@
     color: red;
     /* Change color on hover */
 }
+
+.delete-device i {
+    cursor: pointer;
+    color: #000;
+    /* Default color */
+}
+
+.delete-device:hover i {
+    color: red;
+    /* Change color on hover */
+}
+
+.delete-test i {
+    cursor: pointer;
+    color: #000;
+    /* Default color */
+}
+
+.delete-test:hover i {
+    color: red;
+    /* Change color on hover */
+}

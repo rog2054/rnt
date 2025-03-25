@@ -1,32 +1,32 @@
 {% extends 'base.html' %}
-{% block title %}Devices{% endblock %}
+{% block title %}BGP AS Path Tests{% endblock %}
 {% block head %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
 {% block content %}
-<h1>Devices</h1>
+<h1>BGP AS Path Tests</h1>
 <table class="table">
     <thead>
         <tr>
             <th>ID</th>
-            <th>Hostname</th>
-            <th>Site Info</th>
-            <th>Mgmt IP</th>
-            <th>SSH User</th>
-            <th>Remove</th>
+            <th>Test from device</th>
+            <th>Search AS-path for Prefix</th>
+            <th>Checking for this AS in the as-path</th>
+            <th>Should the AS be in the as-path?</th>
+            <th>Description of Test</th>
         </tr>
     </thead>
     <tbody>
-        {% for device in devices %}
+        {% for test in bgpaspathtests %}
         <tr>
-            <td>{{ device.id }}</td>
-            <td>{{ device.devicehostname }}</td>
-            <td>{{ device.devicesiteinfo }}</td>
-            <td>{{ device.devicemgmtip }}</td>
-            <td>{{ device.deviceusername.uname if device.deviceusername else "N/A" }}</td>
+            <td>{{ test.id }}</td>
+            <td>{{ test.devicehostname.devicehostname }}</td>
+            <td>{{ test.testprefix }}</td>
+            <td>{{ test.checkASinpath }}</td>
+            <td>{{ test.checkASwantresult }} </td>
+            <td>{{ test.testtext }} </td>
             <td>
-                <button class="delete-device" data-id="{{ device.id }}"
-                    style="background: none; border: none; padding: 0;">
+                <button class="delete-test" data-id="{{ test.id }}" style="background: none; border: none; padding: 0;">
                     <i class="fas fa-trash-alt"></i>
                 </button>
             </td>
@@ -35,7 +35,7 @@
     </tbody>
 </table>
 
-<a href="{{ url_for('device_add') }}" class="btn btn-primary">Add Device</a>
+<a href="{{ url_for('addtest_bgpaspath') }}" class="btn btn-primary">Create Test</a>
 
 
 {% endblock %}
@@ -46,7 +46,7 @@
         $('#deviceForm').submit(function (e) {
             e.preventDefault();
             $.ajax({
-                url: '/devices',
+                url: '/tests/bgpaspath',
                 type: 'POST',
                 data: $(this).serialize(),
                 success: function (response) {
@@ -61,11 +61,11 @@
 
         // Delete device
         // Delete device
-        $('.delete-device').click(function () {
+        $('.delete-test').click(function () {
             const deviceId = $(this).data('id');
-            if (confirm('Are you sure you want to remove this device?')) {
+            if (confirm('Are you sure you want to remove this test?')) {
                 $.ajax({
-                    url: '/delete_device/' + deviceId,
+                    url: '/tests/delete_bgpaspathtest/' + deviceId,
                     type: 'POST',
                     headers: {
                         'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')  // Include CSRF token
@@ -75,7 +75,7 @@
                         location.reload();
                     },
                     error: function (xhr) {
-                        alert('Error removing device: ' + xhr.responseText);
+                        alert('Error removing test: ' + xhr.responseText);
                     }
                 });
             }
