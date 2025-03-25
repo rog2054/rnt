@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Devices{% endblock %}
+{% block head %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+{% block content %}
+<h2>Add Device</h2>
+<form id="deviceForm" method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="mb-3">
+        <label for="device_name" class="form-label">Hostname</label>
+        <input type="text" class="form-control w-25" id="device_name" name="device_name" required>
+        {% if form.device_name.errors %}
+        <div class="text-danger">{{ form.device_name.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <label for="device_mgmtip" class="form-label">Mgmt IP</label>
+        <input type="text" class="form-control w-25" id="device_mgmtip" name="device_mgmtip" required>
+        {% if form.device_mgmtip.errors %}
+        <div class="text-danger">{{ form.device_mgmtip.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <label for="device_username" class="form-label">SSH user</label>
+        {{ form.device_username(class="form-control w-25") }}
+        {% if form.device_username.errors %}
+        <div class="text-danger">{{ form.device_username.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <label for="device_siteinfo" class="form-label">Site info/type</label>
+        <input type="text" class="form-control w-25" id="device_siteinfo" name="device_siteinfo">
+        {% if form.device_siteinfo.errors %}
+        <div class="text-danger">{{ form.device_siteinfo.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <label for="device_lanip" class="form-label">LAN interface IP</label>
+        <input type="text" class="form-control w-25" id="device_lanip" name="device_lanip">
+        {% if form.device_lanip.errors %}
+        <div class="text-danger">{{ form.device_lanip.errors[0] }}</div>
+        {% endif %}
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save Device</button>
+</form>
+
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#deviceForm').submit(function (e) {
+            e.preventDefault();
+            $.ajax({
+                url: '/devices/add',
+                type: 'POST',
+                data: $(this).serialize(),
+                headers: {
+                    'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')  // Include CSRF token
+                },
+                success: function (response) {
+                    if (response.redirect) {
+                        window.location.href = response.redirect;
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    const errors = JSON.parse(xhr.responseText).errors;
+                    let errorMessage = 'Form validation failed. Please fix the following errors:\n\n';
+                    for (const field in errors) {
+                        errorMessage += `${field}: ${errors[field].join(', ')}\n`;
+                    }
+                    alert(errorMessage);  // Show user-friendly error message
+                }
+            });
+        });
+    });
+</script>
+
+{% endblock %}

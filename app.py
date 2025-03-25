@@ -1,51 +1,31 @@
-from flask import Flask, render_template, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
 from flask_socketio import SocketIO
+from flask_migrate import Migrate
+from flask_wtf.csrf import CSRFProtect
 import threading
 from time import sleep  # Simulated test execution
+from models import db, DeviceCredential, Device, ASPathTest, TracerouteTest
+from forms import DeviceForm
 
-app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///config.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'your-secret-key'
-db = SQLAlchemy(app)
-socketio = SocketIO(app)
+socketio = SocketIO()
 
-# Models
+def create_app():
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///config.db'
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SECRET_KEY'] = 'your-secret-key'
 
-class DeviceCredential(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    uname = db.Column(db.String(100), nullable=False)
-    pw = db.Column(db.String(100), nullable=True)
-    pwexpiry = db.Column(db.Boolean, default=False)
-    
-class Device(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    devicehostname = db.Column(db.String(100), nullable=False)
-    devicemgmtip = db.Column(db.String(100), nullable=False)
-    devicesiteinfo = db.Column(db.String(100))
-    deviceusername = DeviceCredential.uname
-    devicelanip = db.Column(db.String(100))
-    # traceroute 10.174.88.1 source 10.55.33.253 numeric
+    db.init_app(app)  # Bind db to app
+    migrate = Migrate(app, db)  # Enable migrations
+    socketio.init_app(app)
 
-class ASPathTest(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    devicehostname = Device.devicehostname
-    testprefix = db.Column(db.String(100), nullable=False)
-    checkASinpath = db.Column(db.String(30), nullable=False)
-    checkASwantresult = db.Column(db.Boolean)
-    testtext = db.Column(db.String(200))
-    status = db.Column(db.String(20), default='pending')
+    with app.app_context():
+        db.create_all()  # Ensure tables exist
 
-class TracerouteTest(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    devicehostname = Device.devicehostname
-    testdest = db.Column(db.String(100), nullable=False)
-    testtext = db.Column(db.String(200))
-    status = db.Column(db.String(20), default='pending')
-    
-with app.app_context():
-    db.create_all()
+    return app
+
+app = create_app()
+CSRFProtect(app)
 
 # Routes
 @app.route('/credentials', methods=['GET', 'POST'])
@@ -61,20 +41,45 @@ def credentials():
     credentials = DeviceCredential.query.all()
     return render_template('credentials.html', credentials=credentials)
 
-@app.route('/devices', methods=['GET', 'POST'])
-def devices():
-    if request.method == 'POST':
-        device_name = request.form['device_name']
-        device_mgmtip = request.form['device_mgmtip']
-        device_username = request.form['device_username']
-        device_siteinfo = request.form['device_siteinfo']
-        device_lanip = request.form['device_lanip']
-        new_device = Device(devicehostname=device_name, devicemgmtip=device_mgmtip, deviceusername=device_username, devicesiteinfo=device_siteinfo, devicelanip=device_lanip)
-        db.session.add(new_device)
-        db.session.commit()
-        return jsonify({'message': 'Device added'})
-    devices = Device.query.all()
+# Delete credentials
+@app.route('/delete_credential/<int:credential_id>', methods=['POST'])
+def delete_credential(credential_id):
+    credential = DeviceCredential.query.get_or_404(credential_id)
+    db.session.delete(credential)
+    db.session.commit()
+    return jsonify({'message': 'Credential deleted successfully'})
+
+@app.route('/devices')
+def device_list():
+    devices=Device.query.all()
     return render_template('devices.html', devices=devices)
+
+# Route to display the add device form
+@app.route('/devices/add', methods=['GET', 'POST'])
+def device_add():
+    form = DeviceForm()
+    if request.method == 'POST':
+        if form.validate_on_submit():  # Form validation
+            try:
+                # Create a new device using the form data
+                new_device = Device(
+                    devicehostname=form.device_name.data,
+                    devicemgmtip=form.device_mgmtip.data,
+                    deviceusername_id=form.device_username.data,  # Device username as selected from dropdown
+                    devicesiteinfo=form.device_siteinfo.data,
+                    devicelanip=form.device_lanip.data
+                )
+                db.session.add(new_device)
+                db.session.commit()
+                return jsonify({'redirect': url_for('device_list')})  # Redirect back to device list
+            except Exception as e:
+                db.session.rollback()  # In case of any error, rollback the session
+                print("Error adding device:", str(e))
+                return jsonify({'message': 'Database error: ' + str(e)}), 500
+        # If form validation fails, return specific errors
+        error_messages = {field: error for field, error in form.errors.items()}
+        return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
+    return render_template("add_device.html", form=form)  # If GET request, render form
 
 @app.route('/tests', methods=['GET', 'POST'])
 def tests():

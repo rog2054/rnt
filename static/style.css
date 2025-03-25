@@ -18,3 +18,14 @@
 .progress-bar {
     transition: width 0.3s ease-in-out;
 }
+
+.delete-credential i {
+    cursor: pointer;
+    color: #000;
+    /* Default color */
+}
+
+.delete-credential:hover i {
+    color: red;
+    /* Change color on hover */
+}

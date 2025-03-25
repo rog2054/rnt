@@ -4,15 +4,15 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
 {% block content %}
-<h1>Current Devices</h1>
+<h1>Devices</h1>
 <table class="table">
     <thead>
         <tr>
             <th>ID</th>
             <th>Hostname</th>
+            <th>Site Info</th>
             <th>Mgmt IP</th>
             <th>SSH User</th>
-            <th>Site Info</th>
         </tr>
     </thead>
     <tbody>
@@ -20,37 +20,17 @@
         <tr>
             <td>{{ device.id }}</td>
             <td>{{ device.devicehostname }}</td>
-            <td>{{ device.devicemgmtip }}</td>
-            <td>{{ device.deviceusername }}</td>
             <td>{{ device.devicesiteinfo }}</td>
+            <td>{{ device.devicemgmtip }}</td>
+            <td>{{ device.deviceusername.uname if device.deviceusername else "N/A" }}</td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
-<h2>Add Device</h2>
-<form id="deviceForm" class="mb-4">
-    <div class="mb-3">
-        <label for="device_name" class="form-label">Hostname</label>
-        <input type="text" class="form-control" id="device_name" name="device_name" required>
-    </div>
-    <div class="mb-3">
-        <label for="device_mgmtip" class="form-label">Mgmt IP</label>
-        <input type="text" class="form-control" id="device_mgmtip" name="device_mgmtip" required>
-    </div>
-    <div class="mb-3">
-        <label for="device_username" class="form-label">SSH user</label>
-        <input type="text" class="form-control" id="device_username" name="device_username">
-    </div>
-    <div class="mb-3">
-        <label for="device_siteinfo" class="form-label">Site info/type</label>
-        <input type="text" class="form-control" id="device_siteinfo" name="device_siteinfo">
-    </div>
-    <div class="mb-3">
-        <label for="device_lanip" class="form-label">LAN interface IP</label>
-        <input type="text" class="form-control" id="device_lanip" name="device_lanip">
-    </div>
-    <button type="submit" class="btn btn-primary">Add Device</button>
-</form>
+
+<a href="{{ url_for('device_add') }}" class="btn btn-primary">Add Device</a>
+
+
 {% endblock %}
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
