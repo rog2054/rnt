@@ -1,8 +1,19 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, SubmitField, BooleanField
-from wtforms.validators import DataRequired, IPAddress, Regexp
+from wtforms.validators import DataRequired, IPAddress, Regexp, ValidationError
 from models import DeviceCredential, Device
+import ipaddress
 
+def validate_ipv4_prefix(form, field):
+    try:
+        # Parse the input as an IPv4 network
+        network = ipaddress.ip_network(field.data, strict=True)
+        # Ensure it’s IPv4 (not IPv6)
+        if not isinstance(network, ipaddress.IPv4Network):
+            raise ValidationError("Must be an IPv4 prefix (e.g., 10.10.10.0/24)")
+    except ValueError as e:
+        raise ValidationError(f"Invalid IPv4 prefix: {str(e)}")
+    
 class DeviceForm(FlaskForm):
     device_name = StringField("Hostname", validators=[DataRequired()])
     device_mgmtip = StringField("Mgmt IP", validators=[DataRequired(), IPAddress()])
@@ -28,7 +39,10 @@ class CredentialForm(FlaskForm):
     
 class bgpASpathTestForm(FlaskForm):
     test_device_hostname=SelectField("Test from Device", choices=[], coerce=int)
-    test_testprefix=StringField("Prefix to check")
+    test_testprefix = StringField(
+        "Prefix to check",
+        validators=[validate_ipv4_prefix]
+    )
     test_checkASinpath = StringField(
     "ASN to check for",
     validators=[
