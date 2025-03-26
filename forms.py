@@ -68,3 +68,8 @@ class tracerouteTestForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super(tracerouteTestForm, self).__init__(*args, **kwargs)
         self.test_device_hostname.choices = [(device.id, device.devicehostname) for device in Device.query.all()]
+        
+
+class TestRunForm(FlaskForm):
+    description = StringField("Test Run Description", validators=[DataRequired(message="Description is required")])
+    submit = SubmitField("Run Tests")

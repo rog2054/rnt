@@ -6,7 +6,7 @@ from threading import Thread
 from queue import Queue
 from time import sleep  # Simulated test execution
 from models import db, DeviceCredential, Device, bgpASpathTest, tracerouteTest, TestRun, TestInstance, bgpASpathResult, tracerouteTestResult
-from forms import DeviceForm, CredentialForm, bgpASpathTestForm, tracerouteTestForm
+from forms import DeviceForm, CredentialForm, bgpASpathTestForm, tracerouteTestForm, TestRunForm
 import netmiko
 
 socketio = SocketIO()
@@ -197,17 +197,15 @@ def test_results(run_id):
 
 @app.route('/run_tests', methods=['GET', 'POST'])
 def run_tests():
-    if request.method == 'POST':
-        description = request.form.get('description', 'Unnamed Test Run')
-        test_run = TestRun(description=description, status="running")
+    form = TestRunForm()
+    if form.validate_on_submit():  # Handles POST and validation
+        test_run = TestRun(description=form.description.data, status="running")
         db.session.add(test_run)
         db.session.commit()
 
         # Gather all test configurations
-        
-        # BGP AS-path Tests
-        bgp_tests = bgpASpathTest.query.all()
         test_instances = []
+        bgp_tests = bgpASpathTest.query.all()
         for test in bgp_tests:
             instance = TestInstance(
                 test_run_id=test_run.id,
@@ -216,8 +214,7 @@ def run_tests():
                 bgp_as_path_test_id=test.id
             )
             test_instances.append(instance)
-            
-        # Traceroute Tests
+
         traceroute_tests = tracerouteTest.query.all()
         for test in traceroute_tests:
             instance = TestInstance(
@@ -227,14 +224,13 @@ def run_tests():
                 traceroute_test_id=test.id
             )
             test_instances.append(instance)
-            
+
         db.session.bulk_save_objects(test_instances)
         db.session.commit()
 
-        # Start test execution in background
         run_tests_in_background(test_run.id)
         return redirect(url_for('test_progress', run_id=test_run.id))
-    return render_template('start_test_run.html')
+    return render_template('start_test_run.html', form=form)  # Pass form to template
     
 def run_tests_in_background(test_run_id):
     def worker(queue):

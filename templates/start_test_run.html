@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block title %}Start Test Run{% endblock %}
+{% block content %}
+<h1>Start a New Test Run</h1>
+<form method="POST" class="mb-4">
+    {{ form.hidden_tag() }} <!-- Adds CSRF token -->
+
+    <div class="mb-3">
+        {{ form.description.label(class="form-label") }}
+        {{ form.description(class="form-control w-50", placeholder="e.g., Tests before changes") }}
+        {% if form.description.errors %}
+        <div class="text-danger">
+            {% for error in form.description.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    {{ form.submit(class="btn btn-primary") }}
+</form>
+{% endblock %}
