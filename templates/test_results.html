@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Test Results{% endblock %}
+{% block content %}
+<h1>Test Run: {{ test_run.description }}</h1>
+<p>Started: {{ test_run.start_time }}</p>
+<table class="table">
+    <tr>
+        <th>Device</th>
+        <th>Type</th>
+        <th>Result</th>
+    </tr>
+    {% for inst in instances %}
+    <tr>
+        <td>{{ inst.device.devicehostname }}</td>
+        <td>{{ inst.test_type }}</td>
+        <td>
+            {% if inst.test_type == "bgp_as_path" and inst.bgp_as_path_result %}
+            Passed: {{ inst.bgp_as_path_result.passed }}<br>
+            Output:
+            <pre>{{ inst.bgp_as_path_result.output }}</pre>
+            {% elif inst.test_type == "traceroute_test" and inst.traceroute_result %}
+            Hops: {{ inst.traceroute_result.hop_count }}<br>
+            Output:
+            <pre>{{ inst.traceroute_result.output }}</pre>
+            {% endif %}
+        </td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

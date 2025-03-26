@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}Test Progress{% endblock %}
+{% block content %}
+<h1>Test Run: {{ test_run.description }}</h1>
+<p>Started: {{ test_run.start_time }}</p>
+<h2>Progress</h2>
+<p>BGP AS Path Tests: {{ stats.bgp_as_path.completed }} / {{ stats.bgp_as_path.total }}</p>
+<p>Traceroute Tests: {{ stats.traceroute_test.completed }} / {{ stats.traceroute_test.total }}</p>
+<!-- Add other test types -->
+<script>
+    setTimeout(function () { location.reload(); }, 5000); // Refresh every 5s
+</script>
+{% endblock %}

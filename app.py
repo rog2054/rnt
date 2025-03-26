@@ -2,10 +2,12 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, f
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
-import threading
+from threading import Thread
+from queue import Queue
 from time import sleep  # Simulated test execution
-from models import db, DeviceCredential, Device, bgpASpathTest, tracerouteTest
+from models import db, DeviceCredential, Device, bgpASpathTest, tracerouteTest, TestRun, TestInstance, bgpASpathResult, tracerouteTestResult
 from forms import DeviceForm, CredentialForm, bgpASpathTestForm, tracerouteTestForm
+import netmiko
 
 socketio = SocketIO()
 
@@ -173,57 +175,140 @@ def delete_traceroutetest(test_id):
     db.session.commit()
     return jsonify({'message': 'Traceroute Test removed successfully'})
 
+@app.route('/tests/progress/<int:run_id>')
+def test_progress(run_id):
+    test_run = TestRun.query.get_or_404(run_id)
+    instances = TestInstance.query.filter_by(test_run_id=run_id).all()
+    stats = {
+        "bgp_as_path": {"completed": 0, "total": 0},
+        "traceroute_test": {"completed": 0, "total": 0},
+    }
+    for inst in instances:
+        stats[inst.test_type]["total"] += 1
+        if inst.status == "completed":
+            stats[inst.test_type]["completed"] += 1
+    return render_template('test_progress.html', test_run=test_run, stats=stats)
+
+@app.route('/tests/results/<int:run_id>')
+def test_results(run_id):
+    test_run = TestRun.query.get_or_404(run_id)
+    instances = TestInstance.query.filter_by(test_run_id=run_id).all()
+    return render_template('test_results.html', test_run=test_run, instances=instances)
 
 @app.route('/run_tests', methods=['GET', 'POST'])
 def run_tests():
-    tests = TestConfig.query.all()
-    devices = Device.query.all()
-    dynamic_devices = [d for d in devices if d.is_dynamic]
-    if dynamic_devices:
-        socketio.emit('password_prompt', {
-            'devices': [{'id': d.id, 'device_name': d.device_name, 'username': d.username} for d in dynamic_devices]
-        }, namespace='/test')
-    return render_template('run_tests.html', tests=tests)
-
-def run_test_group(group_name, tests):
-    total = len(tests)
-    for i, test in enumerate(tests, 1):
-        sleep(1)  # Replace with Netmiko logic
-        test.status = 'passed' if hash(test.test_name) % 2 == 0 else 'failed'
+    if request.method == 'POST':
+        description = request.form.get('description', 'Unnamed Test Run')
+        test_run = TestRun(description=description, status="running")
+        db.session.add(test_run)
         db.session.commit()
-        socketio.emit('progress', {
-            'group': group_name,
-            'completed': i,
-            'total': total,
-            'percentage': (i / total) * 100
-        }, namespace='/test')
 
-@app.route('/start_tests', methods=['GET'])
-def start_tests():
-    tests = TestConfig.query.all()
-    grouped_tests = {}
-    for test in tests:
-        test.status = 'running'
-        grouped_tests.setdefault(test.category, []).append(test)
-    db.session.commit()
+        # Gather all test configurations
+        
+        # BGP AS-path Tests
+        bgp_tests = bgpASpathTest.query.all()
+        test_instances = []
+        for test in bgp_tests:
+            instance = TestInstance(
+                test_run_id=test_run.id,
+                device_id=test.devicehostname_id,
+                test_type="bgp_as_path",
+                bgp_as_path_test_id=test.id
+            )
+            test_instances.append(instance)
+            
+        # Traceroute Tests
+        traceroute_tests = tracerouteTest.query.all()
+        for test in traceroute_tests:
+            instance = TestInstance(
+                test_run_id=test_run.id,
+                device_id=test.devicehostname_id,
+                test_type="traceroute_test",
+                traceroute_test_id=test.id
+            )
+            test_instances.append(instance)
+            
+        db.session.bulk_save_objects(test_instances)
+        db.session.commit()
+
+        # Start test execution in background
+        run_tests_in_background(test_run.id)
+        return redirect(url_for('test_progress', run_id=test_run.id))
+    return render_template('start_test_run.html')
+    
+def run_tests_in_background(test_run_id):
+    def worker(queue):
+        while True:
+            try:
+                device_id = queue.get_nowait()
+            except Queue.Empty:
+                break
+            run_tests_for_device(device_id, test_run_id)
+            queue.task_done()
+
+    # Get unique devices from this test run
+    test_instances = TestInstance.query.filter_by(test_run_id=test_run_id).all()
+    unique_device_ids = set(t.device_id for t in test_instances)
+
+    # Create a queue and add devices
+    device_queue = Queue()
+    for device_id in unique_device_ids:
+        device_queue.put(device_id)
+
+    # Start up to 3 worker threads
     threads = []
-    max_threads = 3
-    for group_name, group_tests in list(grouped_tests.items())[:max_threads]:
-        t = threading.Thread(target=run_test_group, args=(group_name, group_tests))
-        threads.append(t)
+    for _ in range(min(3, len(unique_device_ids))):
+        t = Thread(target=worker, args=(device_queue,))
         t.start()
-    return jsonify({'message': 'Tests started'})
+        threads.append(t)
 
-@socketio.on('submit_passwords', namespace='/test')
-def handle_passwords(data):
-    passwords = data['passwords']
-    for device_id, password in passwords.items():
-        device = Device.query.get(device_id)
-        if device and device.is_dynamic:
-            device.password = password
-    db.session.commit()
-    socketio.emit('start_tests', namespace='/test')
+    # Wait for all threads to complete
+    for t in threads:
+        t.join()
 
+def run_tests_for_device(device_id, test_run_id):
+    device = Device.query.get(device_id)
+    cred = DeviceCredential.query.get(device.username_id)
+    conn_params = {
+        "device_type": "cisco_ios",  # Adjust as needed
+        "host": device.device_mgmtip,
+        "username": cred.uname,
+        "password": cred.pw,
+    }
+
+    # Connect to device
+    with netmiko.ConnectHandler(**conn_params) as conn:
+        # Get tests for this device in this run
+        tests = TestInstance.query.filter_by(test_run_id=test_run_id, device_id=device_id).all()
+        for test in tests:
+            test.status = "running"
+            db.session.commit()
+
+            if test.test_type == "bgp_as_path":
+                bgp_test = test.bgp_as_path_test
+                output = conn.send_command("show ip bgp")  # Your Netmiko code
+                passed = check_bgp_result(output, bgp_test.checkASinpath, bgp_test.checkASwantresult)
+                result = bgpASpathResult(test_instance_id=test.id, output=output, passed=passed)
+                db.session.add(result)
+                
+            elif test.test_type == "traceroute_test":
+                traceroute_test = test.traceroute_test
+                output = conn.send_command(f"traceroute {traceroute_test.destinationip}")  # Your traceroute code
+                hop_count = count_hops(output)  # Example parsing function
+                result = tracerouteTestResult(test_instance_id=test.id, output=output, hop_count=hop_count)
+                db.session.add(result)
+            
+            test.status = "completed"
+            db.session.commit()
+
+def check_bgp_result(output, as_number, want_result):
+    # Your logic to parse output and check if as_number appears as expected
+    return as_number in output  # Simplified example
+
+def count_hops(output):
+    # Parse traceroute output to count hops (example)
+    return len([line for line in output.splitlines() if line.strip().startswith(tuple(str(i) for i in range(1, 31)))])
+    
 if __name__ == '__main__':
     socketio.run(app, debug=True)
     
