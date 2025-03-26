@@ -44,3 +44,13 @@ class bgpASpathTestForm(FlaskForm):
         super(bgpASpathTestForm, self).__init__(*args, **kwargs)
         self.test_device_hostname.choices = [(device.id, device.devicehostname) for device in Device.query.all()]
         
+class tracerouteTestForm(FlaskForm):
+    test_device_hostname=SelectField("Test from Device", choices=[], coerce=int)
+    test_destinationip=StringField("Traceroute destination IP", validators=[DataRequired(), IPAddress()])
+    test_testtext = StringField("What is the purpose of doing this test")
+    
+    submit = SubmitField("Save Test")
+    
+    def __init__(self, *args, **kwargs):
+        super(tracerouteTestForm, self).__init__(*args, **kwargs)
+        self.test_device_hostname.choices = [(device.id, device.devicehostname) for device in Device.query.all()]

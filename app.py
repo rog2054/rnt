@@ -5,7 +5,7 @@ from flask_wtf.csrf import CSRFProtect
 import threading
 from time import sleep  # Simulated test execution
 from models import db, DeviceCredential, Device, bgpASpathTest, tracerouteTest
-from forms import DeviceForm, CredentialForm, bgpASpathTestForm
+from forms import DeviceForm, CredentialForm, bgpASpathTestForm, tracerouteTestForm
 
 socketio = SocketIO()
 
@@ -91,11 +91,13 @@ def delete_device(device_id):
     db.session.commit()
     return jsonify({'message': 'Device removed successfully'})
 
+# Display all AS-path tests
 @app.route('/tests/bgpaspath', methods=['GET'])
 def showtests_bgpaspath():
     bgpaspathtests=bgpASpathTest.query.all()
     return render_template('bgpaspathtests.html', bgpaspathtests=bgpaspathtests)
 
+# Add AS-path test
 @app.route('/tests/addtest_bgpaspath', methods=['GET', 'POST'])
 def addtest_bgpaspath():
     form = bgpASpathTestForm()
@@ -123,7 +125,7 @@ def addtest_bgpaspath():
         return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
     return render_template("addtest_bgpaspath.html", form=form)  # If GET request, render form
 
-# Delete BGP AS-path Test
+# Delete AS-path Test
 @app.route('/tests/delete_bgpaspathtest/<int:test_id>', methods=['POST'])
 def delete_bgptest(test_id):
     test = bgpASpathTest.query.get_or_404(test_id)
@@ -131,33 +133,46 @@ def delete_bgptest(test_id):
     db.session.commit()
     return jsonify({'message': 'BGP AS-path Test removed successfully'})
 
-
+# Display all Traceroute Tests
 @app.route('/tests/traceroute', methods=['GET'])
 def showtests_traceroute():
     traceroutetests=tracerouteTest.query.all()
     return render_template('traceroutetests.html', traceroutetests=traceroutetests)
 
-
-@app.route('/tests', methods=['GET', 'POST'])
-def tests():
+# Add Traceroute test
+@app.route('/tests/addtest_traceroute', methods=['GET', 'POST'])
+def addtest_traceroute():
+    form = tracerouteTestForm()
     if request.method == 'POST':
-        test_name = request.form['test_name']
-        category = request.form['category']
-        parameter = request.form['parameter']
-        new_test = TestConfig(test_name=test_name, category=category, parameter=parameter)
-        db.session.add(new_test)
-        db.session.commit()
-        return jsonify({'message': 'Test added successfully'})
-    categories = [cat[0] for cat in db.session.query(TestConfig.category).distinct().all()]
-    tests = TestConfig.query.all()
-    return render_template('tests.html', categories=categories, tests=tests)
+        if form.validate_on_submit():  # Form validation
+            try:
+                # Create a new bgp as-path test using the form data
+                new_test = tracerouteTest(
+                    devicehostname_id=form.test_device_hostname.data,
+                    destinationip=form.test_destinationip.data,
+                    testtext=form.test_testtext.data
+                )
+                db.session.add(new_test)
+                db.session.commit()
+                ''' return jsonify({'redirect': url_for('showtests_traceroute')})  # Redirect back to BGP as-path tests list '''
+                return redirect(url_for('showtests_traceroute'))
+            except Exception as e:
+                db.session.rollback()  # In case of any error, rollback the session
+                print("Error adding device:", str(e))
+                return jsonify({'message': 'Database error: ' + str(e)}), 500
+        # If form validation fails, return specific errors
+        error_messages = {field: error for field, error in form.errors.items()}
+        return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
+    return render_template("addtest_traceroute.html", form=form)  # If GET request, render form
 
-@app.route('/delete_test/<int:test_id>', methods=['POST'])
-def delete_test(test_id):
-    test = TestConfig.query.get_or_404(test_id)
+# Delete Traceroute Test
+@app.route('/tests/delete_traceroutetest/<int:test_id>', methods=['POST'])
+def delete_traceroutetest(test_id):
+    test = tracerouteTest.query.get_or_404(test_id)
     db.session.delete(test)
     db.session.commit()
-    return jsonify({'message': 'Test deleted successfully'})
+    return jsonify({'message': 'Traceroute Test removed successfully'})
+
 
 @app.route('/run_tests', methods=['GET', 'POST'])
 def run_tests():

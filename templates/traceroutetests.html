@@ -4,26 +4,22 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
 {% block content %}
-<h1>BGP AS Path Tests</h1>
+<h1>Traceroute Tests</h1>
 <table class="table">
     <thead>
         <tr>
-            <th>ID</th>
-            <th>Connect to device</th>
-            <th>Search AS-path for Prefix</th>
-            <th>Check for this ASN in the as-path</th>
-            <th>Should the ASN exist in the as-path?</th>
+            <th>Test ID</th>
+            <th>Traceroute source device</th>
+            <th>Traceroute destination IP</th>
             <th>Description of Test</th>
         </tr>
     </thead>
     <tbody>
-        {% for test in bgpaspathtests %}
+        {% for test in traceroutetests %}
         <tr>
             <td>{{ test.id }}</td>
             <td>{{ test.devicehostname.devicehostname }}</td>
-            <td>{{ test.testprefix }}</td>
-            <td>{{ test.checkASinpath }}</td>
-            <td>{{ test.checkASwantresult }} </td>
+            <td>{{ test.destinationip }} </td>
             <td>{{ test.testtext }} </td>
             <td>
                 <button class="delete-test" data-id="{{ test.id }}" style="background: none; border: none; padding: 0;">
@@ -35,7 +31,7 @@
     </tbody>
 </table>
 
-<a href="{{ url_for('addtest_bgpaspath') }}" class="btn btn-primary">Create Test</a>
+<a href="{{ url_for('addtest_traceroute') }}" class="btn btn-primary">Create Test</a>
 
 
 {% endblock %}
@@ -46,7 +42,7 @@
         $('#deviceForm').submit(function (e) {
             e.preventDefault();
             $.ajax({
-                url: '/tests/bgpaspath',
+                url: '/tests/traceroute',
                 type: 'POST',
                 data: $(this).serialize(),
                 success: function (response) {
@@ -54,18 +50,17 @@
                     location.reload();
                 },
                 error: function () {
-                    alert('Error adding device');
+                    alert('Error adding test');
                 }
             });
         });
 
-        // Delete device
-        // Delete device
+        // Delete test
         $('.delete-test').click(function () {
             const deviceId = $(this).data('id');
             if (confirm('Are you sure you want to remove this test?')) {
                 $.ajax({
-                    url: '/tests/delete_bgpaspathtest/' + deviceId,
+                    url: '/tests/delete_traceroutetest/' + deviceId,
                     type: 'POST',
                     headers: {
                         'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')  // Include CSRF token

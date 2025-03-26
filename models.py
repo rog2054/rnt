@@ -40,7 +40,12 @@ class bgpASpathTest(db.Model):
 
 class tracerouteTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    devicehostname = Device.devicehostname
-    testdest = db.Column(db.String(100), nullable=False)
+    devicehostname_id = db.Column(
+        db.Integer,
+        db.ForeignKey('device.id', name='fk_device_hostname'),
+        nullable=True
+    )
+    devicehostname = db.relationship('Device', backref='tracerouteTests')
+    destinationip = db.Column(db.String(100), nullable=False)
     testtext = db.Column(db.String(200))
     status = db.Column(db.String(20), default='pending')
