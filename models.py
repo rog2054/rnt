@@ -21,6 +21,7 @@ class Device(db.Model):
     )
     deviceusername = db.relationship('DeviceCredential', backref='devices')
     devicelanip = db.Column(db.String(100))
+    devicesupportsnumerictraceroute = db.Column(db.Boolean, default=True)
     # traceroute 10.174.88.1 source 10.55.33.253 numeric
 
 class bgpASpathTest(db.Model):

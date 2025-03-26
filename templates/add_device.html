@@ -9,46 +9,78 @@
     {{ form.hidden_tag() }}
 
     <div class="mb-3">
-        <label for="device_name" class="form-label">Hostname</label>
-        <input type="text" class="form-control w-25" id="device_name" name="device_name" required>
+        {{ form.device_name.label(class="form-label") }}
+        {{ form.device_name(class="form-control w-25") }}
         {% if form.device_name.errors %}
-        <div class="text-danger">{{ form.device_name.errors[0] }}</div>
+        <div class="text-danger">
+            {% for error in form.device_name.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
 
     <div class="mb-3">
-        <label for="device_mgmtip" class="form-label">Mgmt IP</label>
-        <input type="text" class="form-control w-25" id="device_mgmtip" name="device_mgmtip" required>
+        {{ form.device_mgmtip.label(class="form-label") }}
+        {{ form.device_mgmtip(class="form-control w-25") }}
         {% if form.device_mgmtip.errors %}
-        <div class="text-danger">{{ form.device_mgmtip.errors[0] }}</div>
+        <div class="text-danger">
+            {% for error in form.device_mgmtip.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
 
     <div class="mb-3">
-        <label for="device_username" class="form-label">SSH user</label>
-        {{ form.device_username(class="form-control w-25") }}
+        {{ form.device_username.label(class="form-label") }}
+        {{ form.device_username(class="form-select w-25") }}
         {% if form.device_username.errors %}
-        <div class="text-danger">{{ form.device_username.errors[0] }}</div>
+        <div class="text-danger">
+            {% for error in form.device_username.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
 
     <div class="mb-3">
-        <label for="device_siteinfo" class="form-label">Site info/type</label>
-        <input type="text" class="form-control w-25" id="device_siteinfo" name="device_siteinfo">
+        {{ form.device_siteinfo.label(class="form-label") }}
+        {{ form.device_siteinfo(class="form-control w-25") }}
         {% if form.device_siteinfo.errors %}
-        <div class="text-danger">{{ form.device_siteinfo.errors[0] }}</div>
+        <div class="text-danger">
+            {% for error in form.device_siteinfo.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
 
     <div class="mb-3">
-        <label for="device_lanip" class="form-label">LAN interface IP</label>
-        <input type="text" class="form-control w-25" id="device_lanip" name="device_lanip">
+        {{ form.device_lanip.label(class="form-label") }}
+        {{ form.device_lanip(class="form-control w-25") }}
         {% if form.device_lanip.errors %}
-        <div class="text-danger">{{ form.device_lanip.errors[0] }}</div>
+        <div class="text-danger">
+            {% for error in form.device_lanip.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
         {% endif %}
     </div>
 
-    <button type="submit" class="btn btn-primary">Save Device</button>
+    <div class="mb-3 form-check">
+        {{ form.device_supportsnumerictraceroute(class="form-check-input") }}
+        {{ form.device_supportsnumerictraceroute.label(class="form-check-label") }}
+        {% if form.device_supportsnumerictraceroute.errors %}
+        <div class="text-danger">
+            {% for error in form.device_supportsnumerictraceroute.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    {{ form.submit(class="btn btn-primary") }}
 </form>
 
 {% endblock %}

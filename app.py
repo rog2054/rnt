@@ -68,7 +68,8 @@ def device_add():
                     devicemgmtip=form.device_mgmtip.data,
                     deviceusername_id=form.device_username.data,  # Device username as selected from dropdown
                     devicesiteinfo=form.device_siteinfo.data,
-                    devicelanip=form.device_lanip.data
+                    devicelanip=form.device_lanip.data,
+                    devicesupportsnumerictraceroute=form.device_supportsnumerictraceroute.data
                 )
                 db.session.add(new_device)
                 db.session.commit()
@@ -121,6 +122,15 @@ def addtest_bgpaspath():
         error_messages = {field: error for field, error in form.errors.items()}
         return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
     return render_template("addtest_bgpaspath.html", form=form)  # If GET request, render form
+
+# Delete BGP AS-path Test
+@app.route('/tests/delete_bgpaspathtest/<int:test_id>', methods=['POST'])
+def delete_bgptest(test_id):
+    test = bgpASpathTest.query.get_or_404(test_id)
+    db.session.delete(test)
+    db.session.commit()
+    return jsonify({'message': 'BGP AS-path Test removed successfully'})
+
 
 @app.route('/tests/traceroute', methods=['GET'])
 def showtests_traceroute():

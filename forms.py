@@ -13,6 +13,8 @@ class DeviceForm(FlaskForm):
     device_siteinfo = StringField("Site info/type")
     device_lanip = StringField("LAN interface IP", validators=[IPAddress()])
     
+    device_supportsnumerictraceroute = BooleanField("Supports numeric traceroute?", default="checked", render_kw={'checked':''})
+    
     submit = SubmitField("Save Device")
 
     def __init__(self, *args, **kwargs):
@@ -22,7 +24,7 @@ class DeviceForm(FlaskForm):
 class CredentialForm(FlaskForm):
     uname = StringField("Username", validators=[DataRequired()])
     pw = StringField("Password")
-    pwexpiry = bool("Password expires?")
+    pwexpiry = BooleanField("Password expires?", default=False)
     
 class bgpASpathTestForm(FlaskForm):
     test_device_hostname=SelectField("Test from Device", choices=[], coerce=int)
@@ -35,6 +37,8 @@ class bgpASpathTestForm(FlaskForm):
     )
     test_checkASwantresult = BooleanField("AS should exist in the as-path?")
     test_testtext = StringField("What is the purpose of doing this test")
+    
+    submit = SubmitField("Save Test")
     
     def __init__(self, *args, **kwargs):
         super(bgpASpathTestForm, self).__init__(*args, **kwargs)
