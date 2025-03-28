@@ -71,7 +71,7 @@ class TestInstance(db.Model):
     traceroute_test_id = db.Column(db.Integer, db.ForeignKey("traceroute_test.id"), nullable=True)
     # Add more test type IDs as needed (e.g., other_test_id)
     
-class bgpASpathResult(db.Model):
+class bgpASpathTestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     test_instance_id = db.Column(db.Integer, db.ForeignKey("test_instance.id"), nullable=False)
     rawoutput = db.Column(db.Text)  # Raw Netmiko output (e.g., BGP table)
