@@ -4,10 +4,37 @@
 <h1>Test Run: {{ test_run.description }}</h1>
 <p>Started: {{ test_run.start_time }}</p>
 <h2>Progress</h2>
-<p>BGP AS Path Tests: {{ stats.bgp_as_path.completed }} / {{ stats.bgp_as_path.total }}</p>
-<p>Traceroute Tests: {{ stats.traceroute_test.completed }} / {{ stats.traceroute_test.total }}</p>
-<!-- Add other test types -->
-<script>
-    setTimeout(function () { location.reload(); }, 5000); // Refresh every 5s
+<p>BGP AS Path Tests:
+    Completed: {{ stats.bgp_as_path.completed }} /
+    Running: {{ stats.bgp_as_path.running }} /
+    Skipped: {{ stats.bgp_as_path.skipped }} /
+    Total: {{ stats.bgp_as_path.total }}
+</p>
+<p>Traceroute Tests:
+    Completed: {{ stats.traceroute_test.completed }} /
+    Running: {{ stats.traceroute_test.running }} /
+    Skipped: {{ stats.traceroute_test.skipped }} /
+    Total: {{ stats.traceroute_test.total }}
+</p>
+
+<h2>Status Updates</h2>
+<div id="status-log" class="border p-3" style="height: 300px; overflow-y: auto;"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
+<script type="text/javascript">
+    // Define run_id from Jinja2 outside the event handler
+    const currentRunId = {{ run_id | tojson | safe }};
+
+    // Connect to SocketIO server
+    const socket = io.connect('http://' + document.domain + ':' + location.port);
+
+    // Listen for status updates
+    socket.on('status_update', function (data) {
+        if (data.run_id === currentRunId) {  // Compare with predefined variable
+            const log = document.getElementById('status-log');
+            log.innerHTML += '<p>' + data.message + '</p>';
+            log.scrollTop = log.scrollHeight;  // Auto-scroll to latest
+        }
+    });
 </script>
 {% endblock %}
