@@ -30,6 +30,7 @@
 
     // Listen for status updates
     socket.on('status_update', function (data) {
+        console.log('Received:', data);
         if (data.run_id === currentRunId) {  // Compare with predefined variable
             const log = document.getElementById('status-log');
             log.innerHTML += '<p>' + data.message + '</p>';
