@@ -42,3 +42,4 @@ Flask-Migrate==4.1.0
 Flask-SocketIO==5.3.6
 Flask-SQLAlchemy==3.0.3
 Flask-WTF==1.2.2
+netmiko==4.5.0
