@@ -21,11 +21,11 @@
     </div>
 
     <div class="mb-3">
-        {{ form.test_testprefix.label(class="form-label") }}
-        {{ form.test_testprefix(class="form-control w-25") }}
-        {% if form.test_testprefix.errors %}
+        {{ form.test_ipv4prefix.label(class="form-label") }}
+        {{ form.test_ipv4prefix(class="form-control w-25") }}
+        {% if form.test_ipv4prefix.errors %}
         <div class="text-danger">
-            {% for error in form.test_testprefix.errors %}
+            {% for error in form.test_ipv4prefix.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>
@@ -33,11 +33,11 @@
     </div>
 
     <div class="mb-3">
-        {{ form.test_checkASinpath.label(class="form-label") }}
-        {{ form.test_checkASinpath(class="form-control w-25") }}
-        {% if form.test_checkASinpath.errors %}
+        {{ form.test_checkasinpath.label(class="form-label") }}
+        {{ form.test_checkasinpath(class="form-control w-25") }}
+        {% if form.test_checkasinpath.errors %}
         <div class="text-danger">
-            {% for error in form.test_checkASinpath.errors %}
+            {% for error in form.test_checkasinpath.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>
@@ -45,11 +45,11 @@
     </div>
 
     <div class="mb-3 form-check">
-        {{ form.test_checkASwantresult(class="form-check-input") }}
-        {{ form.test_checkASwantresult.label(class="form-check-label") }}
-        {% if form.test_checkASwantresult.errors %}
+        {{ form.test_checkaswantresult(class="form-check-input") }}
+        {{ form.test_checkaswantresult.label(class="form-check-label") }}
+        {% if form.test_checkaswantresult.errors %}
         <div class="text-danger">
-            {% for error in form.test_checkASwantresult.errors %}
+            {% for error in form.test_checkaswantresult.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>
@@ -57,11 +57,11 @@
     </div>
 
     <div class="mb-3">
-        {{ form.test_testtext.label(class="form-label") }}
-        {{ form.test_testtext(class="form-control w-25") }}
-        {% if form.test_testtext.errors %}
+        {{ form.test_description.label(class="form-label") }}
+        {{ form.test_description(class="form-control w-25") }}
+        {% if form.test_description.errors %}
         <div class="text-danger">
-            {% for error in form.test_testtext.errors %}
+            {% for error in form.test_description.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>

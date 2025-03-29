@@ -6,39 +6,42 @@ db = SQLAlchemy()  # Initialize without app
 
 class DeviceCredential(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    uname = db.Column(db.String(100), nullable=False)
-    pw = db.Column(db.String(100), nullable=True)
-    pwexpiry = db.Column(db.Boolean, default=False)
-    
+    username = db.Column(db.String(100), nullable=False)
+    password = db.Column(db.String(100), nullable=True)
+    passwordexpiry = db.Column(db.Boolean, default=False)
+
+
 class Device(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    devicehostname = db.Column(db.String(100), nullable=False)
-    devicemgmtip = db.Column(db.String(100), nullable=False)
-    devicesiteinfo = db.Column(db.String(100))
-    deviceusername_id = db.Column(
+    hostname = db.Column(db.String(100), nullable=False)
+    mgmtip = db.Column(db.String(100), nullable=False)
+    siteinfo = db.Column(db.String(100))
+    username_id = db.Column(
         db.Integer,
         db.ForeignKey('device_credential.id', name="fk_device_username"),
         nullable=True
     )
-    deviceusername = db.relationship('DeviceCredential', backref='devices')
-    devicelanip = db.Column(db.String(100))
-    devicesupportsnumerictraceroute = db.Column(db.Boolean, default=True)
+    username = db.relationship('DeviceCredential', backref='devices')
+    lanip = db.Column(db.String(100))
+    numerictraceroute = db.Column(db.Boolean, default=True)
     tests = db.relationship("TestInstance", backref="device")
     # traceroute 10.174.88.1 source 10.55.33.253 numeric
 
-class bgpASpathTest(db.Model):
+
+class bgpaspathTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     devicehostname_id = db.Column(
         db.Integer,
         db.ForeignKey('device.id', name='fk_device_hostname'),
         nullable=True
     )
-    devicehostname = db.relationship('Device', backref='bgpASpathTests')
-    testprefix = db.Column(db.String(100), nullable=False)
-    checkASinpath = db.Column(db.String(30), nullable=False)
-    checkASwantresult = db.Column(db.Boolean, default=False, nullable=False)
-    testtext = db.Column(db.String(200))
-    instances = db.relationship("TestInstance", backref="bgp_aspath_test")    
+    devicehostname = db.relationship('Device', backref='bgpaspathTests')
+    testipv4prefix = db.Column(db.String(100), nullable=False)
+    checkasinpath = db.Column(db.String(30), nullable=False)
+    checkaswantresult = db.Column(db.Boolean, default=False, nullable=False)
+    description = db.Column(db.String(200))
+    instances = db.relationship("TestInstance", backref="bgpaspath_test")
+
 
 class tracerouteTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -49,41 +52,58 @@ class tracerouteTest(db.Model):
     )
     devicehostname = db.relationship('Device', backref='tracerouteTests')
     destinationip = db.Column(db.String(100), nullable=False)
-    testtext = db.Column(db.String(200))
-    instances = db.relationship("TestInstance", backref="traceroute_test")    
-    
+    description = db.Column(db.String(200))
+    instances = db.relationship("TestInstance", backref="traceroute_test")
+
+
 class TestRun(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
-    description = db.Column(db.String(200), nullable=False)  # e.g., "Tests before changes"
-    status = db.Column(db.String(20), default="pending")  # "pending", "running", "completed"
+    # e.g., "Tests before changes"
+    description = db.Column(db.String(200), nullable=False)
+    # "pending", "running", "completed"
+    status = db.Column(db.String(20), default="pending")
     # Relationships
     tests = db.relationship("TestInstance", backref="test_run")
-    
+
+
 class TestInstance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    test_run_id = db.Column(db.Integer, db.ForeignKey("test_run.id"), nullable=False)
-    device_id = db.Column(db.Integer, db.ForeignKey("device.id"), nullable=False)
-    test_type = db.Column(db.String(50), nullable=False)  # e.g., "bgp_as_path", "traceroute_test"
-    status = db.Column(db.String(20), default="pending")  # "pending", "running", "completed"
+    test_run_id = db.Column(db.Integer, db.ForeignKey(
+        "test_run.id"), nullable=False)
+    device_id = db.Column(db.Integer, db.ForeignKey(
+        "device.id"), nullable=False)
+    # e.g., "bgp_as_path", "traceroute_test"
+    test_type = db.Column(db.String(50), nullable=False)
+    # "pending", "running", "completed"
+    status = db.Column(db.String(20), default="pending")
     # Foreign keys to specific test configs
-    bgp_aspath_test_id = db.Column(db.Integer, db.ForeignKey("bgp_a_spath_test.id"), nullable=True)
-    traceroute_test_id = db.Column(db.Integer, db.ForeignKey("traceroute_test.id"), nullable=True)
+    bgpaspath_test_id = db.Column(
+        db.Integer, db.ForeignKey("bgpaspath_test.id"), nullable=True)
+    traceroute_test_id = db.Column(
+        db.Integer, db.ForeignKey("traceroute_test.id"), nullable=True)
     # Add more test type IDs as needed (e.g., other_test_id)
-    
-class bgpASpathTestResult(db.Model):
+
+
+class bgpaspathTestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    test_instance_id = db.Column(db.Integer, db.ForeignKey("test_instance.id"), nullable=False)
-    rawoutput = db.Column(db.Text)  # Raw Netmiko output (e.g., BGP table)
-    output = db.Column(db.Text)  # Filtered output (e.g. only relevant lines)
-    passed = db.Column(db.Boolean)  # Was the AS there/not-there as required in the test definition?
+    test_instance_id = db.Column(db.Integer, db.ForeignKey(
+        "test_instance.id"), nullable=False)
+    # Raw Netmiko output (e.g. show command output)
+    rawoutput = db.Column(db.Text)
+    # Filtered output (e.g. just the line we have identified)
+    output = db.Column(db.Text)
+    # Was the AS there/not-there as required in the test definition?
+    passed = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-class tracerouteTestResult(db.Model):  
+
+class tracerouteTestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    test_instance_id = db.Column(db.Integer, db.ForeignKey("test_instance.id"), nullable=False)
+    test_instance_id = db.Column(db.Integer, db.ForeignKey(
+        "test_instance.id"), nullable=False)
     rawoutput = db.Column(db.Text)  # Traceroute output
     numberofhops = db.Column(db.Integer)
-    passed = db.Column(db.Boolean)  # Not sure what determines a pass result for this test? Field for future use.
+    # Not sure what determines a pass result for this test? Field for future use.
+    passed = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    

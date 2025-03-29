@@ -5,18 +5,20 @@ from flask_wtf.csrf import CSRFProtect
 from threading import Thread
 from queue import Queue
 from time import sleep  # Simulated test execution
-from models import db, DeviceCredential, Device, bgpASpathTest, tracerouteTest, TestRun, TestInstance, bgpASpathTestResult, tracerouteTestResult
-from forms import DeviceForm, CredentialForm, bgpASpathTestForm, tracerouteTestForm, TestRunForm
+from models import db, DeviceCredential, Device, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult
+from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm
 import netmiko
 from netmiko import NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.DEBUG,
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 # Define global extensions
 socketio = SocketIO(async_mode='threading')
+
 
 def create_app():
     app = Flask(__name__)
@@ -61,18 +63,19 @@ def create_app():
     def run_tests():
         form = TestRunForm()
         if form.validate_on_submit():  # Handles POST and validation
-            test_run = TestRun(description=form.description.data, status="running")
+            test_run = TestRun(
+                description=form.description.data, status="running")
             db.session.add(test_run)
             db.session.commit()
 
             # Gather all test configurations
             test_instances = []
-            bgp_tests = bgpASpathTest.query.all()
+            bgp_tests = bgpaspathTest.query.all()
             for test in bgp_tests:
                 instance = TestInstance(
                     test_run_id=test_run.id,
                     device_id=test.devicehostname_id,
-                    test_type="bgp_as_path",
+                    test_type="bgpaspath_test",
                     bgp_as_path_test_id=test.id
                 )
                 test_instances.append(instance)
@@ -93,19 +96,21 @@ def create_app():
             with app.app_context():
                 run_tests_in_background(test_run.id)
             return redirect(url_for('test_progress', run_id=test_run.id))
-        return render_template('start_test_run.html', form=form)  # Pass form to template
-    
+        # Pass form to template
+        return render_template('start_test_run.html', form=form)
+
     @app.route('/credentials', methods=['GET', 'POST'])
     def credentials():
         form = CredentialForm()
         if request.method == 'POST':
-            uname = request.form['uname']
-            pw = request.form['pw']
-            is_pwexpiry = 'pwexpiry' in request.form
-            new_credential = DeviceCredential(uname=uname, pw=pw, pwexpiry=is_pwexpiry)
+            username = request.form['username']
+            password = request.form['password']
+            is_passwordexpiry = 'passwordexpiry' in request.form
+            new_credential = DeviceCredential(
+                username=username, password=password, passwordexpiry=is_passwordexpiry)
             db.session.add(new_credential)
             db.session.commit()
-            return jsonify({'message': 'Credentails added'})
+            return jsonify({'message': 'User added'})
         credentials = DeviceCredential.query.all()
         return render_template('credentials.html', credentials=credentials, form=form)
 
@@ -119,7 +124,7 @@ def create_app():
 
     @app.route('/devices')
     def device_list():
-        devices=Device.query.all()
+        devices = Device.query.all()
         return render_template('devices.html', devices=devices)
 
     # Route to display the add device form
@@ -131,24 +136,28 @@ def create_app():
                 try:
                     # Create a new device using the form data
                     new_device = Device(
-                        devicehostname=form.device_name.data,
-                        devicemgmtip=form.device_mgmtip.data,
-                        deviceusername_id=form.device_username.data,  # Device username as selected from dropdown
-                        devicesiteinfo=form.device_siteinfo.data,
-                        devicelanip=form.device_lanip.data,
-                        devicesupportsnumerictraceroute=form.device_supportsnumerictraceroute.data
+                        hostname=form.hostname.data,
+                        mgmtip=form.mgmtip.data,
+                        # Device username as selected from dropdown
+                        username_id=form.username.data,
+                        siteinfo=form.siteinfo.data,
+                        lanip=form.lanip.data,
+                        numerictraceroute=form.numerictraceroute.data
                     )
                     db.session.add(new_device)
                     db.session.commit()
-                    return jsonify({'redirect': url_for('device_list')})  # Redirect back to device list
+                    # Redirect back to device list
+                    return jsonify({'redirect': url_for('device_list')})
                 except Exception as e:
                     db.session.rollback()  # In case of any error, rollback the session
                     print("Error adding device:", str(e))
                     return jsonify({'message': 'Database error: ' + str(e)}), 500
             # If form validation fails, return specific errors
-            error_messages = {field: error for field, error in form.errors.items()}
+            error_messages = {field: error for field,
+                              error in form.errors.items()}
             return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
-        return render_template("add_device.html", form=form)  # If GET request, render form
+        # If GET request, render form
+        return render_template("add_device.html", form=form)
 
     # Delete device
     @app.route('/delete_device/<int:device_id>', methods=['POST'])
@@ -161,23 +170,23 @@ def create_app():
     # Display all AS-path tests
     @app.route('/tests/bgpaspath', methods=['GET'])
     def showtests_bgpaspath():
-        bgpaspathtests=bgpASpathTest.query.all()
+        bgpaspathtests = bgpaspathTest.query.all()
         return render_template('bgpaspathtests.html', bgpaspathtests=bgpaspathtests)
 
     # Add AS-path test
     @app.route('/tests/addtest_bgpaspath', methods=['GET', 'POST'])
     def addtest_bgpaspath():
-        form = bgpASpathTestForm()
+        form = bgpaspathTestForm()
         if request.method == 'POST':
             if form.validate_on_submit():  # Form validation
                 try:
                     # Create a new bgp as-path test using the form data
-                    new_test = bgpASpathTest(
+                    new_test = bgpaspathTest(
                         devicehostname_id=form.test_device_hostname.data,
-                        testprefix=form.test_testprefix.data,
-                        checkASinpath=form.test_checkASinpath.data,
-                        checkASwantresult=form.test_checkASwantresult.data,
-                        testtext=form.test_testtext.data
+                        testipv4prefix=form.test_ipv4prefix.data,
+                        checkasinpath=form.test_checkasinpath.data,
+                        checkaswantresult=form.test_checkaswantresult.data,
+                        description=form.test_description.data
                     )
                     db.session.add(new_test)
                     db.session.commit()
@@ -188,14 +197,16 @@ def create_app():
                     print("Error adding device:", str(e))
                     return jsonify({'message': 'Database error: ' + str(e)}), 500
             # If form validation fails, return specific errors
-            error_messages = {field: error for field, error in form.errors.items()}
+            error_messages = {field: error for field,
+                              error in form.errors.items()}
             return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
-        return render_template("addtest_bgpaspath.html", form=form)  # If GET request, render form
+        # If GET request, render form
+        return render_template("addtest_bgpaspath.html", form=form)
 
     # Delete AS-path Test
     @app.route('/tests/delete_bgpaspathtest/<int:test_id>', methods=['POST'])
     def delete_bgptest(test_id):
-        test = bgpASpathTest.query.get_or_404(test_id)
+        test = bgpaspathTest.query.get_or_404(test_id)
         db.session.delete(test)
         db.session.commit()
         return jsonify({'message': 'BGP AS-path Test removed successfully'})
@@ -203,7 +214,7 @@ def create_app():
     # Display all Traceroute Tests
     @app.route('/tests/traceroute', methods=['GET'])
     def showtests_traceroute():
-        traceroutetests=tracerouteTest.query.all()
+        traceroutetests = tracerouteTest.query.all()
         return render_template('traceroutetests.html', traceroutetests=traceroutetests)
 
     # Add Traceroute test
@@ -217,7 +228,7 @@ def create_app():
                     new_test = tracerouteTest(
                         devicehostname_id=form.test_device_hostname.data,
                         destinationip=form.test_destinationip.data,
-                        testtext=form.test_testtext.data
+                        description=form.test_description.data
                     )
                     db.session.add(new_test)
                     db.session.commit()
@@ -228,9 +239,11 @@ def create_app():
                     print("Error adding device:", str(e))
                     return jsonify({'message': 'Database error: ' + str(e)}), 500
             # If form validation fails, return specific errors
-            error_messages = {field: error for field, error in form.errors.items()}
+            error_messages = {field: error for field,
+                              error in form.errors.items()}
             return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
-        return render_template("addtest_traceroute.html", form=form)  # If GET request, render form
+        # If GET request, render form
+        return render_template("addtest_traceroute.html", form=form)
 
     # Delete Traceroute Test
     @app.route('/tests/delete_traceroutetest/<int:test_id>', methods=['POST'])
@@ -239,14 +252,17 @@ def create_app():
         db.session.delete(test)
         db.session.commit()
         return jsonify({'message': 'Traceroute Test removed successfully'})
-    
+
     # Add other routes here if needed
     return app
+
 
 app = create_app()
 CSRFProtect(app)
 
 # Background Routes
+
+
 def run_tests_in_background(test_run_id):
     def worker(queue):
         while True:
@@ -260,7 +276,8 @@ def run_tests_in_background(test_run_id):
     with app.app_context():
         # Get unique devices from this test run
         print(f"Starting background tests for run ID: {test_run_id}")
-        test_instances = TestInstance.query.filter_by(test_run_id=test_run_id).all()
+        test_instances = TestInstance.query.filter_by(
+            test_run_id=test_run_id).all()
         unique_device_ids = set(t.device_id for t in test_instances)
         print(f"Unique DeviceIDs: {unique_device_ids}")
 
@@ -280,111 +297,143 @@ def run_tests_in_background(test_run_id):
     for t in threads:
         t.join()
 
+
 def run_tests_for_device(device_id, test_run_id):
     with app.app_context():
         device = Device.query.get(device_id)
-        cred = DeviceCredential.query.get(device.deviceusername_id)
+        cred = DeviceCredential.query.get(device.username_id)
         if cred is None:
-            logger.error(f"No credentials found for device {device.devicehostname}")
-            socketio.emit('status_update', {'message': f"No credentials for {device.devicehostname}", 'run_id': test_run_id})
+            logger.error(
+                f"No credentials found for device {device.hostname}")
+            socketio.emit('status_update', {
+                          'message': f"No credentials for {device.hostname}", 'run_id': test_run_id})
             skip_tests_for_device(device_id, test_run_id, "No credentials")
             return
         conn_params = {
             "device_type": "cisco_ios",  # Adjust as needed
-            "host": device.device_mgmtip,
-            "username": cred.uname,
-            "password": cred.pw,
+            "host": device.mgmtip,
+            "username": cred.username,
+            "password": cred.password,
             "timeout": 10,
             "session_timeout": 60,
         }
 
-        socketio.emit('status_update', {'message': f"Connecting to device {device.devicehostname} ({device.device_mgmtip})", 'run_id': test_run_id})
+        socketio.emit('status_update', {
+                      'message': f"Connecting to device {device.hostname} ({device.mgmtip})", 'run_id': test_run_id})
         try:
             # Connect to device
             with netmiko.ConnectHandler(**conn_params) as conn:
-                socketio.emit('status_update', {'message': f"Connected to device {device.devicehostname}", 'run_id': test_run_id})
+                socketio.emit('status_update', {
+                              'message': f"Connected to device {device.hostname}", 'run_id': test_run_id})
                 # Get tests for this device in this run
-                tests = TestInstance.query.filter_by(test_run_id=test_run_id, device_id=device_id).all()
+                tests = TestInstance.query.filter_by(
+                    test_run_id=test_run_id, device_id=device_id).all()
                 for test in tests:
                     test.status = "running"
                     db.session.commit()
-                    socketio.emit('status_update', {'message': f"Running {test.test_type} test ID {test.id} on {device.devicehostname}", 'run_id': test_run_id})
+                    socketio.emit('status_update', {
+                                  'message': f"Running {test.test_type} test ID {test.id} on {device.hostname}", 'run_id': test_run_id})
 
                     try:
-                        
-                        if test.test_type == "bgp_as_path":
+
+                        if test.test_type == "bgpaspath_test":
                             bgp_test = test.bgp_as_path_test
-                            output = conn.send_command("show ip bgp")  # Your Netmiko code
-                            passed = check_bgp_result(output, bgp_test.checkASinpath, bgp_test.checkASwantresult)
-                            result = bgpASpathTestResult(test_instance_id=test.id, output=output, passed=passed)
+                            output = conn.send_command(
+                                "show ip bgp")  # Your Netmiko code
+                            passed = check_bgp_result(
+                                output, bgp_test.checkasinpath, bgp_test.checkaswantresult)
+                            result = bgpaspathTestResult(
+                                test_instance_id=test.id, output=output, passed=passed)
                             db.session.add(result)
-                            socketio.emit('status_update', {'message': f"BGP test ID {test.id} completed on {device.devicehostname}", 'run_id': test_run_id})
-                            
+                            socketio.emit('status_update', {
+                                          'message': f"BGP test ID {test.id} completed on {device.hostname}", 'run_id': test_run_id})
+
                         elif test.test_type == "traceroute_test":
                             traceroute_test = test.traceroute_test
-                            output = conn.send_command(f"traceroute {traceroute_test.destinationip}")  # Your traceroute code
-                            hop_count = count_hops(output)  # Example parsing function
-                            result = tracerouteTestResult(test_instance_id=test.id, output=output, hop_count=hop_count)
+                            output = conn.send_command(
+                                # Your traceroute code
+                                f"traceroute {traceroute_test.destinationip}")
+                            # Example parsing function
+                            hop_count = count_hops(output)
+                            result = tracerouteTestResult(
+                                test_instance_id=test.id, output=output, hop_count=hop_count)
                             db.session.add(result)
-                            socketio.emit('status_update', {'message': f"Traceroute test ID {test.id} completed on {device.devicehostname}", 'run_id': test_run_id})
-                        
+                            socketio.emit('status_update', {
+                                          'message': f"Traceroute test ID {test.id} completed on {device.hostname}", 'run_id': test_run_id})
+
                         test.status = "completed"
-                    
+
                     except NetmikoTimeoutException as e:
-                        logger.error(f"Timeout during test on {device.devicehostname}: {str(e)}")
-                        socketio.emit('status_update', {'message': f"Timeout during test on {device.devicehostname}", 'run_id': test_run_id})
+                        logger.error(
+                            f"Timeout during test on {device.hostname}: {str(e)}")
+                        socketio.emit('status_update', {
+                                      'message': f"Timeout during test on {device.hostname}", 'run_id': test_run_id})
                         test.status = "failed"
-                        result = (bgpASpathTestResult if test.test_type == "bgp_as_path" else tracerouteTestResult)(
-                            test_instance_id=test.id, output=f"Error: {str(e)}", passed=False if test.test_type == "bgp_as_path" else None, hop_count=None
+                        result = (bgpaspathTestResult if test.test_type == "bgpaspath_test" else tracerouteTestResult)(
+                            test_instance_id=test.id, output=f"Error: {str(e)}", passed=False if test.test_type == "bgpaspath_test" else None, hop_count=None
                         )
                         db.session.add(result)
-                        
+
                     except Exception as e:
-                        logger.error(f"Unexpected error during test on {device.devicehostname}: {str(e)}")
-                        socketio.emit('status_update', {'message': f"Error during test on {device.devicehostname}: {str(e)}", 'run_id': test_run_id})
+                        logger.error(
+                            f"Unexpected error during test on {device.hostname}: {str(e)}")
+                        socketio.emit('status_update', {
+                                      'message': f"Error during test on {device.hostname}: {str(e)}", 'run_id': test_run_id})
                         test.status = "failed"
-                        result = (bgpASpathTestResult if test.test_type == "bgp_as_path" else tracerouteTestResult)(
-                            test_instance_id=test.id, output=f"Error: {str(e)}", passed=False if test.test_type == "bgp_as_path" else None, hop_count=None
+                        result = (bgpaspathTestResult if test.test_type == "bgpaspath_test" else tracerouteTestResult)(
+                            test_instance_id=test.id, output=f"Error: {str(e)}", passed=False if test.test_type == "bgpaspath_test" else None, hop_count=None
                         )
-                        db.session.add(result) 
-                                
+                        db.session.add(result)
+
                     db.session.commit()
-                    
+
         except NetmikoTimeoutException:
-            logger.error(f"Device {device.devicehostname} unreachable (timeout)")
-            socketio.emit('status_update', {'message': f"Device {device.devicehostname} unreachable (timeout)", 'run_id': test_run_id})
-            skip_tests_for_device(device_id, test_run_id, "Unreachable: Timeout", socketio)
+            logger.error(
+                f"Device {device.hostname} unreachable (timeout)")
+            socketio.emit('status_update', {
+                          'message': f"Device {device.hostname} unreachable (timeout)", 'run_id': test_run_id})
+            skip_tests_for_device(device_id, test_run_id,
+                                  "Unreachable: Timeout")
         except NetmikoAuthenticationException:
-            logger.error(f"Authentication failed for {device.devicehostname}")
-            socketio.emit('status_update', {'message': f"Authentication failed for {device.devicehostname}", 'run_id': test_run_id})
-            skip_tests_for_device(device_id, test_run_id, "Authentication failed", socketio)
+            logger.error(f"Authentication failed for {device.hostname}")
+            socketio.emit('status_update', {
+                          'message': f"Authentication failed for {device.hostname}", 'run_id': test_run_id})
+            skip_tests_for_device(device_id, test_run_id,
+                                  "Authentication failed")
         except Exception as e:
-            logger.error(f"Unexpected error connecting to {device.devicehostname}: {str(e)}")
-            socketio.emit('status_update', {'message': f"Error connecting to {device.devicehostname}: {str(e)}", 'run_id': test_run_id})
-            skip_tests_for_device(device_id, test_run_id, f"Error: {str(e)}", socketio)
-        
+            logger.error(
+                f"Unexpected error connecting to {device.hostname}: {str(e)}")
+            socketio.emit('status_update', {
+                          'message': f"Error connecting to {device.hostname}: {str(e)}", 'run_id': test_run_id})
+            skip_tests_for_device(device_id, test_run_id,
+                                  f"Error: {str(e)}")
+
 
 def skip_tests_for_device(device_id, test_run_id, reason):
     with app.app_context():
-        tests = TestInstance.query.filter_by(test_run_id=test_run_id, device_id=device_id).all()
+        tests = TestInstance.query.filter_by(
+            test_run_id=test_run_id, device_id=device_id).all()
         for test in tests:
             if test.status == "pending":
                 test.status = "skipped"
-                result = (bgpASpathTestResult if test.test_type == "bgp_as_path" else tracerouteTestResult)(
+                result = (bgpaspathTestResult if test.test_type == "bgp_as_path" else tracerouteTestResult)(
                     test_instance_id=test.id, output=f"Skipped: {reason}", passed=None, hop_count=None
                 )
                 db.session.add(result)
-                socketio.emit('status_update', {'message': f"Skipped {test.test_type} test on device ID {device_id}: {reason}", 'run_id': test_run_id})
+                socketio.emit('status_update', {
+                              'message': f"Skipped {test.test_type} test on device ID {device_id}: {reason}", 'run_id': test_run_id})
         db.session.commit()
+
 
 def check_bgp_result(output, as_number, want_result):
     # Your logic to parse output and check if as_number appears as expected
     return as_number in output  # Simplified example
 
+
 def count_hops(output):
     # Parse traceroute output to count hops (example)
     return len([line for line in output.splitlines() if line.strip().startswith(tuple(str(i) for i in range(1, 31)))])
-    
+
+
 if __name__ == '__main__':
     socketio.run(app, debug=True)
-    

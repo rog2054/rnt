@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block title %}BGP AS Path Tests{% endblock %}
+{% block title %}Traceroute Tests{% endblock %}
 {% block head %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
@@ -18,9 +18,9 @@
         {% for test in traceroutetests %}
         <tr>
             <td>{{ test.id }}</td>
-            <td>{{ test.devicehostname.devicehostname }}</td>
+            <td>{{ test.devicehostname.hostname }}</td>
             <td>{{ test.destinationip }} </td>
-            <td>{{ test.testtext }} </td>
+            <td>{{ test.description }} </td>
             <td>
                 <button class="delete-test" data-id="{{ test.id }}" style="background: none; border: none; padding: 0;">
                     <i class="fas fa-trash-alt"></i>

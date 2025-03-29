@@ -8,12 +8,16 @@
 <form id="deviceForm" method="POST">
     {{ form.hidden_tag() }}
 
+    {% if form.errors %}
+    <pre>{{ form.errors }}</pre>
+    {% endif %}
+
     <div class="mb-3">
-        {{ form.device_name.label(class="form-label") }}
-        {{ form.device_name(class="form-control w-25") }}
-        {% if form.device_name.errors %}
+        {{ form.hostname.label(class="form-label") }}
+        {{ form.hostname(class="form-control w-25") }}
+        {% if form.hostname.errors %}
         <div class="text-danger">
-            {% for error in form.device_name.errors %}
+            {% for error in form.hostname.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>
@@ -21,11 +25,11 @@
     </div>
 
     <div class="mb-3">
-        {{ form.device_mgmtip.label(class="form-label") }}
-        {{ form.device_mgmtip(class="form-control w-25") }}
-        {% if form.device_mgmtip.errors %}
+        {{ form.mgmtip.label(class="form-label") }}
+        {{ form.mgmtip(class="form-control w-25") }}
+        {% if form.mgmtip.errors %}
         <div class="text-danger">
-            {% for error in form.device_mgmtip.errors %}
+            {% for error in form.mgmtip.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>
@@ -33,11 +37,11 @@
     </div>
 
     <div class="mb-3">
-        {{ form.device_username.label(class="form-label") }}
-        {{ form.device_username(class="form-select w-25") }}
-        {% if form.device_username.errors %}
+        {{ form.username.label(class="form-label") }}
+        {{ form.username(class="form-select w-25") }}
+        {% if form.username.errors %}
         <div class="text-danger">
-            {% for error in form.device_username.errors %}
+            {% for error in form.username.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>
@@ -45,11 +49,11 @@
     </div>
 
     <div class="mb-3">
-        {{ form.device_siteinfo.label(class="form-label") }}
-        {{ form.device_siteinfo(class="form-control w-25") }}
-        {% if form.device_siteinfo.errors %}
+        {{ form.siteinfo.label(class="form-label") }}
+        {{ form.siteinfo(class="form-control w-25") }}
+        {% if form.siteinfo.errors %}
         <div class="text-danger">
-            {% for error in form.device_siteinfo.errors %}
+            {% for error in form.siteinfo.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>
@@ -57,11 +61,11 @@
     </div>
 
     <div class="mb-3">
-        {{ form.device_lanip.label(class="form-label") }}
-        {{ form.device_lanip(class="form-control w-25") }}
-        {% if form.device_lanip.errors %}
+        {{ form.lanip.label(class="form-label") }}
+        {{ form.lanip(class="form-control w-25") }}
+        {% if form.lanip.errors %}
         <div class="text-danger">
-            {% for error in form.device_lanip.errors %}
+            {% for error in form.lanip.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>
@@ -69,11 +73,11 @@
     </div>
 
     <div class="mb-3 form-check">
-        {{ form.device_supportsnumerictraceroute(class="form-check-input") }}
-        {{ form.device_supportsnumerictraceroute.label(class="form-check-label") }}
-        {% if form.device_supportsnumerictraceroute.errors %}
+        {{ form.numerictraceroute(class="form-check-input") }}
+        {{ form.numerictraceroute.label(class="form-check-label") }}
+        {% if form.numerictraceroute.errors %}
         <div class="text-danger">
-            {% for error in form.device_supportsnumerictraceroute.errors %}
+            {% for error in form.numerictraceroute.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>

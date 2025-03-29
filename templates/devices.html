@@ -20,10 +20,10 @@
         {% for device in devices %}
         <tr>
             <td>{{ device.id }}</td>
-            <td>{{ device.devicehostname }}</td>
-            <td>{{ device.devicesiteinfo }}</td>
-            <td>{{ device.devicemgmtip }}</td>
-            <td>{{ device.deviceusername.uname if device.deviceusername else "N/A" }}</td>
+            <td>{{ device.hostname }}</td>
+            <td>{{ device.siteinfo }}</td>
+            <td>{{ device.mgmtip }}</td>
+            <td>{{ device.username.username if device.username else "N/A" }}</td>
             <td>
                 <button class="delete-device" data-id="{{ device.id }}"
                     style="background: none; border: none; padding: 0;">
