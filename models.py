@@ -15,6 +15,7 @@ class Device(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     hostname = db.Column(db.String(100), nullable=False)
     mgmtip = db.Column(db.String(100), nullable=False)
+    devicetype = db.Column(db.String(100))
     siteinfo = db.Column(db.String(100))
     username_id = db.Column(
         db.Integer,

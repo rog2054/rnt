@@ -20,6 +20,16 @@ def validate_ipv4_prefix(form, field):
 class DeviceForm(FlaskForm):
     hostname = StringField("Hostname", validators=[DataRequired()])
     mgmtip = StringField("Mgmt IP", validators=[DataRequired(), IPAddress()])
+    devicetype = SelectField(
+        'Device Type:',
+        choices=[
+            ('cisco_ios', 'Cisco IOS'),
+            ('cisco_nxos', 'Cisco NX OS'),
+            ('ciscoaci', 'Cisco ACI Leaf')
+        ],
+        coerce=str  # This ensures that the selected value is returned as a string
+    )
+    submit = SubmitField('Submit')
 
     # Dropdown field populated dynamically
     username = SelectField("SSH User", choices=[], coerce=int)

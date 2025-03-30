@@ -37,6 +37,18 @@
     </div>
 
     <div class="mb-3">
+        {{ form.devicetype.label(class="form-label") }}
+        {{ form.devicetype(class="form-select w-25") }}
+        {% if form.devicetype.errors %}
+        <div class="text-danger">
+            {% for error in form.devicetype.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
         {{ form.username.label(class="form-label") }}
         {{ form.username(class="form-select w-25") }}
         {% if form.username.errors %}

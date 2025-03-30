@@ -140,8 +140,8 @@ def create_app():
                     new_device = Device(
                         hostname=form.hostname.data,
                         mgmtip=form.mgmtip.data,
-                        # Device username as selected from dropdown
-                        username_id=form.username.data,
+                        devicetype=form.devicetype.data, #dropdown
+                        username_id=form.username.data, #dropdown
                         siteinfo=form.siteinfo.data,
                         lanip=form.lanip.data,
                         numerictraceroute=form.numerictraceroute.data
