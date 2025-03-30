@@ -5,37 +5,100 @@
 <p>Started: {{ test_run.start_time }}</p>
 <h2>Progress</h2>
 <p>BGP AS Path Tests:
-    Completed: {{ stats.bgp_as_path.completed }} /
-    Running: {{ stats.bgp_as_path.running }} /
-    Skipped: {{ stats.bgp_as_path.skipped }} /
-    Total: {{ stats.bgp_as_path.total }}
+    Completed: <span id="bgp_completed">{{ stats.bgpaspath_test.completed }}</span> /
+    Running: <span id="bgp_running">{{ stats.bgpaspath_test.running }}</span> /
+    Skipped: <span id="bgp_skipped">{{ stats.bgpaspath_test.skipped }}</span> /
+    Total: <span id="bgp_total">{{ stats.bgpaspath_test.total }}</span>
 </p>
 <p>Traceroute Tests:
-    Completed: {{ stats.traceroute_test.completed }} /
-    Running: {{ stats.traceroute_test.running }} /
-    Skipped: {{ stats.traceroute_test.skipped }} /
-    Total: {{ stats.traceroute_test.total }}
+    Completed: <span id="traceroute_completed">{{ stats.traceroute_test.completed }}</span> /
+    Running: <span id="traceroute_running">{{ stats.traceroute_test.running }}</span> /
+    Skipped: <span id="traceroute_skipped">{{ stats.traceroute_test.skipped }}</span> /
+    Total: <span id="traceroute_total">{{ stats.traceroute_test.total }}</span>
 </p>
-
 <h2>Status Updates</h2>
 <div id="status-log" class="border p-3" style="height: 300px; overflow-y: auto;"></div>
-
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
 <script type="text/javascript">
-    // Define run_id from Jinja2 outside the event handler
-    const currentRunId = {{ run_id | tojson | safe }};
-
-    // Connect to SocketIO server
+    document.addEventListener('DOMContentLoaded', function () {
+        const currentRunId = {{ run_id | tojson | safe
+    }};
     const socket = io.connect('http://' + document.domain + ':' + location.port);
+    const deviceLogs = new Map();
 
-    // Listen for status updates
+    socket.on('connect', function () {
+        console.log('Connected to Socket.IO server');
+        socket.emit('start_tests', { run_id: currentRunId });
+    });
+
+    socket.on('connect_error', function (error) {
+        console.error('Socket.IO connection error:', error);
+    });
+
     socket.on('status_update', function (data) {
-        console.log('Received:', data);
-        if (data.run_id === currentRunId) {  // Compare with predefined variable
-            const log = document.getElementById('status-log');
-            log.innerHTML += '<p>' + data.message + '</p>';
-            log.scrollTop = log.scrollHeight;  // Auto-scroll to latest
+        console.log('Received status_update:', data);
+        if (data.run_id !== currentRunId) {
+            console.log('Message ignored, run_id mismatch:', data.run_id, '!=', currentRunId);
+            return;
         }
+
+        const log = document.getElementById('status-log');
+        if (!log) {
+            console.error('Status log element not found');
+            return;
+        }
+
+        if (data.level === 'parent' && !data.device_id) {
+            // Final "Test run completed" message
+            log.innerHTML += '<div class="parent">' + data.message + '</div>';
+        } else if (data.level === 'parent' && data.device_id) {
+            // "Connecting to device" message with placeholder
+            deviceLogs.set(data.device_id, {
+                parent: '<div class="parent">' + data.message + '</div>',
+                children: ['<li class="child">...running</li>']  // Placeholder
+            });
+        } else if (data.level === 'child' && data.device_id) {
+            // Device-specific child message
+            if (!deviceLogs.has(data.device_id)) {
+                deviceLogs.set(data.device_id, {
+                    parent: '<div class="parent">Device ' + data.device_id + ' (pending connection info)</div>',
+                    children: ['<li class="child">...running</li>']
+                });
+            }
+            const deviceLog = deviceLogs.get(data.device_id);
+            // Replace placeholder if it's still there, otherwise append
+            if (deviceLog.children.length === 1 && deviceLog.children[0] === '<li class="child">...running</li>') {
+                deviceLog.children = ['<li class="child">' + data.message + '</li>'];
+            } else {
+                deviceLog.children.push('<li class="child">' + data.message + '</li>');
+            }
+        }
+
+        // Rebuild the log display
+        log.innerHTML = '';
+        deviceLogs.forEach((deviceLog, deviceId) => {
+            log.innerHTML += deviceLog.parent;
+            if (deviceLog.children.length > 0) {
+                log.innerHTML += '<ul>' + deviceLog.children.join('') + '</ul>';
+            }
+        });
+        log.scrollTop = log.scrollHeight;
+    });
+
+    socket.on('stats_update', function (data) {
+        console.log('Received stats_update:', data);
+        if (data.run_id === currentRunId) {
+            const stats = data.stats;
+            document.getElementById('bgp_completed').textContent = stats.bgpaspath_test.completed;
+            document.getElementById('bgp_running').textContent = stats.bgpaspath_test.running;
+            document.getElementById('bgp_skipped').textContent = stats.bgpaspath_test.skipped;
+            document.getElementById('bgp_total').textContent = stats.bgpaspath_test.total;
+            document.getElementById('traceroute_completed').textContent = stats.traceroute_test.completed;
+            document.getElementById('traceroute_running').textContent = stats.traceroute_test.running;
+            document.getElementById('traceroute_skipped').textContent = stats.traceroute_test.skipped;
+            document.getElementById('traceroute_total').textContent = stats.traceroute_test.total;
+        }
+    });
     });
 </script>
 {% endblock %}
