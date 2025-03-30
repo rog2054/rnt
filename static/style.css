@@ -51,3 +51,29 @@
     color: red;
     /* Change color on hover */
 }
+
+#status-log {
+    padding: 0;
+    /* Remove padding from container, let children handle spacing */
+}
+
+#status-log .parent {
+    margin: 5px 0;
+    /* Spacing between parent entries */
+    font-weight: bold;
+    /* Optional: make parent messages stand out */
+}
+
+#status-log ul {
+    margin: 0 0 5px 20px;
+    /* Indent children, space below */
+    padding: 0;
+    /* Remove default padding */
+    list-style-type: none;
+    /* Remove bullets */
+}
+
+#status-log .child {
+    margin: 2px 0;
+    /* Minimal spacing between child items */
+}
