@@ -3,6 +3,7 @@ from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from threading import Thread
+import queue
 from queue import Queue
 from time import sleep  # Simulated test execution
 from models import db, DeviceCredential, Device, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult
@@ -11,7 +12,9 @@ import netmiko
 from netmiko import NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
 
+# Globals
 pending_test_runs = []
+processed_devices = set() # Used for tracking processed devices per run
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG,
@@ -258,16 +261,18 @@ def create_app():
     @socketio.on('start_tests')
     def handle_start_tests(data):
         run_id = data.get('run_id')
+        logger.info(f"Starting tests for run ID {run_id} via Socket.IO")
         if run_id in pending_test_runs:
             with app.app_context():
-                # test_run = TestRun.query.get(run_id) # old SQLalchemy 1.x style
                 test_run = db.session.get(TestRun, run_id)
                 test_run.status = "running"
                 db.session.commit()
-                logger.info(f"Starting tests for run ID {run_id} via Socket.IO")
-                run_tests_in_background(run_id)
-            pending_test_runs.remove(run_id)
-    
+            processed_devices.clear()  # Reset for new run
+            pending_test_runs.remove(run_id)  # Dequeue the run
+            socketio.start_background_task(run_tests_in_background, run_id)
+        else:
+            logger.debug(f"Test run {run_id} not in pending_test_runs, ignoring")
+        
     return app
 
 
@@ -278,17 +283,18 @@ CSRFProtect(app)
 
 
 def run_tests_in_background(test_run_id):
-    def worker(queue):
-        with app.app_context():  # Add context for worker
+    def worker(device_queue):
+        with app.app_context():
             while True:
                 try:
-                    device_id = queue.get_nowait()
+                    device_id = device_queue.get_nowait()
                     logger.info(f"Worker picked up device ID: {device_id} for run ID: {test_run_id}")
                 except queue.Empty:
                     logger.info(f"Queue empty, worker exiting for run ID: {test_run_id}")
                     break
                 run_tests_for_device(device_id, test_run_id)
-                queue.task_done()
+                processed_devices.add((test_run_id, device_id))
+                device_queue.task_done()
 
     with app.app_context():
         logger.info(f"Starting background tests for run ID: {test_run_id}")
@@ -298,6 +304,7 @@ def run_tests_in_background(test_run_id):
 
         device_queue = Queue()
         for device_id in unique_device_ids:
+            logger.debug(f"Queuing device_id: {device_id}, queue size: {device_queue.qsize()}")
             device_queue.put(device_id)
             logger.debug(f"Queued device ID: {device_id} for run ID: {test_run_id}")
 
@@ -311,10 +318,11 @@ def run_tests_in_background(test_run_id):
         for t in threads:
             t.join()
         logger.info(f"All threads completed for run ID: {test_run_id}")
-
+        socketio.emit('status_update', {'message': f"Test run {test_run_id} completed", 'run_id': test_run_id, 'level': 'parent'})
 
 def run_tests_for_device(device_id, test_run_id):
     def emit_stats_update():
+        """Helper to emit current stats for the test run."""
         instances = TestInstance.query.filter_by(test_run_id=test_run_id).all()
         stats = {
             "bgpaspath_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
@@ -340,6 +348,7 @@ def run_tests_for_device(device_id, test_run_id):
             skip_tests_for_device(device_id, test_run_id, "No credentials")
             emit_stats_update()
             return
+
         conn_params = {
             "device_type": "cisco_ios",
             "host": device.mgmtip,
@@ -349,8 +358,10 @@ def run_tests_for_device(device_id, test_run_id):
             "session_timeout": 60,
         }
 
+        logger.debug(f"Starting run_tests_for_device for device_id: {device_id}, run_id: {test_run_id}")
         socketio.emit('status_update', {'message': f"Connecting to device {device.hostname} ({device.mgmtip})", 'run_id': test_run_id, 'level': 'parent', 'device_id': device_id})
         logger.info(f"socketio.emit: 'Connecting to device {device.hostname} ({device.mgmtip})' for run_id: {test_run_id}")
+
         try:
             with netmiko.ConnectHandler(**conn_params) as conn:
                 socketio.emit('status_update', {'message': f"Connected to device {device.hostname}", 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
@@ -415,140 +426,36 @@ def run_tests_for_device(device_id, test_run_id):
             skip_tests_for_device(device_id, test_run_id, f"Error: {str(e)}")
             emit_stats_update()
 
-        tests = TestInstance.query.filter_by(test_run_id=test_run_id).all()
-        if all(test.status in ["completed", "skipped", "failed"] for test in tests):
-            test_run = db.session.get(TestRun, test_run_id)
-            test_run.status = "completed"
-            db.session.commit()
-            socketio.emit('status_update', {'message': f"Test run {test_run_id} completed", 'run_id': test_run_id, 'level': 'parent'})  # No device_id for run completion
-            logger.info(f"socketio.emit: 'Test run {test_run_id} completed'")
-            emit_stats_update()
-            
-    def emit_stats_update():
-        """Helper to emit current stats for the test run."""
-        instances = TestInstance.query.filter_by(test_run_id=test_run_id).all()
-        stats = {
-            "bgpaspath_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
-            "traceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
-        }
-        for inst in instances:
-            stats[inst.test_type]["total"] += 1
-            if inst.status == "completed":
-                stats[inst.test_type]["completed"] += 1
-            elif inst.status == "running":
-                stats[inst.test_type]["running"] += 1
-            elif inst.status == "skipped":
-                stats[inst.test_type]["skipped"] += 1
-        socketio.emit('stats_update', {'stats': stats, 'run_id': test_run_id})
-        logger.info(f"socketio.emit: stats_update with {stats}")
-
-    with app.app_context():
-        device = db.session.get(Device, device_id)
-        cred = db.session.get(DeviceCredential, device.username_id)
-        if cred is None:
-            logger.error(f"No credentials found for device {device.hostname}")
-            socketio.emit('status_update', {'message': f"No credentials for {device.hostname}", 'run_id': test_run_id, 'level': 'child'})
-            skip_tests_for_device(device_id, test_run_id, "No credentials")
-            emit_stats_update()
-            return
-        conn_params = {
-            "device_type": "cisco_ios",
-            "host": device.mgmtip,
-            "username": cred.username,
-            "password": cred.password,
-            "timeout": 10,
-            "session_timeout": 60,
-        }
-
-        socketio.emit('status_update', {'message': f"Connecting to device {device.hostname} ({device.mgmtip})", 'run_id': test_run_id, 'level': 'parent'})
-        logger.info(f"socketio.emit: 'Connecting to device {device.hostname} ({device.mgmtip})' for run_id: {test_run_id}")
-        try:
-            with netmiko.ConnectHandler(**conn_params) as conn:
-                socketio.emit('status_update', {'message': f"Connected to device {device.hostname}", 'run_id': test_run_id, 'level': 'child'})
-                logger.info(f"socketio.emit: 'Connected to device {device.hostname}' for run_id: {test_run_id}")
-                tests = TestInstance.query.filter_by(test_run_id=test_run_id, device_id=device_id).all()
-                for test in tests:
-                    test.status = "running"
-                    db.session.commit()
-                    socketio.emit('status_update', {'message': f"Running {test.test_type} test ID {test.id} on {device.hostname}", 'run_id': test_run_id, 'level': 'child'})
-                    logger.info(f"socketio.emit: 'Running {test.test_type} test ID {test.id}' for run_id: {test_run_id}")
-                    emit_stats_update()
-                    try:
-                        if test.test_type == "bgpaspath_test":
-                            bgp_test = test.bgp_as_path_test
-                            rawoutput = conn.send_command("show ip bgp")
-                            passed = check_bgp_result(rawoutput, bgp_test.checkasinpath, bgp_test.checkaswantresult)
-                            result = bgpaspathTestResult(test_instance_id=test.id, rawoutput=rawoutput, passed=passed)
-                            db.session.add(result)
-                            socketio.emit('status_update', {'message': f"BGP test ID {test.id} completed on {device.hostname}", 'run_id': test_run_id, 'level': 'child'})
-                            logger.info(f"socketio.emit: 'BGP test ID {test.id} completed' for run_id: {test_run_id}")
-                        elif test.test_type == "traceroute_test":
-                            traceroute_test = test.traceroute_test
-                            rawoutput = conn.send_command(f"traceroute {traceroute_test.destinationip}")
-                            numberofhops = count_hops(rawoutput)
-                            result = tracerouteTestResult(test_instance_id=test.id, rawoutput=rawoutput, numberofhops=numberofhops)
-                            db.session.add(result)
-                            socketio.emit('status_update', {'message': f"Traceroute test ID {test.id} completed on {device.hostname}", 'run_id': test_run_id, 'level': 'child'})
-                            logger.info(f"socketio.emit: 'Traceroute test ID {test.id} completed' for run_id: {test_run_id}")
-                        test.status = "completed"
-                    except NetmikoTimeoutException as e:
-                        logger.error(f"Timeout during test on {device.hostname}: {str(e)}")
-                        socketio.emit('status_update', {'message': f"Timeout during test on {device.hostname}", 'run_id': test_run_id, 'level': 'child'})
-                        test.status = "failed"
-                        result = (bgpaspathTestResult if test.test_type == "bgpaspath_test" else tracerouteTestResult)(
-                            test_instance_id=test.id, rawoutput=f"Error: {str(e)}", passed=False if test.test_type == "bgpaspath_test" else None, numberofhops=None
-                        )
-                        db.session.add(result)
-                    except Exception as e:
-                        logger.error(f"Unexpected error during test on {device.hostname}: {str(e)}")
-                        socketio.emit('status_update', {'message': f"Error during test on {device.hostname}: {str(e)}", 'run_id': test_run_id, 'level': 'child'})
-                        test.status = "failed"
-                        result = (bgpaspathTestResult if test.test_type == "bgpaspath_test" else tracerouteTestResult)(
-                            test_instance_id=test.id, rawoutput=f"Error: {str(e)}", passed=False if test.test_type == "bgpaspath_test" else None, numberofhops=None
-                        )
-                        db.session.add(result)
-                    db.session.commit()
-                    emit_stats_update()
-
-        except NetmikoTimeoutException:
-            logger.error(f"Device {device.hostname} unreachable (timeout)")
-            socketio.emit('status_update', {'message': f"Device {device.hostname} unreachable (timeout)", 'run_id': test_run_id, 'level': 'child'})
-            skip_tests_for_device(device_id, test_run_id, "Unreachable: Timeout")
-            emit_stats_update()
-        except NetmikoAuthenticationException:
-            logger.error(f"Authentication failed for {device.hostname}")
-            socketio.emit('status_update', {'message': f"Authentication failed for {device.hostname}", 'run_id': test_run_id, 'level': 'child'})
-            skip_tests_for_device(device_id, test_run_id, "Authentication failed")
-            emit_stats_update()
-        except Exception as e:
-            logger.error(f"Unexpected error connecting to {device.hostname}: {str(e)}")
-            socketio.emit('status_update', {'message': f"Error connecting to {device.hostname}: {str(e)}", 'run_id': test_run_id, 'level': 'child'})
-            skip_tests_for_device(device_id, test_run_id, f"Error: {str(e)}")
-            emit_stats_update()
-
-        tests = TestInstance.query.filter_by(test_run_id=test_run_id).all()
-        if all(test.status in ["completed", "skipped", "failed"] for test in tests):
-            test_run = db.session.get(TestRun, test_run_id)
-            test_run.status = "completed"
-            db.session.commit()
-            socketio.emit('status_update', {'message': f"Test run {test_run_id} completed", 'run_id': test_run_id, 'level': 'parent'})
-            logger.info(f"socketio.emit: 'Test run {test_run_id} completed'")
-            emit_stats_update()
-
 def skip_tests_for_device(device_id, test_run_id, reason):
     with app.app_context():
-        tests = TestInstance.query.filter_by(
-            test_run_id=test_run_id, device_id=device_id).all()
+        tests = TestInstance.query.filter_by(test_run_id=test_run_id, device_id=device_id).all()
+        device = db.session.get(Device, device_id)
+        if not tests or (test_run_id, device_id) in processed_devices:
+            return # Skip if already processed
+
+        # Count test types
+        bgp_count = sum(1 for t in tests if t.test_type == "bgpaspath_test")
+        traceroute_count = sum(1 for t in tests if t.test_type == "traceroute_test")
+        skip_summary = []
+        if bgp_count:
+            skip_summary.append(f"{bgp_count} BGP test{'s' if bgp_count > 1 else ''}")
+        if traceroute_count:
+            skip_summary.append(f"{traceroute_count} Traceroute test{'s' if traceroute_count > 1 else ''}")
+        summary_msg = f"Skipping {', '.join(skip_summary)} for device {device.hostname}: {reason}"
+
+        # Skip all tests at once
         for test in tests:
             if test.status == "pending":
                 test.status = "skipped"
-                result = (bgpaspathTestResult if test.test_type == "bgp_as_path" else tracerouteTestResult)(
-                    test_instance_id=test.id, rawoutput=f"Skipped: {reason}", passed=None, numberofhops=None
-                )
-                db.session.add(result)
-                socketio.emit('status_update', {
-                              'message': f"Skipped {test.test_type} test on device ID {device_id}: {reason}", 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
         db.session.commit()
+
+        socketio.emit('status_update', {
+            'message': summary_msg,
+            'run_id': test_run_id,
+            'level': 'child',
+            'device_id': device_id
+        })
+        logger.info(f"socketio.emit: '{summary_msg}' for run_id: {test_run_id}")
 
 
 def check_bgp_result(output, as_number, want_result):

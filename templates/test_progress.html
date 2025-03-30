@@ -25,6 +25,8 @@
     }};
     const socket = io.connect('http://' + document.domain + ':' + location.port);
     const deviceLogs = new Map();
+    let runCompletedMessage = '';
+    const deviceOrder = [];
 
     socket.on('connect', function () {
         console.log('Connected to Socket.IO server');
@@ -49,39 +51,44 @@
         }
 
         if (data.level === 'parent' && !data.device_id) {
-            // Final "Test run completed" message
-            log.innerHTML += '<div class="parent">' + data.message + '</div>';
+            runCompletedMessage = '<div class="parent">' + data.message + '</div>';
         } else if (data.level === 'parent' && data.device_id) {
-            // "Connecting to device" message with placeholder
-            deviceLogs.set(data.device_id, {
-                parent: '<div class="parent">' + data.message + '</div>',
-                children: ['<li class="child">...running</li>']  // Placeholder
-            });
+            if (!deviceLogs.has(data.device_id)) {
+                deviceLogs.set(data.device_id, {
+                    parent: '<div class="parent">' + data.message + '</div>',
+                    children: ['<li class="child">...running</li>']
+                });
+                deviceOrder.push(data.device_id);
+            } else {
+                console.warn('Duplicate parent message ignored for device_id:', data.device_id, data.message);
+            }
         } else if (data.level === 'child' && data.device_id) {
-            // Device-specific child message
             if (!deviceLogs.has(data.device_id)) {
                 deviceLogs.set(data.device_id, {
                     parent: '<div class="parent">Device ' + data.device_id + ' (pending connection info)</div>',
                     children: ['<li class="child">...running</li>']
                 });
+                deviceOrder.push(data.device_id);
             }
             const deviceLog = deviceLogs.get(data.device_id);
-            // Replace placeholder if it's still there, otherwise append
             if (deviceLog.children.length === 1 && deviceLog.children[0] === '<li class="child">...running</li>') {
                 deviceLog.children = ['<li class="child">' + data.message + '</li>'];
-            } else {
+            } else if (!deviceLog.children.includes('<li class="child">' + data.message + '</li>')) {
                 deviceLog.children.push('<li class="child">' + data.message + '</li>');
             }
         }
 
-        // Rebuild the log display
         log.innerHTML = '';
-        deviceLogs.forEach((deviceLog, deviceId) => {
+        deviceOrder.forEach(deviceId => {
+            const deviceLog = deviceLogs.get(deviceId);
             log.innerHTML += deviceLog.parent;
             if (deviceLog.children.length > 0) {
                 log.innerHTML += '<ul>' + deviceLog.children.join('') + '</ul>';
             }
         });
+        if (runCompletedMessage) {
+            log.innerHTML += runCompletedMessage;
+        }
         log.scrollTop = log.scrollHeight;
     });
 
