@@ -58,12 +58,6 @@ def create_app():
                 stats[inst.test_type]["skipped"] += 1
         return render_template('test_progress.html', test_run=test_run, stats=stats, run_id=run_id)
 
-    @app.route('/tests/results/<int:run_id>')
-    def test_results(run_id):
-        test_run = TestRun.query.get_or_404(run_id)
-        instances = TestInstance.query.filter_by(test_run_id=run_id).all()
-        return render_template('test_results.html', test_run=test_run, instances=instances)
-
     @app.route('/tests/run', methods=['GET', 'POST'])
     def run_tests():
         form = TestRunForm()
@@ -255,6 +249,51 @@ def create_app():
         db.session.commit()
         return jsonify({'message': 'Traceroute Test removed successfully'})
 
+    # Detail tables showing the results of a specific batch of tests
+    @app.route('/test_results/<int:run_id>')
+    def test_results(run_id):
+        with app.app_context():
+            # Fetch BGP test results
+            bgp_results = db.session.query(TestInstance, bgpaspathTestResult, Device, bgpaspathTest)\
+                .join(bgpaspathTestResult, TestInstance.id == bgpaspathTestResult.test_instance_id)\
+                .join(Device, TestInstance.device_id == Device.id)\
+                .join(bgpaspathTest, TestInstance.bgpaspath_test_id == bgpaspathTest.id)\
+                .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "bgpaspath_test")\
+                .all()
+
+            # Fetch Traceroute test results
+            traceroute_results = db.session.query(TestInstance, tracerouteTestResult, Device, tracerouteTest)\
+                .join(tracerouteTestResult, TestInstance.id == tracerouteTestResult.test_instance_id)\
+                .join(Device, TestInstance.device_id == Device.id)\
+                .join(tracerouteTest, TestInstance.traceroute_test_id == tracerouteTest.id)\
+                .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "traceroute_test")\
+                .all()
+
+            # Fetch the test run timestamp (assuming TestInstance has a timestamp field)
+            test_instance = db.session.query(TestInstance).filter_by(test_run_id=run_id).first()
+            run_timestamp = test_instance.test_run.start_time if test_instance else None  # Adjust field name if different
+
+            testrun = db.session.query(TestRun).filter_by(id=run_id).first()
+            run_description = testrun.description if testrun else run_id
+
+            # Calculate summary counts
+            bgp_pass = sum(1 for _, result, _, _ in bgp_results if result.passed)
+            bgp_fail = len(bgp_results) - bgp_pass
+            all_bgp_tests_passed = True if bgp_fail == 0 else False
+            traceroute_pass = sum(1 for _, result, _, _ in traceroute_results if result.passed is not None and result.passed)
+            traceroute_fail = sum(1 for _, result, _, _ in traceroute_results if result.passed is not None and not result.passed)
+            all_traceroute_tests_passed = True if traceroute_fail == 0 else False
+
+        return render_template('test_results.html', 
+                            run_id=run_id,
+                            run_description=run_description,
+                            bgp_results=bgp_results, 
+                            traceroute_results=traceroute_results,
+                            run_timestamp=run_timestamp,
+                            bgp_pass=bgp_pass, bgp_fail=bgp_fail,
+                            traceroute_pass=traceroute_pass, traceroute_fail=traceroute_fail,
+                            all_bgp_tests_passed=all_bgp_tests_passed, all_traceroute_tests_passed=all_traceroute_tests_passed)
+
     # Add other routes here if needed
     
     # Add Socket.IO handler
@@ -377,8 +416,8 @@ def run_tests_for_device(device_id, test_run_id):
                     try:
                         if test.test_type == "bgpaspath_test":
                             # return rawoutput, output, passed (class bgpaspathTestResult)
-                            bgp_test = test.bgp_as_path_test
-                            
+                            bgp_test = test.bgpaspath_test
+                        
                             rawoutput = conn.send_command(f"show ip bgp {bgp_test.testipv4prefix} bestpath")
                             # define regex patterns to check
                             pattern = r"Refresh Epoch (\d+)\n(.*)"
@@ -419,10 +458,10 @@ def run_tests_for_device(device_id, test_run_id):
                             
                         elif test.test_type == "traceroute_test":
                             traceroute_test = test.traceroute_test
-                            if device.device.type == "cisco_ios":
-                                rawoutput = conn.send_command(f"traceroute {traceroute_test.destinationip} source {device.device.lanip} numeric")
-                            if device.device.type == "cisco_nxos":
-                                rawoutput = conn.send_command(f"traceroute {traceroute_test.destinationip} source {device.device.lanip}")
+                            if device.devicetype == "cisco_ios":
+                                rawoutput = conn.send_command_timing(f"traceroute {traceroute_test.destinationip} source {device.lanip} numeric")
+                            if device.devicetype == "cisco_nxos":
+                                rawoutput = conn.send_command_timing(f"traceroute {traceroute_test.destinationip} source {device.lanip}")
                             numberofhops = count_hops(rawoutput)
                             
                             # might refine this later, but initially this is a metric for determining Pass/Fail
