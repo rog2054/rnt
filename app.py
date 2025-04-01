@@ -11,6 +11,7 @@ from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestF
 import netmiko
 from netmiko import NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
+import re
 
 # Globals
 pending_test_runs = []
@@ -320,6 +321,7 @@ def run_tests_in_background(test_run_id):
         logger.info(f"All threads completed for run ID: {test_run_id}")
         socketio.emit('status_update', {'message': f"Test run {test_run_id} completed", 'run_id': test_run_id, 'level': 'parent'})
 
+
 def run_tests_for_device(device_id, test_run_id):
     def emit_stats_update():
         """Helper to emit current stats for the test run."""
@@ -375,22 +377,70 @@ def run_tests_for_device(device_id, test_run_id):
                     emit_stats_update()
                     try:
                         if test.test_type == "bgpaspath_test":
+                            # return rawoutput, output, passed (class bgpaspathTestResult)
                             bgp_test = test.bgp_as_path_test
-                            rawoutput = conn.send_command("show ip bgp")
-                            passed = check_bgp_result(rawoutput, bgp_test.checkasinpath, bgp_test.checkaswantresult)
-                            result = bgpaspathTestResult(test_instance_id=test.id, rawoutput=rawoutput, passed=passed)
+                            
+                            rawoutput = conn.send_command(f"show ip bgp {bgp_test.testipv4prefix} bestpath")
+                            # define regex patterns to check
+                            pattern = r"Refresh Epoch (\d+)\n(.*)"
+                            pattern2 = r"Network not in table"
+                            match = re.search(pattern,rawoutput)
+                            if match:
+                                output = match.group(2).strip()
+                                if len(output) > 3:
+                                    if bgp_test.checkasinpath in output:
+                                        # AS is in the path
+                                        if bgp_test.checkaswantresult:
+                                        # found the AS in the path, and wanted the AS in the path
+                                            passed = True
+                                        else:
+                                            # the AS was in the path, however wanted AS to NOT be in the path
+                                            passed = False
+                                    else:
+                                        # the AS was NOT in the path
+                                        if bgp_test.checkaswantresult:
+                                            # AS not in the path, wanted AS to be in the path
+                                            passed = False
+                                        else:
+                                            # AS not in the path, we don't want the AS to be in the path
+                                            passed = True
+                            else:
+                                match2 = re.search(pattern2,rawoutput)
+                                if match2:
+                                    output = f"Prefix {bgp_test.testipv4prefix} not in bgp table"
+                                    passed = False
+                                else:  
+                                    output = f"Unable to process the output, review raw output manually"
+                                    passed = False
+                                
+                            result = bgpaspathTestResult(test_instance_id=test.id, rawoutput=rawoutput, output=output, passed=passed)
                             db.session.add(result)
                             socketio.emit('status_update', {'message': f"BGP test ID {test.id} completed on {device.hostname}", 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
                             logger.info(f"socketio.emit: 'BGP test ID {test.id} completed' for run_id: {test_run_id}")
+                            
                         elif test.test_type == "traceroute_test":
                             traceroute_test = test.traceroute_test
-                            rawoutput = conn.send_command(f"traceroute {traceroute_test.destinationip}")
+                            if device.device.type == "cisco_ios":
+                                rawoutput = conn.send_command(f"traceroute {traceroute_test.destinationip} source {device.device.lanip} numeric")
+                            if device.device.type == "cisco_nxos":
+                                rawoutput = conn.send_command(f"traceroute {traceroute_test.destinationip} source {device.device.lanip}")
                             numberofhops = count_hops(rawoutput)
-                            result = tracerouteTestResult(test_instance_id=test.id, rawoutput=rawoutput, numberofhops=numberofhops)
+                            
+                            # might refine this later, but initially this is a metric for determining Pass/Fail
+                            if numberofhops > 3:
+                                # A traceroute was successful
+                                passed = True
+                            else:
+                                # A traceroute was unsuccessful
+                                passed = False
+                            result = tracerouteTestResult(test_instance_id=test.id, rawoutput=rawoutput, numberofhops=numberofhops, passed=passed)
                             db.session.add(result)
                             socketio.emit('status_update', {'message': f"Traceroute test ID {test.id} completed on {device.hostname}", 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
                             logger.info(f"socketio.emit: 'Traceroute test ID {test.id} completed' for run_id: {test_run_id}")
+                        
+                        # end of tests
                         test.status = "completed"
+                        
                     except NetmikoTimeoutException as e:
                         logger.error(f"Timeout during test on {device.hostname}: {str(e)}")
                         socketio.emit('status_update', {'message': f"Timeout during test on {device.hostname}", 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
