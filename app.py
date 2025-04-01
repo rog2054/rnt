@@ -5,7 +5,6 @@ from flask_wtf.csrf import CSRFProtect
 from threading import Thread
 import queue
 from queue import Queue
-from time import sleep  # Simulated test execution
 from models import db, DeviceCredential, Device, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult
 from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm
 import netmiko
