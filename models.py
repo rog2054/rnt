@@ -61,6 +61,7 @@ class tracerouteTest(db.Model):
 class TestRun(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
+    end_time = db.Column(db.DateTime, default=None)
     # e.g., "Tests before changes"
     description = db.Column(db.String(200), nullable=False)
     # "pending", "running", "completed"
