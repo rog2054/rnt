@@ -25,6 +25,7 @@ class Device(db.Model):
     username = db.relationship('DeviceCredential', backref='devices')
     lanip = db.Column(db.String(100))
     numerictraceroute = db.Column(db.Boolean, default=True)
+    active = db.Column(db.Boolean, default=True)
     tests = db.relationship("TestInstance", backref="device")
     # traceroute 10.174.88.1 source 10.55.33.253 numeric
 
@@ -64,6 +65,7 @@ class TestRun(db.Model):
     description = db.Column(db.String(200), nullable=False)
     # "pending", "running", "completed"
     status = db.Column(db.String(20), default="pending")
+    log = db.Column(db.Text, nullable=True)
     # Relationships
     tests = db.relationship("TestInstance", backref="test_run")
 
@@ -83,7 +85,7 @@ class TestInstance(db.Model):
         db.Integer, db.ForeignKey("bgpaspath_test.id"), nullable=True)
     traceroute_test_id = db.Column(
         db.Integer, db.ForeignKey("traceroute_test.id"), nullable=True)
-    # Add more test type IDs as needed (e.g., other_test_id)
+    device_active_at_run = db.Column(db.Boolean, nullable=False, default=True)
 
 
 class bgpaspathTestResult(db.Model):
