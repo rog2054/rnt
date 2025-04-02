@@ -284,7 +284,10 @@ def create_app():
 
             testrun = db.session.query(TestRun).filter_by(id=run_id).first()
             run_description = testrun.description if testrun else run_id
-
+            
+            test_run = db.session.query(TestRun).filter_by(id=run_id).first()
+            run_log = test_run.log if test_run.log else "No log available"
+            
             # Debug logging
             logger.info(f"BGP Results: {len(bgp_results)} entries")
             for ti, result, dev, test in bgp_results:
@@ -324,7 +327,8 @@ def create_app():
                             traceroute_pass=traceroute_pass, traceroute_fail=traceroute_fail,
                             traceroute_skipped_inactive=traceroute_skipped_inactive, 
                             traceroute_skipped_error=traceroute_skipped_error,
-                            all_bgp_tests_passed=all_bgp_tests_passed, all_traceroute_tests_passed=all_traceroute_tests_passed)
+                            all_bgp_tests_passed=all_bgp_tests_passed, all_traceroute_tests_passed=all_traceroute_tests_passed,
+                            run_log=run_log)
         
 
     # Add other routes here if needed
