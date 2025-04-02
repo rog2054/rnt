@@ -12,7 +12,7 @@ import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Globals
 pending_test_runs = []
@@ -381,7 +381,7 @@ def run_tests_in_background(test_run_id):
         logger.info(f"Unique DeviceIDs for run ID {test_run_id}: {unique_device_ids}")
 
         # Initialize log buffer and lock
-        log_lines = [f"Starting test run {test_run_id} at {TestRun.query.get(test_run_id).start_time}"]
+        log_lines = [f"Starting test run {test_run_id} at {db.session.get(TestRun,test_run_id).start_time.strftime('%Y-%m-%d %H:%M:%S')}"]
         log_lock = threading.Lock()
 
         device_queue = Queue()
@@ -400,19 +400,18 @@ def run_tests_in_background(test_run_id):
         for t in threads:
             t.join()
         logger.info(f"All threads completed for run ID: {test_run_id}")
-        log_msg = (f"Ending test run {test_run_id} at {db.session.get(TestRun,test_run_id).end_time}")
-        with log_lock:
-            log_lines.append(log_msg)
 
         test_run = db.session.get(TestRun, test_run_id)
+        timenow = datetime.now(timezone.utc)
         with log_lock:
+            log_msg = (f"Ending test run {test_run_id} at {timenow.strftime('%Y-%m-%d %H:%M:%S')}")
+            log_lines.append(log_msg)
             test_run.log = "\n".join(log_lines)
         test_run.status = "completed"
-        test_run.end_time = datetime.utcnow
+        test_run.end_time = timenow
         db.session.commit()
-
-        timenow = datetime.utcnow()
-        socketio.emit('status_update', {'message': f"Test run {test_run_id} completed at {timenow}", 'run_id': test_run_id, 'level': 'parent'})
+        
+        socketio.emit('status_update', {'message': f"Test run {test_run_id} completed at {timenow.strftime('%Y-%m-%d %H:%M:%S')}", 'run_id': test_run_id, 'level': 'parent'})
         
 
 def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
