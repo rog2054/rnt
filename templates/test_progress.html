@@ -18,6 +18,11 @@
 </p>
 <h2>Status Updates</h2>
 <div id="status-log" class="border p-3" style="height: 300px; overflow-y: auto;"></div>
+
+<div id="results-button" style="display:block;">
+    <a href="{{ url_for('test_results', run_id=test_run.id) }}" class="btn btn-primary mt-3">View Results</a>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
 <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function () {
@@ -104,8 +109,12 @@
             document.getElementById('traceroute_running').textContent = stats.traceroute_test.running;
             document.getElementById('traceroute_skipped').textContent = stats.traceroute_test.skipped;
             document.getElementById('traceroute_total').textContent = stats.traceroute_test.total;
+            if (stats.bgpaspathtest_test.running === 0 && stats.traceroute_test.running === 0) {
+                document.getElementById('results-button').style.display = 'block';  // Show button
+            }
         }
     });
+
     });
 </script>
 {% endblock %}
