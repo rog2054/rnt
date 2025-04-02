@@ -2,7 +2,7 @@
 {% block title %}Test Progress{% endblock %}
 {% block content %}
 <h1>Test Run: {{ test_run.description }}</h1>
-<p>Started: {{ test_run.start_time }}</p>
+<p>Started: {{ test_run.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
 <h2>Progress</h2>
 <p>BGP AS Path Tests:
     Completed: <span id="bgp_completed">{{ stats.bgpaspath_test.completed }}</span> /
