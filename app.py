@@ -12,6 +12,7 @@ import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
 import re
+from datetime import datetime
 
 # Globals
 pending_test_runs = []
@@ -280,7 +281,8 @@ def create_app():
 
             # Fetch the test run timestamp (assuming TestInstance has a timestamp field)
             test_instance = db.session.query(TestInstance).filter_by(test_run_id=run_id).first()
-            run_timestamp = test_instance.test_run.start_time if test_instance else None  # Adjust field name if different
+            run_timestamp = test_instance.test_run.start_time if test_instance else None
+            run_endtimestamp = test_instance.test_run.end_time if test_instance else None
 
             testrun = db.session.query(TestRun).filter_by(id=run_id).first()
             run_description = testrun.description if testrun else run_id
@@ -321,6 +323,7 @@ def create_app():
                             bgp_results=bgp_results, 
                             traceroute_results=traceroute_results,
                             run_timestamp=run_timestamp,
+                            run_endtimestamp=run_endtimestamp,
                             run_description=run_description,
                             bgp_pass=bgp_pass, bgp_fail=bgp_fail,
                             bgp_skipped_inactive=bgp_skipped_inactive, bgp_skipped_error=bgp_skipped_error,
@@ -397,15 +400,20 @@ def run_tests_in_background(test_run_id):
         for t in threads:
             t.join()
         logger.info(f"All threads completed for run ID: {test_run_id}")
+        log_msg = (f"Ending test run {test_run_id} at {db.session.get(TestRun,test_run_id).end_time}")
+        with log_lock:
+            log_lines.append(log_msg)
 
-        # Save the log to TestRun
         test_run = db.session.get(TestRun, test_run_id)
         with log_lock:
             test_run.log = "\n".join(log_lines)
         test_run.status = "completed"
+        test_run.end_time = datetime.utcnow
         db.session.commit()
 
-        socketio.emit('status_update', {'message': f"Test run {test_run_id} completed", 'run_id': test_run_id, 'level': 'parent'})
+        timenow = datetime.utcnow()
+        socketio.emit('status_update', {'message': f"Test run {test_run_id} completed at {timenow}", 'run_id': test_run_id, 'level': 'parent'})
+        
 
 def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
     def emit_stats_update():
