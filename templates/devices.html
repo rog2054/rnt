@@ -13,6 +13,7 @@
             <th>Site Info</th>
             <th>Mgmt IP</th>
             <th>SSH User</th>
+            <th>Status</th>
             <th>Remove</th>
         </tr>
     </thead>
@@ -25,6 +26,16 @@
             <td>{{ device.mgmtip }}</td>
             <td>{{ device.username.username if device.username else "N/A" }}</td>
             <td>
+                <button class="toggle-active" data-id="{{ device.id }}" data-active="{{ device.active|lower }}"
+                    style="background: none; border: none; padding: 0;">
+                    {% if device.active %}
+                    <i class="fas fa-toggle-on text-success" title="Click to disable"></i>
+                    {% else %}
+                    <i class="fas fa-toggle-off text-muted" title="Click to enable"></i>
+                    {% endif %}
+                </button>
+            </td>
+            <td>
                 <button class="delete-device" data-id="{{ device.id }}"
                     style="background: none; border: none; padding: 0;">
                     <i class="fas fa-trash-alt"></i>
@@ -36,8 +47,6 @@
 </table>
 
 <a href="{{ url_for('device_add') }}" class="btn btn-primary">Add Device</a>
-
-
 {% endblock %}
 {% block scripts %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
@@ -60,7 +69,6 @@
         });
 
         // Delete device
-        // Delete device
         $('.delete-device').click(function () {
             const deviceId = $(this).data('id');
             if (confirm('Are you sure you want to remove this device?')) {
@@ -68,7 +76,7 @@
                     url: '/delete_device/' + deviceId,
                     type: 'POST',
                     headers: {
-                        'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')  // Include CSRF token
+                        'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
                     },
                     success: function (response) {
                         alert(response.message);
@@ -76,6 +84,40 @@
                     },
                     error: function (xhr) {
                         alert('Error removing device: ' + xhr.responseText);
+                    }
+                });
+            }
+        });
+
+        // Toggle device active status
+        $('.toggle-active').click(function () {
+            const $button = $(this);
+            const deviceId = $button.data('id');
+            const currentActive = $button.data('active') === true || $button.data('active') === 'true'; // Handle string or boolean
+            const newActive = !currentActive;
+            const action = newActive ? 'enable' : 'disable';
+
+            if (confirm(`Are you sure you want to ${action} this device?`)) {
+                $.ajax({
+                    url: '/toggle_device_active/' + deviceId,
+                    type: 'POST',
+                    headers: {
+                        'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+                    },
+                    data: { active: newActive },
+                    success: function (response) {
+                        // Update the button's state dynamically
+                        $button.data('active', newActive); // Update data-active attribute
+                        if (newActive) {
+                            $button.html('<i class="fas fa-toggle-on text-success" title="Click to disable"></i>');
+                        } else {
+                            $button.html('<i class="fas fa-toggle-off text-muted" title="Click to enable"></i>');
+                        }
+                        alert(response.message);
+                        // location.reload(); // Uncomment if you prefer reloading
+                    },
+                    error: function (xhr) {
+                        alert('Error toggling device status: ' + xhr.responseText);
                     }
                 });
             }
