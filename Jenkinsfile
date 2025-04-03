@@ -22,9 +22,8 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image with a tag based on the build number
                     def imageTag = "${env.BUILD_NUMBER}"
-                    docker.build("${DOCKER_IMAGE}:${imageTag}")
+                    docker.build("${DOCKER_IMAGE}:${imageTag}", "-f /Dockerfile .")
                 }
             }
         }
