@@ -13,7 +13,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 // Pull the code from your Gitea repo
-                git url: 'https://gitea.kranica.com/dev1/bgp-route-tester.git', branch: 'main'
+                git url: 'https://gitea.kranica.com/dev1/bgp-route-tester.git', 
+                branch: 'main',
                 credentialsId: "${GITEA_CREDENTIALS_ID}"
             }
         }
