@@ -24,8 +24,10 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Build the Docker image with a tag based on the build number
                     def imageTag = "${env.BUILD_NUMBER}"
+                    // Write the build number to a version file
+                    sh "echo ${imageTag} > version.txt"
+                    // Build the Docker image, including the version file
                     docker.build("${DOCKER_IMAGE}:${imageTag}")
                 }
             }
