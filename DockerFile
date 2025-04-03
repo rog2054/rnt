@@ -9,7 +9,7 @@ COPY app.py forms.py models.py requirements.txt /app/
 COPY templates/ /app/templates/
 COPY static/ /app/static/
 
-# Install dependencies from requirements.txt
+# Install dependencies from requirements file
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose the port your Flask app will run on (default is 5000, adjust if needed)
