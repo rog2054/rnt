@@ -45,18 +45,34 @@ pipeline {
             }
         }
 
+
         stage('Run Docker Container') {
             steps {
                 script {
-                    // Stop and remove any existing container with the same name (optional)
+                    // Stop and remove any existing container with the same name (if it exists)
                     sh 'docker stop flask-app-container || true'
                     sh 'docker rm flask-app-container || true'
 
-                    // Run the new container from the latest image
-                    sh "docker run -d --name flask-app-container -p 5000:5000 ${DOCKER_IMAGE}:latest"
+                    // Run the new container and capture the container ID
+                    def containerId = sh(script: "docker run -d --name flask-app-container -p 5000:5000 ${DOCKER_IMAGE}:latest", returnStdout: true).trim()
+                    echo "Started container with ID: ${containerId}"
+
+                    // Wait briefly to ensure the container starts
+                    sleep 5
+
+                    // Check if the container is still running
+                    def running = sh(script: "docker ps -q -f id=${containerId}", returnStdout: true).trim()
+                    if (running) {
+                        echo "Container ${containerId} is running."
+                    } else {
+                        echo "Container ${containerId} is not running. Checking logs..."
+                        sh "docker logs ${containerId}"
+                        error "Container failed to stay running. See logs above for details."
+                    }
                 }
             }
         }
+        
     }
 
     post {
