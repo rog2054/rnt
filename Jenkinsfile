@@ -6,6 +6,7 @@ pipeline {
         DOCKER_REGISTRY = 'registry.kranica.com' // e.g., 'myregistry.example.com'
         DOCKER_IMAGE = "${DOCKER_REGISTRY}/rogers-network-tools" // Image name in registry
         DOCKER_CREDENTIALS_ID = 'registry-kranica-com-user' // Jenkins credential ID for registry login
+        GITEA_CREDENTIALS_ID = 'gitea-jenkinsuser' // 'jenkins' user within Gitea
     }
 
     stages {
@@ -13,6 +14,7 @@ pipeline {
             steps {
                 // Pull the code from your Gitea repo
                 git url: 'https://gitea.kranica.com/dev1/bgp-route-tester.git', branch: 'main'
+                credentialsId: "${GITEA_CREDENTIALS_ID}"
             }
         }
 
