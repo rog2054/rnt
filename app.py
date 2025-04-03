@@ -358,8 +358,7 @@ def create_app():
 app = create_app()
 CSRFProtect(app)
 
-# Background Routes
-
+# Background Routes and Functions
 def run_tests_in_background(test_run_id):
     def worker(device_queue, log_lines, log_lock):
         with app.app_context():
@@ -412,7 +411,6 @@ def run_tests_in_background(test_run_id):
         db.session.commit()
         
         socketio.emit('status_update', {'message': f"Test run {test_run_id} completed at {timenow.strftime('%Y-%m-%d %H:%M:%S')}", 'run_id': test_run_id, 'level': 'parent'})
-        
 
 def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
     def emit_stats_update():
@@ -625,7 +623,6 @@ def skip_tests_for_device(device_id, test_run_id, reason, log_lines, log_lock):
 def check_bgp_result(output, as_number, want_result):
     # Your logic to parse output and check if as_number appears as expected
     return as_number in output  # Simplified example
-
 
 def count_hops(output):
     # Parse traceroute output to count hops (example)
