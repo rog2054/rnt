@@ -42,6 +42,16 @@ def create_app():
         db.create_all()
 
     # Define routes
+    @app.route('/')
+    def index():
+        # Read the version from the file
+        try:
+            with open('/app/version.txt', 'r') as f:
+                version = f.read().strip()
+        except FileNotFoundError:
+            version = 'unknown'
+        return render_template('index.html', version=version)
+    
     @app.route('/tests/progress/<int:run_id>')
     def test_progress(run_id):
         test_run = TestRun.query.get_or_404(run_id)
