@@ -631,6 +631,6 @@ def count_hops(output):
     # Parse traceroute output to count hops (example)
     return len([line for line in output.splitlines() if line.strip().startswith(tuple(str(i) for i in range(1, 31)))])
 
-
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    # For local development only
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
