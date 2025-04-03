@@ -16,14 +16,17 @@ pipeline {
                 git url: 'https://gitea.kranica.com/dev1/bgp-route-tester.git', 
                 branch: 'main',
                 credentialsId: "${GITEA_CREDENTIALS_ID}"
+                sh 'ls -la' // List files to verify Dockerfile
             }
         }
+        
 
         stage('Build Docker Image') {
             steps {
                 script {
+                    // Build the Docker image with a tag based on the build number
                     def imageTag = "${env.BUILD_NUMBER}"
-                    docker.build("${DOCKER_IMAGE}:${imageTag}", "-f /Dockerfile .")
+                    docker.build("${DOCKER_IMAGE}:${imageTag}")
                 }
             }
         }
