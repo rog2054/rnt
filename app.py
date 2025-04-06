@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, flash
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
@@ -6,13 +7,14 @@ from threading import Thread
 import threading
 import queue
 from queue import Queue
-from models import db, DeviceCredential, Device, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult
-from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm
+from models import db, DeviceCredential, Device, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User
+from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
 import re
 from datetime import datetime, timezone
+import bcrypt
 
 # Globals
 pending_test_runs = []
@@ -25,23 +27,49 @@ logger = logging.getLogger(__name__)
 
 # Define global extensions
 socketio = SocketIO(async_mode='threading')
-
+login_manager = LoginManager()
 
 def create_app():
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///config.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = 'your-secret-key'
+    app.config['SECRET_KEY'] = 'gfd789ydfs2Anvjfkdgnfs38dKZKXsd83d'
 
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db)
     socketio.init_app(app)
+    login_manager.init_app(app)
+    login_manager.login_view = 'login' # redirect unauth users to login route
+
+    @login_manager.user_loader
+    def load_user(user_id):
+        return User.query.get(int(user_id))
+
 
     with app.app_context():
         db.create_all()
 
+    # Check for no users before each request
+    @app.before_request
+    def check_initial_user():
+        if request.endpoint not in ['login', 'create_user', 'static']:  # Allow these routes regardless
+            with app.app_context():
+                if User.query.count() == 0:
+                    return redirect(url_for('create_user'))
+
     # Define routes
+    @app.route('/')
+    @login_required
+    def index():
+        try:
+            with open('/app/version.txt', 'r') as f:
+                version = f.read().strip()
+        except FileNotFoundError:
+            version = 'unknown'
+        return f"<h1>Welcome, {current_user.username}!</h1><h2>Version: {version}</h2><br /><a href='/devices'>Start</a>"
+    
+    '''
     @app.route('/')
     def index():
         # Read the version from the file
@@ -51,8 +79,57 @@ def create_app():
         except FileNotFoundError:
             version = 'unknown'
         return render_template('index.html', version=version)
+    '''
+    
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        if current_user.is_authenticated:
+            return redirect(url_for('index'))
+        form = LoginForm()
+        if form.validate_on_submit():
+            username = form.username.data
+            password = form.password.data
+            user = User.query.filter_by(username=username).first()
+            if user and user.check_password(password):
+                login_user(user)
+                return redirect(url_for('test_results', run_id=1))
+            flash('Invalid username or password')
+        return render_template('login.html', form=form)
+
+    @app.route('/logout')
+    @login_required
+    def logout():
+        logout_user()
+        return redirect(url_for('login'))
+
+    @app.route('/create_user', methods=['GET', 'POST'])
+    def create_user():
+        user_count = User.query.count()
+        form = CreateUserForm()  # Instantiate the form
+
+        if user_count > 0 and not current_user.is_authenticated:
+            flash('You must be logged in to create additional users.')
+            return redirect(url_for('login'))
+
+        if form.validate_on_submit():  # Handles POST with CSRF validation
+            username = form.username.data
+            password = form.password.data
+            if User.query.filter_by(username=username).first():
+                flash('Username already exists.')
+            else:
+                new_user = User(username=username)
+                new_user.set_password(password)
+                db.session.add(new_user)
+                db.session.commit()
+                if user_count == 0:
+                    login_user(new_user)
+                    return redirect(url_for('index'))
+                flash('User created successfully.')
+                return redirect(url_for('login'))
+        return render_template('create_user.html', form=form, user_count=user_count)
     
     @app.route('/tests/progress/<int:run_id>')
+    @login_required
     def test_progress(run_id):
         test_run = TestRun.query.get_or_404(run_id)
         instances = TestInstance.query.filter_by(test_run_id=run_id).all()
@@ -71,6 +148,7 @@ def create_app():
         return render_template('test_progress.html', test_run=test_run, stats=stats, run_id=run_id)
 
     @app.route('/tests/run', methods=['GET', 'POST'])
+    @login_required
     def run_tests():
         form = TestRunForm()
         if form.validate_on_submit():
@@ -108,6 +186,7 @@ def create_app():
         return render_template('start_test_run.html', form=form)
 
     @app.route('/credentials', methods=['GET', 'POST'])
+    @login_required
     def credentials():
         form = CredentialForm()
         if request.method == 'POST':
@@ -124,6 +203,7 @@ def create_app():
 
     # Delete credential
     @app.route('/delete_credential/<int:credential_id>', methods=['POST'])
+    @login_required
     def delete_credential(credential_id):
         credential = DeviceCredential.query.get_or_404(credential_id)
         db.session.delete(credential)
@@ -131,12 +211,14 @@ def create_app():
         return jsonify({'message': 'Credential deleted successfully'})
 
     @app.route('/devices')
+    @login_required
     def device_list():
         devices = Device.query.all()
         return render_template('devices.html', devices=devices)
 
     # Route to display the add device form
     @app.route('/devices/add', methods=['GET', 'POST'])
+    @login_required
     def device_add():
         form = DeviceForm()
         if request.method == 'POST':
@@ -169,6 +251,7 @@ def create_app():
 
     # Delete device
     @app.route('/delete_device/<int:device_id>', methods=['POST'])
+    @login_required
     def delete_device(device_id):
         device = Device.query.get_or_404(device_id)
         db.session.delete(device)
@@ -176,6 +259,7 @@ def create_app():
         return jsonify({'message': 'Device removed successfully'})
 
     @app.route('/toggle_device_active/<int:device_id>', methods=['POST'])
+    @login_required
     def toggle_device_active(device_id):
         device = Device.query.get_or_404(device_id)
         new_active = request.form.get('active') == 'true'  # Convert string 'true'/'false' to boolean
@@ -185,12 +269,14 @@ def create_app():
 
     # Display all AS-path tests
     @app.route('/tests/bgpaspath', methods=['GET'])
+    @login_required
     def showtests_bgpaspath():
         bgpaspathtests = bgpaspathTest.query.all()
         return render_template('bgpaspathtests.html', bgpaspathtests=bgpaspathtests)
 
     # Add AS-path test
     @app.route('/tests/addtest_bgpaspath', methods=['GET', 'POST'])
+    @login_required
     def addtest_bgpaspath():
         form = bgpaspathTestForm()
         if request.method == 'POST':
@@ -221,6 +307,7 @@ def create_app():
 
     # Delete AS-path Test
     @app.route('/tests/delete_bgpaspathtest/<int:test_id>', methods=['POST'])
+    @login_required
     def delete_bgptest(test_id):
         test = bgpaspathTest.query.get_or_404(test_id)
         db.session.delete(test)
@@ -229,12 +316,14 @@ def create_app():
 
     # Display all Traceroute Tests
     @app.route('/tests/traceroute', methods=['GET'])
+    @login_required
     def showtests_traceroute():
         traceroutetests = tracerouteTest.query.all()
         return render_template('traceroutetests.html', traceroutetests=traceroutetests)
 
     # Add Traceroute test
     @app.route('/tests/addtest_traceroute', methods=['GET', 'POST'])
+    @login_required
     def addtest_traceroute():
         form = tracerouteTestForm()
         if request.method == 'POST':
@@ -263,6 +352,7 @@ def create_app():
 
     # Delete Traceroute Test
     @app.route('/tests/delete_traceroutetest/<int:test_id>', methods=['POST'])
+    @login_required
     def delete_traceroutetest(test_id):
         test = tracerouteTest.query.get_or_404(test_id)
         db.session.delete(test)
@@ -271,11 +361,13 @@ def create_app():
 
     # Detail tables showing the results of a specific batch of tests
     @app.route('/test_results/<int:run_id>')
+    @login_required
     def test_results(run_id):
         # Redirect to the same run_id but with '/pass' filter
         return redirect(url_for('test_results_filtered', run_id=run_id, filter_type='pass'))
     
     @app.route('/test_results/<int:run_id>/<filter_type>')
+    @login_required
     def test_results_filtered(run_id, filter_type):
         valid_filters = ['pass', 'fail', 'incomplete', 'skipped']
         if filter_type not in valid_filters:
