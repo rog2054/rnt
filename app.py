@@ -294,11 +294,14 @@ def create_app():
             run_timestamp = test_instance.test_run.start_time if test_instance else None
             run_endtimestamp = test_instance.test_run.end_time if test_instance else None
 
-            testrun = db.session.query(TestRun).filter_by(id=run_id).first()
-            run_description = testrun.description if testrun else run_id
-            
             test_run = db.session.query(TestRun).filter_by(id=run_id).first()
-            run_log = test_run.log if test_run.log else "No log available"
+            # fail cleanly if a non-existing run_id is provided via the url
+            if test_run:
+                run_description = test_run.description if test_run else run_id
+                run_log = test_run.log if test_run.log else "No log available"
+            else:
+                run_description = run_id
+                run_log = "No log available"
             
             # Debug logging
             logger.info(f"BGP Results: {len(bgp_results)} entries")
