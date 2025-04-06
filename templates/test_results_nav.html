@@ -1,0 +1,47 @@
+{% block nav %}
+<style>
+    .topbar {
+        display: flex;
+        justify-content: space-around;
+        padding: 10px;
+        background-color: #f8f9fa;
+        margin-bottom: 20px;
+        border-radius: 5px;
+    }
+
+    .topbar a {
+        text-decoration: none;
+        color: #333;
+        padding: 8px 16px;
+        border-radius: 3px;
+    }
+
+    .topbar a:hover {
+        background-color: #e9ecef;
+    }
+
+    .topbar a.active {
+        background-color: #007bff;
+        color: white;
+    }
+</style>
+
+<nav class="topbar">
+    <a href="{{ url_for('test_results_filtered', run_id=run_id, filter_type='pass') }}"
+        class="{% if filter_type == 'pass' %}active{% endif %}">
+        {{ totals.pass }} Pass ✅
+    </a>
+    <a href="{{ url_for('test_results_filtered', run_id=run_id, filter_type='fail') }}"
+        class="{% if filter_type == 'fail' %}active{% endif %}">
+        {{ totals.fail }} Fail ❌
+    </a>
+    <a href="{{ url_for('test_results_filtered', run_id=run_id, filter_type='incomplete') }}"
+        class="{% if filter_type == 'incomplete' %}active{% endif %}">
+        {{ totals.incomplete }} Incomplete ⚠️
+    </a>
+    <a href="{{ url_for('test_results_filtered', run_id=run_id, filter_type='skipped') }}"
+        class="{% if filter_type == 'skipped' %}active{% endif %}">
+        {{ totals.skipped }} Skipped ⏸️
+    </a>
+</nav>
+{% endblock %}

@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+{% block title %}Test Results - Run {{ run_id }} - {{ filter_type|capitalize }}{% endblock %}
+{% block head %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h1>Results: {{ run_description }}</h1>
+    {% if run_timestamp is not none and run_endtimestamp is not none %}
+    <p class="text-muted">Tests Start: {{ run_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    <p class="text-muted">Tests Ended: {{ run_endtimestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+    {% else %}
+    <p class="text-muted">Test execution timestamp not available</p>
+    {% endif %}
+
+    {% include 'test_results_nav.html' %}
+
+    <!-- BGP Tests Table -->
+    {% if bgp_results|length > 0 %}
+    <h2>BGP Tests</h2>
+    <table class="table table-striped" id="bgp-table">
+        <thead>
+            <tr>
+                <th>Tested from Device</th>
+                <th>Test Description</th>
+                <th>Prefix Tested</th>
+                <th>AS Checked</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test_instance, result, device, bgp_test in bgp_results %}
+            <tr class="summary-row" data-toggle-id="bgp-{{ test_instance.id }}">
+                <td>{{ device.siteinfo or device.hostname }}</td>
+                <td>{{ bgp_test.description }}</td>
+                <td>{{ bgp_test.testipv4prefix }}</td>
+                <td>{{ bgp_test.checkasinpath }}</td>
+                <td>
+                    {% if result and result.passed is not none %}
+                    {% if result.passed %}
+                    <span class="pass">✅</span>
+                    {% else %}
+                    <span class="fail">❌</span>
+                    {% endif %}
+                    {% elif not test_instance.device_active_at_run %}
+                    <span class="text-muted" title="Device inactive at run time">⏸️</span>
+                    {% else %}
+                    <span class="text-warning" title="Connection error">⚠️</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr class="details-row" id="bgp-{{ test_instance.id }}" style="display: none;">
+                <td colspan="5">
+                    <strong>Device:</strong> {{ device.hostname }} ({{ device.mgmtip }})<br>
+                    <strong>Status:</strong>
+                    {% if result and result.passed is not none %}
+                    {{ "Passed" if result.passed else "Failed" }}
+                    {% elif not test_instance.device_active_at_run %}
+                    Skipped (Device Inactive at Run Time)
+                    {% else %}
+                    Skipped (Connection Error)
+                    {% endif %}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput if result else "No output" }}</pre>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Traceroute Tests Table -->
+    {% if traceroute_results|length > 0 %}
+    <h2>Traceroute Tests</h2>
+    <table class="table table-striped" id="traceroute-table">
+        <thead>
+            <tr>
+                <th>Tested from Device</th>
+                <th>Test Description</th>
+                <th>Source IP</th>
+                <th>Destination IP</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test_instance, result, device, traceroute_test in traceroute_results %}
+            <tr class="summary-row" data-toggle-id="traceroute-{{ test_instance.id }}">
+                <td>{{ device.siteinfo or device.hostname }}</td>
+                <td>{{ traceroute_test.description }}</td>
+                <td>{{ device.lanip }}</td>
+                <td>{{ traceroute_test.destinationip }}</td>
+                <td>
+                    {% if result and result.passed is not none %}
+                    {% if result.passed %}
+                    <span class="pass">✅</span>
+                    {% else %}
+                    <span class="fail">❌</span>
+                    {% endif %}
+                    {% elif not test_instance.device_active_at_run %}
+                    <span class="text-muted" title="Device inactive at run time">⏸️</span>
+                    {% else %}
+                    <span class="text-warning" title="Connection error">⚠️</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr class="details-row" id="traceroute-{{ test_instance.id }}" style="display: none;">
+                <td colspan="5">
+                    <strong>Device:</strong> {{ device.hostname }} ({{ device.mgmtip }})<br>
+                    <strong>Status:</strong>
+                    {% if result and result.passed is not none %}
+                    {{ "Passed" if result.passed else "Failed" }}
+                    {% elif not test_instance.device_active_at_run %}
+                    Skipped (Device Inactive at Run Time)
+                    {% else %}
+                    Skipped (Connection Error)
+                    {% endif %}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput if result else "No output" }}</pre>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <br />
+    <!-- Run Log Section -->
+    <h2>Run Log</h2>
+    <div class="card">
+        <div class="card-body">
+            <pre>{{ run_log }}</pre>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.querySelectorAll('.summary-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const detailsId = row.getAttribute('data-toggle-id');
+            const detailsRow = document.getElementById(detailsId);
+            if (detailsRow.style.display === 'none' || detailsRow.style.display === '') {
+                detailsRow.style.display = 'table-row';
+            } else {
+                detailsRow.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

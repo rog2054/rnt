@@ -272,80 +272,95 @@ def create_app():
     # Detail tables showing the results of a specific batch of tests
     @app.route('/test_results/<int:run_id>')
     def test_results(run_id):
+        # Redirect to the same run_id but with '/pass' filter
+        return redirect(url_for('test_results_filtered', run_id=run_id, filter_type='pass'))
+    
+    @app.route('/test_results/<int:run_id>/<filter_type>')
+    def test_results_filtered(run_id, filter_type):
+        valid_filters = ['pass', 'fail', 'incomplete', 'skipped']
+        if filter_type not in valid_filters:
+            return "Invalid filter type", 400
+
         with app.app_context():
-            # Fetch BGP test results
-            bgp_results = db.session.query(TestInstance, bgpaspathTestResult, Device, bgpaspathTest)\
-                .join(bgpaspathTestResult, TestInstance.id == bgpaspathTestResult.test_instance_id)\
-                .join(Device, TestInstance.device_id == Device.id)\
-                .join(bgpaspathTest, TestInstance.bgpaspath_test_id == bgpaspathTest.id)\
-                .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "bgpaspath_test")\
-                .all()
+            # Base queries for all results (unfiltered for totals)
+            bgp_base_query = (db.session.query(TestInstance, bgpaspathTestResult, Device, bgpaspathTest)
+                            .join(bgpaspathTestResult, TestInstance.id == bgpaspathTestResult.test_instance_id)
+                            .join(Device, TestInstance.device_id == Device.id)
+                            .join(bgpaspathTest, TestInstance.bgpaspath_test_id == bgpaspathTest.id)
+                            .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "bgpaspath_test"))
 
-            # Fetch Traceroute test results
-            traceroute_results = db.session.query(TestInstance, tracerouteTestResult, Device, tracerouteTest)\
-                .join(tracerouteTestResult, TestInstance.id == tracerouteTestResult.test_instance_id)\
-                .join(Device, TestInstance.device_id == Device.id)\
-                .join(tracerouteTest, TestInstance.traceroute_test_id == tracerouteTest.id)\
-                .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "traceroute_test")\
-                .all()
+            traceroute_base_query = (db.session.query(TestInstance, tracerouteTestResult, Device, tracerouteTest)
+                                .join(tracerouteTestResult, TestInstance.id == tracerouteTestResult.test_instance_id)
+                                .join(Device, TestInstance.device_id == Device.id)
+                                .join(tracerouteTest, TestInstance.traceroute_test_id == tracerouteTest.id)
+                                .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "traceroute_test"))
 
-            # Fetch the test run timestamp (assuming TestInstance has a timestamp field)
+            # Calculate totals from unfiltered data
+            bgp_totals = {
+                'pass': sum(1 for _, r, _, _ in bgp_base_query.filter(bgpaspathTestResult.passed == True).all()),
+                'fail': sum(1 for _, r, _, _ in bgp_base_query.filter(bgpaspathTestResult.passed == False).all()),
+                'incomplete': sum(1 for ti, r, _, _ in bgp_base_query.filter(bgpaspathTestResult.passed == None, TestInstance.device_active_at_run == True).all()),
+                'skipped': sum(1 for ti, _, _, _ in bgp_base_query.filter(TestInstance.device_active_at_run == False).all())
+            }
+            
+            traceroute_totals = {
+                'pass': sum(1 for _, r, _, _ in traceroute_base_query.filter(tracerouteTestResult.passed == True).all()),
+                'fail': sum(1 for _, r, _, _ in traceroute_base_query.filter(tracerouteTestResult.passed == False).all()),
+                'incomplete': sum(1 for ti, r, _, _ in traceroute_base_query.filter(tracerouteTestResult.passed == None, TestInstance.device_active_at_run == True).all()),
+                'skipped': sum(1 for ti, _, _, _ in traceroute_base_query.filter(TestInstance.device_active_at_run == False).all())
+            }
+
+            totals = {
+                'pass': bgp_totals['pass'] + traceroute_totals['pass'],
+                'fail': bgp_totals['fail'] + traceroute_totals['fail'],
+                'incomplete': bgp_totals['incomplete'] + traceroute_totals['incomplete'],
+                'skipped': bgp_totals['skipped'] + traceroute_totals['skipped']
+            }
+
+            # Filtered queries for display
+            bgp_query = bgp_base_query
+            traceroute_query = traceroute_base_query
+
+            # Apply filters to display results
+            if filter_type == 'pass':
+                bgp_query = bgp_query.filter(bgpaspathTestResult.passed == True)
+                traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == True)
+            elif filter_type == 'fail':
+                bgp_query = bgp_query.filter(bgpaspathTestResult.passed == False)
+                traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == False)
+            elif filter_type == 'incomplete':
+                bgp_query = bgp_query.filter(bgpaspathTestResult.passed == None, TestInstance.device_active_at_run == True)
+                traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == None, TestInstance.device_active_at_run == True)
+            elif filter_type == 'skipped':
+                bgp_query = bgp_query.filter(TestInstance.device_active_at_run == False)
+                traceroute_query = traceroute_query.filter(TestInstance.device_active_at_run == False)
+
+            bgp_results = bgp_query.all()
+            traceroute_results = traceroute_query.all()
+
+            # Fetch test run details
             test_instance = db.session.query(TestInstance).filter_by(test_run_id=run_id).first()
             run_timestamp = test_instance.test_run.start_time if test_instance else None
             run_endtimestamp = test_instance.test_run.end_time if test_instance else None
 
             test_run = db.session.query(TestRun).filter_by(id=run_id).first()
-            # fail cleanly if a non-existing run_id is provided via the url
             if test_run:
-                run_description = test_run.description if test_run else run_id
+                run_description = test_run.description
                 run_log = test_run.log if test_run.log else "No log available"
             else:
-                run_description = run_id
+                run_description = f"Run {run_id}"
                 run_log = "No log available"
-            
-            # Debug logging
-            logger.info(f"BGP Results: {len(bgp_results)} entries")
-            for ti, result, dev, test in bgp_results:
-                logger.info(f"BGP - Device: {dev.hostname}, Active: {ti.device_active_at_run}, Passed: {result.passed}")
-            logger.info(f"Traceroute Results: {len(traceroute_results)} entries")
-            for ti, result, dev, test in traceroute_results:
-                logger.info(f"Traceroute - Device: {dev.hostname}, Active: {ti.device_active_at_run}, Passed: {result.passed}")
 
-            # Calculate summary counts
-            # Calculate BGP summary
-            bgp_pass = sum(1 for _, result, _, _ in bgp_results if result.passed)
-            bgp_fail = sum(1 for _, result, _, _ in bgp_results if result.passed is False)
-            bgp_skipped_inactive = sum(1 for ti, result, _, _ in bgp_results if not ti.device_active_at_run)
-            bgp_skipped_error = sum(1 for ti, result, _, _ in bgp_results if result.passed is None and ti.device_active_at_run)
-
-            # Calculate Traceroute summary
-            traceroute_pass = sum(1 for _, result, _, _ in traceroute_results if result.passed)
-            traceroute_fail = sum(1 for _, result, _, _ in traceroute_results if result.passed is False)
-            traceroute_skipped_inactive = sum(1 for ti, result, _, _ in traceroute_results if not ti.device_active_at_run)
-            traceroute_skipped_error = sum(1 for ti, result, _, _ in traceroute_results if result.passed is None and ti.device_active_at_run)
-
-            all_bgp_tests_passed = True if bgp_fail == 0 else False
-            all_traceroute_tests_passed = True if traceroute_fail == 0 else False
-
-            # More debug logging
-            logger.info(f"BGP: Pass={bgp_pass}, Fail={bgp_fail}, Skipped Inactive={bgp_skipped_inactive}, Skipped Error={bgp_skipped_error}")
-            logger.info(f"Traceroute: Pass={traceroute_pass}, Fail={traceroute_fail}, Skipped Inactive={traceroute_skipped_inactive}, Skipped Error={traceroute_skipped_error}")
-
-        return render_template('test_results.html', 
-                            run_id=run_id, 
-                            bgp_results=bgp_results, 
+        return render_template('test_results_filtered.html',
+                            run_id=run_id,
+                            filter_type=filter_type,
+                            bgp_results=bgp_results,
                             traceroute_results=traceroute_results,
                             run_timestamp=run_timestamp,
                             run_endtimestamp=run_endtimestamp,
                             run_description=run_description,
-                            bgp_pass=bgp_pass, bgp_fail=bgp_fail,
-                            bgp_skipped_inactive=bgp_skipped_inactive, bgp_skipped_error=bgp_skipped_error,
-                            traceroute_pass=traceroute_pass, traceroute_fail=traceroute_fail,
-                            traceroute_skipped_inactive=traceroute_skipped_inactive, 
-                            traceroute_skipped_error=traceroute_skipped_error,
-                            all_bgp_tests_passed=all_bgp_tests_passed, all_traceroute_tests_passed=all_traceroute_tests_passed,
-                            run_log=run_log)
-        
+                            run_log=run_log,
+                            totals=totals)
 
     # Add other routes here if needed
     
