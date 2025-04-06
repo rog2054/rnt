@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, SubmitField, BooleanField
-from wtforms.validators import DataRequired, IPAddress, Regexp, ValidationError
+from wtforms import StringField, SelectField, SubmitField, BooleanField, PasswordField
+from wtforms.validators import DataRequired, IPAddress, Regexp, ValidationError, Length
 from models import DeviceCredential, Device
 import ipaddress
 
@@ -16,6 +16,17 @@ def validate_ipv4_prefix(form, field):
     except ValueError as e:
         raise ValidationError(f"Invalid IPv4 prefix: {str(e)}")
 
+
+# User Creation Form
+class CreateUserForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=4, max=80)])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6, max=120)])
+    submit = SubmitField('Create User')
+
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired(), Length(min=4, max=80)])
+    password = PasswordField('Password', validators=[DataRequired(), Length(min=6, max=120)])
+    submit = SubmitField('Login')
 
 class DeviceForm(FlaskForm):
     hostname = StringField("Hostname", validators=[DataRequired()])
