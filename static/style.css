@@ -122,3 +122,29 @@ th.sortable:hover {
     font-size: 1.5rem;
     color: grey;
 }
+
+/* topbar nav used on test results page */
+.topbar {
+    display: flex;
+    justify-content: space-around;
+    padding: 10px;
+    background-color: #f8f9fa;
+    margin-bottom: 20px;
+    border-radius: 5px;
+}
+
+.topbar a {
+    text-decoration: none;
+    color: #333;
+    padding: 8px 16px;
+    border-radius: 3px;
+}
+
+.topbar a:hover {
+    background-color: #e9ecef;
+}
+
+.topbar a.active {
+    background-color: #007bff;
+    color: white;
+}
