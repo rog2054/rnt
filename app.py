@@ -66,8 +66,8 @@ def create_app():
             with open('/app/version.txt', 'r') as f:
                 version = f.read().strip()
         except FileNotFoundError:
-            version = 'unknown'
-        return f"<h1>Welcome, {current_user.username}!</h1><h2>Version: {version}</h2><br /><a href='/devices'>Start</a>"
+            version = 'x'
+        return f"<h1>Welcome, {current_user.username}!</h1><h2>Version: 0.{version}</h2><br /><a href='/devices'>Start</a>"
     
     '''
     @app.route('/')
