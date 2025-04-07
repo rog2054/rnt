@@ -630,13 +630,18 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                                 match2 = re.search(pattern2, rawoutput)
                                 if match2:
                                     output = f"Prefix {bgp_test.testipv4prefix} not in bgp table"
-                                    passed = False
+                                    # set to None so this shows as 'incomplete' in the UI rather than Failed
+                                    # a Failed BGP test is where the target AS was/wasn't found in the AS path for the prefix
+                                    passed = None
                                 else:
                                     output = "Unable to process the output, review raw output manually"
                                     passed = False
                             result = bgpaspathTestResult(test_instance_id=test.id, rawoutput=rawoutput, output=output, passed=passed)
                             db.session.add(result)
-                            log_msg = f"Device {device.hostname}: BGP test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
+                            if passed is None:
+                                log_msg = f"Device {device.hostname}: BGP test ID {test.id} incomplete - Prefix not found"
+                            else:
+                                log_msg = f"Device {device.hostname}: BGP test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
                             with log_lock:
                                 log_lines.append(log_msg)
                             socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
