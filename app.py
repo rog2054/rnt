@@ -485,6 +485,7 @@ def create_app():
 
 
 app = create_app()
+from models import DeviceCredential
 CSRFProtect(app)
 
 # Background Routes and Functions
