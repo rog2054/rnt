@@ -76,10 +76,17 @@
                 deviceOrder.push(data.device_id);
             }
             const deviceLog = deviceLogs.get(data.device_id);
+            const newChildMessage = '<li class="child">' + data.message + '</li>';
+
+            // If the initial "...running" placeholder is still there, replace it
             if (deviceLog.children.length === 1 && deviceLog.children[0] === '<li class="child">...running</li>') {
-                deviceLog.children = ['<li class="child">' + data.message + '</li>'];
-            } else if (!deviceLog.children.includes('<li class="child">' + data.message + '</li>')) {
-                deviceLog.children.push('<li class="child">' + data.message + '</li>');
+                deviceLog.children = [newChildMessage];
+            } else if (!deviceLog.children.includes(newChildMessage)) {
+                // Add the new message and keep only the latest 2
+                deviceLog.children.push(newChildMessage);
+                if (deviceLog.children.length > 2) {
+                    deviceLog.children.shift(); // Remove the oldest message
+                }
             }
         }
 
