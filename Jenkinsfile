@@ -7,6 +7,7 @@ pipeline {
         DOCKER_IMAGE = "${DOCKER_REGISTRY}/rogers-network-tools" // Image name in registry
         DOCKER_CREDENTIALS_ID = 'registry-kranica-com-user' // Jenkins credential ID for registry login
         GITEA_CREDENTIALS_ID = 'gitea-jenkinsuser' // 'jenkins' user within Gitea
+        DOCKER_HUB_IMAGE = "roger00/rogers-network-tools"
     }
 
     stages {
@@ -42,6 +43,7 @@ pipeline {
                         def dockerImage = docker.image("${DOCKER_IMAGE}:${imageTag}")
                         dockerImage.push() // Push the specific tag
                         dockerImage.push('latest') // Also tag and push as 'latest'
+                        dockerImage.tag("${DOCKER_HUB_IMAGE}:${imageTag}")
                     }
                 }
             }
@@ -70,6 +72,25 @@ pipeline {
                         echo "Container ${containerId} is not running. Checking logs..."
                         sh "docker logs ${containerId}"
                         error "Container failed to stay running. See logs above for details."
+                    }
+                }
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            when {
+                expression {
+                    // Only run this stage if the previous stage succeeded and container is running
+                    return currentBuild.resultIsBetterOrEqualTo('SUCCESS')
+                }
+            }
+            steps {
+                script {
+                    // Log in to Docker Hub and push the image
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
+                        def imageTag = "${env.BUILD_NUMBER}"
+                        def dockerImage = docker.image("${DOCKER_HUB_IMAGE}:${imageTag}")
+                        dockerImage.push('latest') // Push as 'latest' to Docker Hub
                     }
                 }
             }
