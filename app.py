@@ -7,7 +7,7 @@ from threading import Thread
 import threading
 import queue
 from queue import Queue
-from models import db, DeviceCredential, Device, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User
+from models import db, Device, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User
 from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
@@ -15,6 +15,8 @@ import logging
 import re
 from datetime import datetime, timezone
 import bcrypt
+import os
+from cryptography.fernet import Fernet
 
 # Globals
 pending_test_runs = []
@@ -34,7 +36,13 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///config.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = 'gfd789ydfs2Anvjfkdgnfs38dKZKXsd83d'
-
+    
+    # setup encryption for safe storing of the device credentials within the db
+    app.config['ENCRYPTION_KEY'] = os.getenv('ENCRYPTION_KEY', Fernet.generate_key())
+    global cipher # define as global so it is accessible by the async functions also
+    cipher = Fernet(app.config['ENCRYPTION_KEY'])
+    from models import DeviceCredential
+    
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db)
@@ -194,7 +202,8 @@ def create_app():
             password = request.form['password']
             is_passwordexpiry = 'passwordexpiry' in request.form
             new_credential = DeviceCredential(
-                username=username, password=password, passwordexpiry=is_passwordexpiry)
+                username=username, passwordexpiry=is_passwordexpiry)
+            new_credential.set_password(password)  # Encrypt the password
             db.session.add(new_credential)
             db.session.commit()
             return jsonify({'message': 'User added'})
@@ -551,6 +560,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
         logger.info(f"socketio.emit: stats_update with {stats}")
 
     with app.app_context():
+        from models import DeviceCredential # lazy import
         device = db.session.get(Device, device_id)
         cred = db.session.get(DeviceCredential, device.username_id)
 
@@ -582,7 +592,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
             "device_type": "cisco_ios",
             "host": device.mgmtip,
             "username": cred.username,
-            "password": cred.password,
+            "password": cred.get_password(),  # Decrypt the password
             "timeout": 10,
             "session_timeout": 60,
         }

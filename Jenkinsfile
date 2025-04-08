@@ -28,8 +28,11 @@ pipeline {
                     def imageTag = "${env.BUILD_NUMBER}"
                     // Write the build number to a version file
                     sh "echo ${imageTag} > version.txt"
-                    // Build the Docker image, including the version file
-                    docker.build("${DOCKER_IMAGE}:${imageTag}")
+                    // Use the stored ENCRYPTION_KEY from Jenkins credentials
+                    withCredentials([string(credentialsId: 'rnt-encryption-key', variable: 'ENCRYPTION_KEY')]) {
+                        // Build the Docker image, including the version file and ENCRYPTION_KEY
+                        docker.build("${DOCKER_IMAGE}:${imageTag}", "--build-arg ENCRYPTION_KEY=${ENCRYPTION_KEY} .")
+                    }
                 }
             }
         }

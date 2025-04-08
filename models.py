@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from flask_login import UserMixin
 import bcrypt
+from app import cipher
 
 db = SQLAlchemy()  # Initialize without app
 
@@ -21,6 +22,20 @@ class DeviceCredential(db.Model):
     username = db.Column(db.String(100), nullable=False)
     password = db.Column(db.String(100), nullable=True)
     passwordexpiry = db.Column(db.Boolean, default=False)
+    
+    def set_password(self, password):
+        """Encrypt and set the password."""
+        self.password = cipher.encrypt(password.encode()).decode('utf-8')
+
+    def get_password(self):
+        """Decrypt and return the password, encrypting cleartext if found."""
+        if self.password and len(self.password) < 50:  # Assume cleartext if < 50 chars
+            # Encrypt the cleartext password and update the database
+            cleartext = self.password
+            self.set_password(cleartext)
+            db.session.commit()  # Save the encrypted version
+            return cleartext  # Return the original cleartext for this call
+        return cipher.decrypt(self.password.encode()).decode('utf-8')
 
 
 class Device(db.Model):

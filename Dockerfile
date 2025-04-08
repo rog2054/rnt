@@ -9,6 +9,11 @@ COPY app.py forms.py models.py requirements.txt version.txt /app/
 COPY templates/ /app/templates/
 COPY static/ /app/static/
 
+# Accept ENCRYPTION_KEY as a build argument
+ARG ENCRYPTION_KEY
+# Set it as an environment variable in the image
+ENV ENCRYPTION_KEY=$ENCRYPTION_KEY
+
 # Install dependencies from requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
