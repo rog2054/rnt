@@ -43,7 +43,6 @@ pipeline {
                         def dockerImage = docker.image("${DOCKER_IMAGE}:${imageTag}")
                         dockerImage.push() // Push the specific tag
                         dockerImage.push('latest') // Also tag and push as 'latest'
-                        dockerImage.tag("${DOCKER_HUB_IMAGE}:${imageTag}")
                     }
                 }
             }
@@ -86,11 +85,17 @@ pipeline {
             }
             steps {
                 script {
-                    // Log in to Docker Hub and push the image
-                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
+                    // Log in to the private registry to access the built image
+                    docker.withRegistry("https://${DOCKER_REGISTRY}", DOCKER_CREDENTIALS_ID) {
                         def imageTag = "${env.BUILD_NUMBER}"
-                        def dockerImage = docker.image("${DOCKER_HUB_IMAGE}:${imageTag}")
-                        dockerImage.push('latest') // Push as 'latest' to Docker Hub
+                        def dockerImage = docker.image("${DOCKER_IMAGE}:${imageTag}")
+                        // Tag the private registry image for Docker Hub
+                        dockerImage.tag("${DOCKER_HUB_IMAGE}:${imageTag}")
+                    }
+                    // Log in to Docker Hub and push the tagged image
+                    docker.withRegistry('https://index.docker.io/v1/', 'docker-hub-credentials') {
+                        def dockerImageForHub = docker.image("${DOCKER_HUB_IMAGE}:${imageTag}")
+                        dockerImageForHub.push('latest') // Push as 'latest' to Docker Hub
                     }
                 }
             }
