@@ -122,6 +122,7 @@ pipeline {
 
                 // Send the message using curl
                 sh """
+                    #!/bin/bash
                     curl -s -X POST "${url}" \\
                     -d chat_id=${chatId} \\
                     -d parse_mode=Markdown \\
