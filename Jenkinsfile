@@ -106,6 +106,23 @@ pipeline {
         always {
             // Clean up dangling images (optional)
             sh 'docker image prune -f'
+        
+            script {
+                def status = currentBuild.currentResult
+                def message = "🔔 Jenkins Build: *${env.JOB_NAME}* #${env.BUILD_NUMBER} has *${status}*.\n" +
+                              "🔗 [View Build](${env.BUILD_URL})"
+                def token = 'telegram-bot-token'
+                def chatId = 'rr-telegram-id'
+                def url = "https://api.telegram.org/bot${token}/sendMessage"
+
+                sh """
+                    curl -s -X POST "${url}" \\
+                    -d chat_id=${chatId} \\
+                    -d parse_mode=Markdown \\
+                    --data-urlencode "text=${message}"
+                """
+                }
+            }
         }
         success {
             echo 'Pipeline completed successfully!'
@@ -114,4 +131,3 @@ pipeline {
             echo 'Pipeline failed.'
         }
     }
-}
