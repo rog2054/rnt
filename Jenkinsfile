@@ -106,26 +106,34 @@ pipeline {
         always {
             // Clean up dangling images (optional)
             sh 'docker image prune -f'
-        
+
             script {
+                // Get build status
                 def status = currentBuild.currentResult
                 def message = "🔔 Jenkins Build: *${env.JOB_NAME}* #${env.BUILD_NUMBER} has *${status}*.\n" +
                               "🔗 [View Build](${env.BUILD_URL})"
-                def token = credentials('telegram-bot-token')  // fetch bot token from Jenkins credentials
-                def chatId = credentials('rr-telegram-id')     // fetch chat ID from Jenkins credentials
+                
+                // Fetch bot token and chat ID from Jenkins credentials
+                def token = credentials('telegram-bot-token')
+                def chatId = credentials('rr-telegram-id')
+
+                // Build the Telegram URL
                 def url = "https://api.telegram.org/bot${token}/sendMessage"
 
+                // Send the message using curl
                 sh """
                     curl -s -X POST "${url}" \\
                     -d chat_id=${chatId} \\
                     -d parse_mode=Markdown \\
                     --data-urlencode "text=${message}"
                 """
-                }
             }
+        }
+        
         success {
             echo 'Pipeline completed successfully!'
         }
+        
         failure {
             echo 'Pipeline failed.'
         }
