@@ -756,6 +756,133 @@ def count_hops(output):
     # Parse traceroute output to count hops (example)
     return len([line for line in output.splitlines() if line.strip().startswith(tuple(str(i) for i in range(1, 31)))])
 
+def lookup_transceiver_info_for_pid(pid):
+    '''
+    info = lookup_transceiver_info_for_pid("GLC-SX-MM")
+    if info is not None:
+        lanes = info['lanes']
+        print (lanes)
+        1
+    else:
+        print ("SFP info not known")
+    '''
+    
+    transceiver_info = {
+    # --- 1G SFPs (Single-lane) ---
+    "GLC-LH-SM":       {"lanes": 1, "type": "SM", "distance": "10 km", "speed": "1G"},
+    "GLC-LH-SMD":      {"lanes": 1, "type": "SM", "distance": "10 km", "speed": "1G"},
+    "GLC-SX-MM":       {"lanes": 1, "type": "MM", "distance": "550 m", "speed": "1G"},
+    "GLC-SX-MMD":      {"lanes": 1, "type": "MM", "distance": "550 m", "speed": "1G"},
+    "GLC-ZX-SM":       {"lanes": 1, "type": "SM", "distance": "70–80 km", "speed": "1G"},
+    "GLC-BX-U":        {"lanes": 1, "type": "SM", "distance": "10 km", "speed": "1G"},
+    "GLC-BX-D":        {"lanes": 1, "type": "SM", "distance": "10 km", "speed": "1G"},
+
+    # --- 10G SFP+ (Single-lane) ---
+    "SFP-10G-SR":      {"lanes": 1, "type": "MM", "distance": "300 m", "speed": "10G"},
+    "SFP-10G-LR":      {"lanes": 1, "type": "SM", "distance": "10 km", "speed": "10G"},
+    "SFP-10G-ER":      {"lanes": 1, "type": "SM", "distance": "40 km", "speed": "10G"},
+    "SFP-10G-ZR":      {"lanes": 1, "type": "SM", "distance": "80 km", "speed": "10G"},
+    "SFP-10G-LRM":     {"lanes": 1, "type": "MM", "distance": "220 m", "speed": "10G"},
+    "SFP-10G-BX10-U":  {"lanes": 1, "type": "SM", "distance": "10 km", "speed": "10G"},
+    "SFP-10G-BX10-D":  {"lanes": 1, "type": "SM", "distance": "10 km", "speed": "10G"},
+    "SFP-10G-DWDM":    {"lanes": 1, "type": "SM", "distance": "up to 80 km", "speed": "10G"},
+    "SFP-10G-ZR-S":    {"lanes": 1, "type": "SM", "distance": "80 km", "speed": "10G"},
+    "SFP-10G-SR-S":    {"lanes": 1, "type": "MM", "distance": "300 m", "speed": "10G"},
+
+    # --- 100G QSFP28 (Mostly 4-lane) ---
+    "QSFP-100G-SR4":       {"lanes": 4, "type": "MM", "distance": "100 m", "speed": "100G"},
+    "QSFP-100G-LR4":       {"lanes": 4, "type": "SM", "distance": "10 km", "speed": "100G"},
+    "QSFP-100G-LR4-S":     {"lanes": 4, "type": "SM", "distance": "10 km", "speed": "100G"},
+    "QSFP-100G-CWDM4":     {"lanes": 4, "type": "SM", "distance": "2 km", "speed": "100G"},
+    "QSFP-100G-CWDM4-S":   {"lanes": 4, "type": "SM", "distance": "2 km", "speed": "100G"},
+    "QSFP-100G-PSM4-S":    {"lanes": 4, "type": "SM", "distance": "500 m", "speed": "100G"},
+    "QSFP-100G-ER4-Lite":  {"lanes": 4, "type": "SM", "distance": "25 km", "speed": "100G"},
+    "QSFP-100G-ZR4-S":     {"lanes": 4, "type": "SM", "distance": "80 km", "speed": "100G"},
+    "QSFP-100G-SRBD":      {"lanes": 2, "type": "MM", "distance": "100 m", "speed": "100G"},  # Bidirectional over 2 fibers
+    "QSFP-100G-DR":        {"lanes": 1, "type": "SM", "distance": "500 m", "speed": "100G"},
+    "QSFP-100G-DR-S":      {"lanes": 1, "type": "SM", "distance": "500 m", "speed": "100G"}
+    }
+
+    # normalise to remove vendor suffixes and -S etc
+    pid = pid.split("-")[0] + "-" + pid.split("-")[1]
+
+    return transceiver_info.get(pid) # returns None is no match found
+
+def parse_iosxe_transceiver_tx_rx(output):
+    # parses Cisco IOS output of 'show interface ... transceiver' and returns the Tx Rx values
+    # works for single-land and multi-lane SFPs
+    '''
+    tx_rx = parse_transceiver_tx_rx(output)
+
+    if tx_rx is not None:
+        for lane, values in tx_rx.items():
+            print(f"Lane {lane}: Tx = {values['tx_dBm']} dBm, Rx = {values['rx_dBm']} dBm")
+    else:
+        print("No Tx/Rx values found.")
+        
+    # example output: single-lane SFP
+    { 0: {'tx_dBm': -2.1, 'rx_dBm': -3.2} }
+
+    # example output: multi-lane SFP
+    {
+        0: {'tx_dBm': -1.6, 'rx_dBm': -2.0},
+        1: {'tx_dBm': -1.5, 'rx_dBm': -2.1},
+        2: {'tx_dBm': -1.4, 'rx_dBm': -2.2},
+        3: {'tx_dBm': -1.5, 'rx_dBm': -2.0}
+    }
+    '''
+    tx_rx_values = {}
+    lines = output.splitlines()
+    in_table = False
+    is_multi_lane = False
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("Lane"):
+            in_table = True
+            is_multi_lane = True
+            continue
+        if in_table and stripped.startswith("---------"):
+            continue
+        if in_table and stripped:
+            parts = line.split()
+            if is_multi_lane:
+                if len(parts) >= 6 and parts[0].isdigit():
+                    lane = int(parts[0])
+                    tx = float(parts[4])
+                    rx = float(parts[5])
+                    tx_rx_values[lane] = {"tx_dBm": tx, "rx_dBm": rx}
+            else:
+                # shouldn't get here on multi-lane
+                pass
+        elif in_table and not stripped:
+            break
+
+    # If no multi-lane match found, try single-lane style
+    if not tx_rx_values:
+        for line in lines:
+            if "Tx Power" in line and "Rx Power" in line:
+                headers = line.split()
+            elif line.strip() and any(char.isdigit() for char in line):
+                # Try to parse values from aligned headers
+                parts = line.split()
+                if len(parts) >= 5:
+                    try:
+                        tx_index = headers.index("Tx") if "Tx" in headers else headers.index("Tx Power")
+                        rx_index = headers.index("Rx") if "Rx" in headers else headers.index("Rx Power")
+                        tx = float(parts[tx_index])
+                        rx = float(parts[rx_index])
+                        tx_rx_values[0] = {"tx_dBm": tx, "rx_dBm": rx}
+                        break
+                    except (ValueError, IndexError):
+                        continue
+
+    return tx_rx_values or None
+
+def parse_nxos_transceiver_tx_rx(output):
+    # to be written
+    pass
+
 if __name__ == '__main__':
     # For local development only
     socketio.run(app, host='0.0.0.0', port=5000, debug=True)
