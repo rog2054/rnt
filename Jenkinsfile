@@ -111,8 +111,8 @@ pipeline {
                 def status = currentBuild.currentResult
                 def message = "🔔 Jenkins Build: *${env.JOB_NAME}* #${env.BUILD_NUMBER} has *${status}*.\n" +
                               "🔗 [View Build](${env.BUILD_URL})"
-                def token = 'telegram-bot-token'
-                def chatId = 'rr-telegram-id'
+                def token = credentials('telegram-bot-token')  // fetch bot token from Jenkins credentials
+                def chatId = credentials('rr-telegram-id')     // fetch chat ID from Jenkins credentials
                 def url = "https://api.telegram.org/bot${token}/sendMessage"
 
                 sh """
