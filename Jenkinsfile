@@ -111,33 +111,35 @@ pipeline {
                 // Get build status
                 def status = currentBuild.currentResult
                 def message = "🔔 Jenkins Build: *${env.JOB_NAME}* #${env.BUILD_NUMBER} has *${status}*.\n" +
-                              "🔗 [View Build](${env.BUILD_URL})"
-                
-                // Fetch bot token and chat ID from Jenkins credentials
-                def token = credentials('telegram-bot-token')
-                def chatId = credentials('rr-telegram-id')
+                            "🔗 [View Build](${env.BUILD_URL})"
 
-                // Build the Telegram URL
-                def url = "https://api.telegram.org/bot${token}/sendMessage"
+                // Use withCredentials to securely fetch bot token and chat ID
+                withCredentials([
+                    string(credentialsId: 'telegram-bot-token', variable: 'TOKEN'),
+                    string(credentialsId: 'rr-telegram-id', variable: 'CHAT_ID')
+                ]) {
+                    // Build the Telegram URL
+                    def url = "https://api.telegram.org/bot${TOKEN}/sendMessage"
 
-                // Send the message using curl
-                sh """
-                    #!/bin/bash
-                    curl -s -X POST "${url}" \\
-                    -d chat_id=${chatId} \\
-                    -d parse_mode=Markdown \\
-                    --data-urlencode "text=${message}"
-                """
+                    // Send the message using curl with proper escaping
+                    sh """
+                        curl -s -X POST '${url}' \
+                            -d chat_id='${CHAT_ID}' \
+                            -d parse_mode=Markdown \
+                            --data-urlencode 'text=${message}'
+                    """
+                }
             }
         }
-        
+
         success {
             echo 'Pipeline completed successfully!'
         }
-        
+
         failure {
             echo 'Pipeline failed.'
         }
     }
+
 }
 
