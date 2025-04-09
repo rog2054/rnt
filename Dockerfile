@@ -5,7 +5,7 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Copy the root directory contents, plus templates/, and static/
-COPY app.py forms.py models.py requirements.txt version.txt /app/
+COPY app.py forms.py models.py extensions.py requirements.txt version.txt /app/
 COPY templates/ /app/templates/
 COPY static/ /app/static/
 
