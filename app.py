@@ -7,16 +7,15 @@ from threading import Thread
 import threading
 import queue
 from queue import Queue
-from models import db, Device, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User
+from extensions import db, cipher
+from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User
 from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
 import re
 from datetime import datetime, timezone
-import bcrypt
-import os
-from cryptography.fernet import Fernet
+
 
 # Globals
 pending_test_runs = []
@@ -36,12 +35,6 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///config.db'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = 'gfd789ydfs2Anvjfkdgnfs38dKZKXsd83d'
-    
-    # setup encryption for safe storing of the device credentials within the db
-    app.config['ENCRYPTION_KEY'] = os.getenv('ENCRYPTION_KEY', Fernet.generate_key())
-    global cipher # define as global so it is accessible by the async functions also
-    cipher = Fernet(app.config['ENCRYPTION_KEY'])
-    from models import DeviceCredential
     
     # Initialize extensions
     db.init_app(app)

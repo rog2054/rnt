@@ -1,10 +1,8 @@
-from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from flask_login import UserMixin
 import bcrypt
-from app import cipher
+from extensions import cipher, db
 
-db = SQLAlchemy()  # Initialize without app
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
