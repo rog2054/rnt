@@ -21,6 +21,20 @@ pipeline {
             }
         }
         
+        stage('Print Encryption Key') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: 'encryption-key', variable: 'ENCRYPTION_KEY')]) {
+                        // Write the key to a temp file and read it back
+                        sh '''
+                            echo "$ENCRYPTION_KEY" > temp_key.txt
+                            cat temp_key.txt
+                            rm temp_key.txt  # Clean up
+                        '''
+                    }
+                }
+            }
+        }
 
         stage('Build Docker Image') {
             steps {
@@ -31,8 +45,6 @@ pipeline {
                     // Use the stored ENCRYPTION_KEY from Jenkins credentials
                     withCredentials([string(credentialsId: 'rnt-encryption-key', variable: 'ENCRYPTION_KEY')]) {
                         // Build the Docker image, including the version file and ENCRYPTION_KEY
-                        // Print the key to the build log
-                        echo "ENCRYPTION_KEY: ${ENCRYPTION_KEY}"
                         docker.build("${DOCKER_IMAGE}:${imageTag}", "--build-arg ENCRYPTION_KEY=${ENCRYPTION_KEY} .")
                     }
                 }
