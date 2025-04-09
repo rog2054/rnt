@@ -123,7 +123,6 @@ pipeline {
                 """
                 }
             }
-        }
         success {
             echo 'Pipeline completed successfully!'
         }
@@ -131,3 +130,5 @@ pipeline {
             echo 'Pipeline failed.'
         }
     }
+}
+
