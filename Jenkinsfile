@@ -20,17 +20,7 @@ pipeline {
                 sh 'ls -la' // List files to verify Dockerfile
             }
         }
-        
-        stage('Print Encryption Key') {
-            steps {
-                script {
-                    withCredentials([string(credentialsId: 'encryption-key', variable: 'ENCRYPTION_KEY')]) {
-                        // Mangle the output to avoid masking
-                        sh 'echo "KEYSTART_${ENCRYPTION_KEY}_KEYEND"'
-                    }
-                }
-            }
-        }
+
 
         stage('Build Docker Image') {
             steps {
