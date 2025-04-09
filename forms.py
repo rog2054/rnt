@@ -36,7 +36,7 @@ class DeviceForm(FlaskForm):
         choices=[
             ('cisco_ios', 'Cisco IOS'),
             ('cisco_nxos', 'Cisco NX OS'),
-            ('ciscoaci', 'Cisco ACI Leaf')
+            ('cisco_aci', 'Cisco ACI Leaf')
         ],
         coerce=str  # This ensures that the selected value is returned as a string
     )
@@ -87,7 +87,12 @@ class bgpaspathTestForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super(bgpaspathTestForm, self).__init__(*args, **kwargs)
         self.test_device_hostname.choices = [
-            (device.id, device.hostname) for device in Device.query.all()]
+        (device.id, device.hostname)
+        for device in Device.query
+            .filter(Device.devicetype.in_(["cisco_ios", "cisco_nxos"]))
+            .order_by(Device.hostname)
+            .all()
+        ]
 
 
 class tracerouteTestForm(FlaskForm):
@@ -102,8 +107,12 @@ class tracerouteTestForm(FlaskForm):
     def __init__(self, *args, **kwargs):
         super(tracerouteTestForm, self).__init__(*args, **kwargs)
         self.test_device_hostname.choices = [
-            (device.id, device.hostname) for device in Device.query.all()]
-
+        (device.id, device.hostname)
+        for device in Device.query
+            .filter(Device.devicetype.in_(["cisco_ios", "cisco_nxos"]))
+            .order_by(Device.hostname)
+            .all()
+        ]
 
 class TestRunForm(FlaskForm):
     description = StringField("Test Run Description", validators=[
