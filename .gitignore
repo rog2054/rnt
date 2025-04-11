@@ -10,8 +10,7 @@
 __pycache__/
 *.pyc
 
-# Exclude alembic.ini and optional README in migrations
-migrations/alembic.ini
+# Exclude README in migrations
 migrations/README
 # Include migrations/versions/, env.py, and script.py.mako by not listing them
 
