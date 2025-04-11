@@ -17,4 +17,14 @@
             <a class="nav-link text-white" href="{{ url_for('run_tests') }}">Run Tests</a>
         </li>
     </ul>
+    <div class="mt-auto">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('logout') }}">Logoff</a>
+            </li>
+            <li class="nav-item">
+                <small class="text-secondary">Version: 0.{{ version }}</small>
+            </li>
+        </ul>
+    </div>
 </nav>

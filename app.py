@@ -36,6 +36,13 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SECRET_KEY'] = 'gfd789ydfs2Anvjfkdgnfs38dKZKXsd83d'
     
+    # Read version number at startup
+    try:
+        with open('/app/version.txt', 'r') as f:
+            app.config['VERSION'] = f.read().strip()
+    except FileNotFoundError:
+        app.config['VERSION'] = 'x'
+    
     # Initialize extensions
     db.init_app(app)
     migrate = Migrate(app, db)
@@ -50,6 +57,11 @@ def create_app():
 
     with app.app_context():
         db.create_all()
+
+    # Make version available to all templates
+    @app.context_processor
+    def inject_version():
+        return dict(version=app.config['VERSION'])
 
     # Check for no users before each request
     @app.before_request

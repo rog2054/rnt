@@ -1,8 +1,19 @@
-{% extends 'base.html' %}
-{% block title %}Roger's Network Tools{% endblock %}
-{% block head %}
-<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
-{% endblock %}
-{% block content %}
-<h2>Version 1.{{version}}</h2>
-{% endblock %}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Welcome</title>
+    <link href="{{ url_for('static', filename='css/bootstrap.min.css') }}" rel="stylesheet">
+</head>
+
+<body>
+    {% include 'sidebar.html' %}
+    <div class="content p-4">
+        <h1>Welcome, {{ username }}!</h1>
+        <h2>Version: 0.{{ version }}</h2>
+        <br>
+        <a href="{{ url_for('device_list') }}">Start</a>
+    </div>
+</body>
+
+</html>
