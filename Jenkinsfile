@@ -14,7 +14,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 // Pull the code from your Gitea repo
-                git url: 'https://gitea.kranica.com/dev1/bgp-route-tester.git', 
+                git url: 'https://gitea.kranica.com/dev1/rogers-network-tools.git', 
                 branch: 'main',
                 credentialsId: "${GITEA_CREDENTIALS_ID}"
                 sh 'ls -la' // List files to verify Dockerfile
