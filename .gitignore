@@ -6,8 +6,14 @@
 .webassets-cache
 .env
 
-### Flask-Migrate
-migrations/*
+# Exclude compiled Python files and caches
+__pycache__/
+*.pyc
+
+# Exclude alembic.ini and optional README in migrations
+migrations/alembic.ini
+migrations/README
+# Include migrations/versions/, env.py, and script.py.mako by not listing them
 
 
 ### Flask.Python Stack ###
