@@ -1,29 +1,29 @@
 <nav class="sidebar bg-dark text-white p-3" style="min-width: 250px; height: 100vh;">
     <h4 class="mb-4">Roger's Network Tools</h4>
-    <ul class="nav flex-column">
-        <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('credentials') }}">Credentials</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('device_list') }}">Manage Devices</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('showtests_bgpaspath') }}">BGP AS-Path Tests</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('showtests_traceroute') }}">Traceroute Tests</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link text-white" href="{{ url_for('run_tests') }}">Run Tests</a>
-        </li>
-    </ul>
-    <div class="mt-auto">
+    <div class="d-flex flex-column h-100">
         <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('credentials') }}">Credentials</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('device_list') }}">Manage Devices</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('showtests_bgpaspath') }}">BGP AS-Path Tests</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('showtests_traceroute') }}">Traceroute Tests</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white" href="{{ url_for('run_tests') }}">Run Tests</a>
+            </li>
+        </ul>
+        <ul class="nav flex-column mt-auto">
             <li class="nav-item">
                 <a class="nav-link text-white" href="{{ url_for('logout') }}">Logoff</a>
             </li>
             <li class="nav-item">
-                <small class="text-secondary">Version: 0.{{ version }}</small>
+                <small class="text-secondary d-block ps-3">Version: 0.{{ version }}</small>
             </li>
         </ul>
     </div>
