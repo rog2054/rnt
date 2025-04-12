@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}Add ACI itraceroute Test{% endblock %}
+{% block head %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
+{% block content %}
+<h2>Add ACI itraceroute Test</h2>
+<form id="itracerouteTestForm" method="POST">
+    {{ form.hidden_tag() }}
+
+    <div class="mb-3">
+        {{ form.test_device_hostname.label(class="form-label") }}
+        {{ form.test_device_hostname(class="form-select w-25") }}
+        {% if form.test_device_hostname.errors %}
+        <div class="text-danger">
+            {% for error in form.test_device_hostname.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        {{ form.test_srcip.label(class="form-label") }}
+        {{ form.test_srcip(class="form-control w-25") }}
+        {% if form.test_srcip.errors %}
+        <div class="text-danger">
+            {% for error in form.test_srcip.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        {{ form.test_dstip.label(class="form-label") }}
+        {{ form.test_dstip(class="form-control w-25") }}
+        {% if form.test_dstip.errors %}
+        <div class="text-danger">
+            {% for error in form.test_dstip.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        {{ form.test_vrf.label(class="form-label") }}
+        {{ form.test_vrf(class="form-control w-25") }}
+        {% if form.test_vrf.errors %}
+        <div class="text-danger">
+            {% for error in form.test_vrf.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        {{ form.test_encapvlan.label(class="form-label") }}
+        {{ form.test_encapvlan(class="form-control w-25") }}
+        {% if form.test_encapvlan.errors %}
+        <div class="text-danger">
+            {% for error in form.test_encapvlan.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+
+    <div class="mb-3">
+        {{ form.test_description.label(class="form-label") }}
+        {{ form.test_description(class="form-control w-25") }}
+        {% if form.test_description.errors %}
+        <div class="text-danger">
+            {% for error in form.test_description.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    {{ form.submit(class="btn btn-primary") }}
+</form>
+
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#deviceForm').submit(function (e) {
+            e.preventDefault();
+            $.ajax({
+                url: '/tests/addtest_itraceroute',
+                type: 'POST',
+                data: $(this).serialize(),
+                headers: {
+                    'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')  // Include CSRF token
+                },
+                success: function (response) {
+                    if (response.redirect) {
+                        window.location.href = response.redirect;
+                    } else {
+                        alert(response.message);
+                    }
+                },
+                error: function (xhr, status, error) {
+                    const errors = JSON.parse(xhr.responseText).errors;
+                    let errorMessage = 'Form validation failed. Please fix the following errors:\n\n';
+                    for (const field in errors) {
+                        errorMessage += `${field}: ${errors[field].join(', ')}\n`;
+                    }
+                    alert(errorMessage);  // Show user-friendly error message
+                }
+            });
+        });
+    });
+</script>
+
+{% endblock %}
