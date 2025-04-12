@@ -286,7 +286,7 @@ def create_app():
     @login_required
     def showtests_bgpaspath():
         bgpaspathtests = bgpaspathTest.query.all()
-        return render_template('bgpaspathtests.html', bgpaspathtests=bgpaspathtests)
+        return render_template('showtests_bgpaspath.html', bgpaspathtests=bgpaspathtests)
 
     # Add AS-path test
     @app.route('/tests/addtest_bgpaspath', methods=['GET', 'POST'])
@@ -333,7 +333,7 @@ def create_app():
     @login_required
     def showtests_traceroute():
         traceroutetests = tracerouteTest.query.all()
-        return render_template('traceroutetests.html', traceroutetests=traceroutetests)
+        return render_template('showtests_traceroute.html', traceroutetests=traceroutetests)
 
     # Add Traceroute test
     @app.route('/tests/addtest_traceroute', methods=['GET', 'POST'])
