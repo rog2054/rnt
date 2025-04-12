@@ -12,7 +12,7 @@ RUN chmod +x /app/entrypoint.sh
 COPY app.py forms.py models.py extensions.py requirements.txt version.txt /app/
 COPY templates/ /app/templates/
 COPY static/ /app/static/
-COPY migrations/env.py migrations/script.py.mako /app/migrations/
+COPY migrations/env.py migrations/script.py.mako migrations/alembic.ini /app/migrations/
 COPY migrations/versions/ /app/migrations/versions/
 
 # Accept ENCRYPTION_KEY as a build argument
