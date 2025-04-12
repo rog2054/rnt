@@ -114,6 +114,50 @@ class tracerouteTestForm(FlaskForm):
             .all()
         ]
 
+class txrxtransceiverTestForm(FlaskForm):
+    test_device_hostname = SelectField(
+        "Test from Device", choices=[], coerce=int)
+    test_deviceinterface = StringField("Interface name", validators=[
+                                     DataRequired()])
+    test_description = StringField("What is the purpose of doing this test")
+
+    submit = SubmitField("Save Test")
+
+    def __init__(self, *args, **kwargs):
+        super(tracerouteTestForm, self).__init__(*args, **kwargs)
+        self.test_device_hostname.choices = [
+        (device.id, device.hostname)
+        for device in Device.query
+            .filter(Device.devicetype.in_(["cisco_ios", "cisco_nxos"]))
+            .order_by(Device.hostname)
+            .all()
+        ]
+
+class itracerouteTestForm(FlaskForm):
+    test_device_hostname = SelectField(
+        "Test from Device", choices=[], coerce=int)
+    test_srcip = StringField("Source IP", validators=[
+                                     DataRequired(), IPAddress()])
+    test_dstip = StringField("Destination IP", validators=[
+                                     DataRequired(), IPAddress()])
+    test_vrf = StringField("vrf", validators=[
+                                     DataRequired()])
+    test_encapvlan = StringField("encap vlan", validators=[
+                                     DataRequired()])
+    test_description = StringField("What is the purpose of doing this test")
+
+    submit = SubmitField("Save Test")
+
+    def __init__(self, *args, **kwargs):
+        super(tracerouteTestForm, self).__init__(*args, **kwargs)
+        self.test_device_hostname.choices = [
+        (device.id, device.hostname)
+        for device in Device.query
+            .filter(Device.devicetype.in_(["cisco_aci"]))
+            .order_by(Device.hostname)
+            .all()
+        ]
+
 class TestRunForm(FlaskForm):
     description = StringField("Test Run Description", validators=[
                               DataRequired(message="Description is required")])
