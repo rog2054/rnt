@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+{% block title %}TxRx SFP Transceiver Tests{% endblock %}
+{% block head %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
+{% block content %}
+<h1>TxRx SFP Transceiver Tests</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Test ID</th>
+            <th>Device</th>
+            <th>Interface</th>
+            <th>Description of Test</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for test in itraceroutetests %}
+        <tr>
+            <td>{{ test.id }}</td>
+            <td>{{ test.devicehostname.hostname }}</td>
+            <td>{{ test.deviceinterface }}</td>
+            <td>{{ test.description }} </td>
+            <td>
+                <button class="delete-test" data-id="{{ test.id }}" style="background: none; border: none; padding: 0;">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{{ url_for('addtest_txrxtransceiver') }}" class="btn btn-primary">Create Test</a>
+
+
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#deviceForm').submit(function (e) {
+            e.preventDefault();
+            $.ajax({
+                url: '/tests/txrxtransceiver',
+                type: 'POST',
+                data: $(this).serialize(),
+                success: function (response) {
+                    alert(response.message);
+                    location.reload();
+                },
+                error: function () {
+                    alert('Error adding test');
+                }
+            });
+        });
+
+        // Delete test
+        $('.delete-test').click(function () {
+            const deviceId = $(this).data('id');
+            if (confirm('Are you sure you want to remove this test?')) {
+                $.ajax({
+                    url: '/tests/delete_txrxtransceivertest/' + deviceId,
+                    type: 'POST',
+                    headers: {
+                        'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')  // Include CSRF token
+                    },
+                    success: function (response) {
+                        alert(response.message);
+                        location.reload();
+                    },
+                    error: function (xhr) {
+                        alert('Error removing test: ' + xhr.responseText);
+                    }
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}
