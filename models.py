@@ -59,7 +59,7 @@ class bgpaspathTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     devicehostname_id = db.Column(
         db.Integer,
-        db.ForeignKey('device.id', name='fk_device_hostname'),
+        db.ForeignKey('device.id', name='fk_bgpaspath_device_hostname'),
         nullable=True
     )
     devicehostname = db.relationship('Device', backref='bgpaspathTests')
@@ -74,7 +74,7 @@ class tracerouteTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     devicehostname_id = db.Column(
         db.Integer,
-        db.ForeignKey('device.id', name='fk_device_hostname'),
+        db.ForeignKey('device.id', name='fk_traceroute_device_hostname'),
         nullable=True
     )
     devicehostname = db.relationship('Device', backref='tracerouteTests')
@@ -82,6 +82,32 @@ class tracerouteTest(db.Model):
     description = db.Column(db.String(200))
     instances = db.relationship("TestInstance", backref="traceroute_test")
 
+class txrxtransceiverTest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    devicehostname_id = db.Column(
+        db.Integer,
+        db.ForeignKey('device.id', name='fk_txrxtransceiver_device_hostname'),
+        nullable=True
+    )
+    devicehostname = db.relationship('Device',backref='txrxtransceiver_tests')
+    deviceinterface = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(200))
+    instances = db.relationship("TestInstance", backref="txrxtransceiver_test")
+
+class itracerouteTest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    devicehostname_id = db.Column(
+        db.Integer,
+        db.ForeignKey('device.id', name='fk_itraceroute_device_hostname'),
+        nullable=True
+    )
+    devicehostname = db.relationship('Device',backref='itraceroute_tests')
+    srcip = db.Column(db.String(100), nullable=False)
+    dstip = db.Column(db.String(100), nullable=False)
+    vrf = db.Column(db.String(100), nullable=False)
+    encapvlan = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(200))
+    instances = db.relationship("TestInstance", backref="itraceroute_test")
 
 class TestRun(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -99,25 +125,27 @@ class TestRun(db.Model):
 class TestInstance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     test_run_id = db.Column(db.Integer, db.ForeignKey(
-        "test_run.id"), nullable=False)
+        "test_run.id", name='fk_test_instance_test_run'), nullable=False)
     device_id = db.Column(db.Integer, db.ForeignKey(
-        "device.id"), nullable=False)
+        "device.id", name='fk_test_instance_device'), nullable=False)
     # e.g., "bgp_as_path", "traceroute_test"
     test_type = db.Column(db.String(50), nullable=False)
     # "pending", "running", "completed"
     status = db.Column(db.String(20), default="pending")
     # Foreign keys to specific test configs
     bgpaspath_test_id = db.Column(
-        db.Integer, db.ForeignKey("bgpaspath_test.id"), nullable=True)
+        db.Integer, db.ForeignKey("bgpaspath_test.id", name='fk_test_instance_bgpaspath_test'), nullable=True)
     traceroute_test_id = db.Column(
-        db.Integer, db.ForeignKey("traceroute_test.id"), nullable=True)
+        db.Integer, db.ForeignKey("traceroute_test.id", name='fk_test_instance_traceroute_test'), nullable=True)
+    txrxtransceiver_test_id = db.Column(db.Integer, db.ForeignKey("txrxtransceiver_test.id", name='fk_test_instance_txrxtransceiver_test'), nullable=True)
+    itraceroute_test_id = db.Column(db.Integer, db.ForeignKey("itraceroute_test.id", name='fk_test_instance_itraceroute_test'), nullable=True)
     device_active_at_run = db.Column(db.Boolean, nullable=False, default=True)
 
 
 class bgpaspathTestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     test_instance_id = db.Column(db.Integer, db.ForeignKey(
-        "test_instance.id"), nullable=False)
+        "test_instance.id", name='fk_bgpaspath_result_test_instance'), nullable=False)
     # Raw Netmiko output (e.g. show command output)
     rawoutput = db.Column(db.Text)
     # Filtered output (e.g. just the line we have identified)
@@ -130,9 +158,24 @@ class bgpaspathTestResult(db.Model):
 class tracerouteTestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     test_instance_id = db.Column(db.Integer, db.ForeignKey(
-        "test_instance.id"), nullable=False)
+        "test_instance.id", name='fk_traceroute_result_test_instance'), nullable=False)
     rawoutput = db.Column(db.Text)  # Traceroute output
     numberofhops = db.Column(db.Integer)
     # Not sure what determines a pass result for this test? Field for future use.
+    passed = db.Column(db.Boolean)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+class txrxtransceiverTestResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    test_instance_id = db.Column(db.Integer, db.ForeignKey("test_instance.id", name='fk_txfxtransceiver_result_test_instance'), nullable=False)
+    rawoutput = db.Column(db.Text)
+    txrx = db.Column(db.Text)
+    passed = db.Column(db.Boolean)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+class itracerouteTestResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    test_instance_id = db.Column(db.Integer, db.ForeignKey("test_instance.id", name='fk_itraceroute_result_test_instance'), nullable=False)
+    rawoutput = db.Column(db.Text)
     passed = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
