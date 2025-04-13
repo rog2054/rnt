@@ -427,9 +427,9 @@ def create_app():
         return render_template('showtests_itraceroute.html', itraceroutetests=itraceroutetests)
 
     # Add ACI itraceroute test
-    @app.route('/tests/addtest_itraceroutetests', methods=['GET', 'POST'])
+    @app.route('/tests/addtest_itraceroute', methods=['GET', 'POST'])
     @login_required
-    def addtest_itraceroutetests():
+    def addtest_itraceroute():
         form = itracerouteTestForm()
         if request.method == 'POST':
             if form.validate_on_submit():  # Form validation
