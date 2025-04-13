@@ -16,6 +16,18 @@
     Skipped: <span id="traceroute_skipped">{{ stats.traceroute_test.skipped }}</span> /
     Total: <span id="traceroute_total">{{ stats.traceroute_test.total }}</span>
 </p>
+<p>TxRx SFP Transceiver Tests:
+    Completed: <span id="txrxtransceiver_completed">{{ stats.txrxtransceiver_test.completed }}</span> /
+    Running: <span id="txrxtransceiver_running">{{ stats.txrxtransceiver_test.running }}</span> /
+    Skipped: <span id="txrxtransceiver_skipped">{{ stats.txrxtransceiver_test.skipped }}</span> /
+    Total: <span id="txrxtransceiver_total">{{ stats.txrxtransceiver_test.total }}</span>
+</p>
+<p>ACI itraceroute Tests:
+    Completed: <span id="itraceroute_completed">{{ stats.itraceroute_test.completed }}</span> /
+    Running: <span id="itraceroute_running">{{ stats.itraceroute_test.running }}</span> /
+    Skipped: <span id="itraceroute_skipped">{{ stats.itraceroute_test.skipped }}</span> /
+    Total: <span id="itraceroute_total">{{ stats.itraceroute_test.total }}</span>
+</p>
 <h2>Status Updates</h2>
 <div id="status-log" class="border p-3" style="height: 300px; overflow-y: auto;"></div>
 
@@ -116,7 +128,15 @@
             document.getElementById('traceroute_running').textContent = stats.traceroute_test.running;
             document.getElementById('traceroute_skipped').textContent = stats.traceroute_test.skipped;
             document.getElementById('traceroute_total').textContent = stats.traceroute_test.total;
-            if (stats.bgpaspathtest_test.running === 0 && stats.traceroute_test.running === 0) {
+            document.getElementById('txrxtransceiver_completed').textContent = stats.txrxtransceiver_test.completed;
+            document.getElementById('txrxtransceiver_running').textContent = stats.txrxtransceiver_test.running;
+            document.getElementById('txrxtransceiver_skipped').textContent = stats.txrxtransceiver_test.skipped;
+            document.getElementById('txrxtransceiver_total').textContent = stats.txrxtransceiver_test.total;
+            document.getElementById('itraceroute_completed').textContent = stats.itraceroute_test.completed;
+            document.getElementById('itraceroute_running').textContent = stats.itraceroute_test.running;
+            document.getElementById('itraceroute_skipped').textContent = stats.itraceroute_test.skipped;
+            document.getElementById('itraceroute_total').textContent = stats.itraceroute_test.total;
+            if (stats.bgpaspathtest_test.running === 0 && stats.traceroute_test.running === 0 && stats.txrxtransceiver_test.running === 0 && stats.itraceroute_test.running === 0) {
                 document.getElementById('results-button').style.display = 'block';  // Show button
             }
         }

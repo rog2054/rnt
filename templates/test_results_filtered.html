@@ -123,6 +123,115 @@
     </table>
     {% endif %}
 
+    <!-- TxRx SFP Transceiver Tests Table -->
+    {% if traceroute_results|length > 0 %}
+    <h2>TxRx SFP Transceiver Tests</h2>
+    <table class="table table-striped" id="txrxtransceiver-table">
+        <thead>
+            <tr>
+                <th>Tested Device</th>
+                <th>Device Interface</th>
+                <th>Test Description</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test_instance, result, device, txrxtransceiver_test in txrxtransceiver_results %}
+            <tr class="summary-row" data-toggle-id="txrxtransceiver-{{ test_instance.id }}">
+                <td>{{ device.siteinfo or device.hostname }}</td>
+                <td>{{ txrxtransceiver_test.deviceinterface }}</td>
+                <td>
+                    {% if result and result.passed is not none %}
+                    {% if result.passed %}
+                    <span class="pass">✅</span>
+                    {% else %}
+                    <span class="fail">❌</span>
+                    {% endif %}
+                    {% elif not test_instance.device_active_at_run %}
+                    <span class="text-muted" title="Device inactive at run time">⏸️</span>
+                    {% else %}
+                    <span class="text-warning" title="Connection error">⚠️</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr class="details-row" id="txrxtransceiver-{{ test_instance.id }}" style="display: none;">
+                <td colspan="5">
+                    <strong>Device:</strong> {{ device.hostname }} ({{ device.mgmtip }})<br>
+                    <strong>Status:</strong>
+                    {% if result and result.passed is not none %}
+                    {{ "Passed" if result.passed else "Failed" }}
+                    {% elif not test_instance.device_active_at_run %}
+                    Skipped (Device Inactive at Run Time)
+                    {% else %}
+                    Skipped (Connection Error)
+                    {% endif %}<br>
+                    <strong>SFP info:</strong><br>
+                    <pre>{{ txrxtransceiver_test.sfpinfo }}</pre>
+                    <strong>TxRx values:</strong><br>
+                    <pre>{{ txrxtransceiver_test.txrx }}</pre>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput if result else "No output" }}</pre>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- itraceroute Tests Table -->
+    {% if itraceroute_results|length > 0 %}
+    <h2>itraceroute Tests</h2>
+    <table class="table table-striped" id="traceroute-table">
+        <thead>
+            <tr>
+                <th>Tested from Device</th>
+                <th>Test Description</th>
+                <th>Source IP</th>
+                <th>Destination IP</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test_instance, result, device, itraceroute_test in itraceroute_results %}
+            <tr class="summary-row" data-toggle-id="itraceroute-{{ test_instance.id }}">
+                <td>{{ device.siteinfo or device.hostname }}</td>
+                <td>{{ itraceroute_test.description }}</td>
+                <td>{{ itraceroute_test.srcip }}</td>
+                <td>{{ itraceroute_test.dstip }}</td>
+                <td>
+                    {% if result and result.passed is not none %}
+                    {% if result.passed %}
+                    <span class="pass">✅</span>
+                    {% else %}
+                    <span class="fail">❌</span>
+                    {% endif %}
+                    {% elif not test_instance.device_active_at_run %}
+                    <span class="text-muted" title="Device inactive at run time">⏸️</span>
+                    {% else %}
+                    <span class="text-warning" title="Connection error">⚠️</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr class="details-row" id="itraceroute-{{ test_instance.id }}" style="display: none;">
+                <td colspan="5">
+                    <strong>Device:</strong> {{ device.hostname }} ({{ device.mgmtip }})<br>
+                    <strong>Status:</strong>
+                    {% if result and result.passed is not none %}
+                    {{ "Passed" if result.passed else "Failed" }}
+                    {% elif not test_instance.device_active_at_run %}
+                    Skipped (Device Inactive at Run Time)
+                    {% else %}
+                    Skipped (Connection Error)
+                    {% endif %}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput if result else "No output" }}</pre>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
     <br />
     <!-- Run Log Section -->
     <h2>Run Log</h2>
