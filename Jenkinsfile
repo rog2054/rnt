@@ -8,6 +8,7 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'registry-kranica-com-user' // Jenkins credential ID for registry login
         GITEA_CREDENTIALS_ID = 'gitea-jenkinsuser' // 'jenkins' user within Gitea
         DOCKER_HUB_IMAGE = "roger00/rogers-network-tools"
+        FULL_BUILD = 'false' // false only builds in dev, true builds in dev then pushes to hub also
     }
 
     stages {
@@ -37,7 +38,7 @@ pipeline {
             }
         }
 
-        stage('Push to Docker Registry') {
+        stage('Push to Private Registry') {
             steps {
                 script {
                     // Log in to the Docker registry and push the image
@@ -81,9 +82,12 @@ pipeline {
 
         stage('Push to Docker Hub') {
             when {
-                expression {
-                    // Only run this stage if the previous stage succeeded and container is running
-                    return currentBuild.resultIsBetterOrEqualTo('SUCCESS')
+                allOf {
+                    expression {
+                        // Only if the dev container ran successfully without terminating itself
+                        return currentBuild.resultIsBetterOrEqualTo('SUCCESS')
+                    }
+                    environment name: 'FULL_BUILD', value: 'true'
                 }
             }
             steps {
@@ -110,7 +114,8 @@ pipeline {
             script {
                 // Get build status
                 def status = currentBuild.currentResult
-                def message = "🔔 Jenkins Build: *${env.JOB_NAME}* #${env.BUILD_NUMBER} has *${status}*.\n" +
+                def buildType = env.FULL_BUILD == 'true' ? 'dev+hub' : 'dev-only'
+                def message = "🔔 Jenkins Build: *${env.JOB_NAME}* #${env.BUILD_NUMBER} has *${status}* (${buildType}).\n" +
                             "🔗 [View Build](${env.BUILD_URL})"
 
                 // Use withCredentials to securely fetch bot token and chat ID
