@@ -538,7 +538,7 @@ def create_app():
             totals = {
                 'pass': bgp_totals['pass'] + traceroute_totals['pass'] + txrxtransceiver_totals['pass'] + itraceroute_totals['pass'],
                 'fail': bgp_totals['fail'] + traceroute_totals['fail'] + txrxtransceiver_totals['fail'] + itraceroute_totals['fail'],
-                'incomplete': bgp_totals['incomplete'] + traceroute_totals['incomplete'] + txrxtransceiver_totals['imcomplete'] + itraceroute_totals['imcomplete'],
+                'incomplete': bgp_totals['incomplete'] + traceroute_totals['incomplete'] + txrxtransceiver_totals['incomplete'] + itraceroute_totals['incomplete'],
                 'skipped': bgp_totals['skipped'] + traceroute_totals['skipped'] + txrxtransceiver_totals['skipped'] + itraceroute_totals['skipped']
             }
 
