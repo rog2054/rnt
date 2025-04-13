@@ -8,7 +8,7 @@ pipeline {
         DOCKER_CREDENTIALS_ID = 'registry-kranica-com-user' // Jenkins credential ID for registry login
         GITEA_CREDENTIALS_ID = 'gitea-jenkinsuser' // 'jenkins' user within Gitea
         DOCKER_HUB_IMAGE = "roger00/rogers-network-tools"
-        FULL_BUILD = 'false' // false only builds in dev, true builds in dev then pushes to hub also
+        FULL_BUILD = 'true' // false only builds in dev, true builds in dev then pushes to hub also
     }
 
     stages {
