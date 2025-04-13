@@ -169,6 +169,7 @@ class txrxtransceiverTestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     test_instance_id = db.Column(db.Integer, db.ForeignKey("test_instance.id", name='fk_txfxtransceiver_result_test_instance'), nullable=False)
     rawoutput = db.Column(db.Text)
+    sfpinfo = db.Column(db.Text)
     txrx = db.Column(db.Text)
     passed = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
