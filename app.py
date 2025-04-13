@@ -8,8 +8,8 @@ import threading
 import queue
 from queue import Queue
 from extensions import db, cipher
-from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User
-from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm
+from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
+from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
@@ -149,7 +149,9 @@ def create_app():
         stats = {
             "bgpaspath_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "traceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
-        }
+            "txrxtransceiver_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
+            "itraceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
+            }
         for inst in instances:
             stats[inst.test_type]["total"] += 1
             if inst.status == "completed":
@@ -343,7 +345,7 @@ def create_app():
         if request.method == 'POST':
             if form.validate_on_submit():  # Form validation
                 try:
-                    # Create a new bgp as-path test using the form data
+                    # Create a new traceroute test using the form data
                     new_test = tracerouteTest(
                         devicehostname_id=form.test_device_hostname.data,
                         destinationip=form.test_destinationip.data,
@@ -351,7 +353,7 @@ def create_app():
                     )
                     db.session.add(new_test)
                     db.session.commit()
-                    ''' return jsonify({'redirect': url_for('showtests_traceroute')})  # Redirect back to BGP as-path tests list '''
+                    ''' return jsonify({'redirect': url_for('showtests_traceroute')})  # Redirect back to traceroute tests list '''
                     return redirect(url_for('showtests_traceroute'))
                 except Exception as e:
                     db.session.rollback()  # In case of any error, rollback the session
@@ -372,6 +374,97 @@ def create_app():
         db.session.delete(test)
         db.session.commit()
         return jsonify({'message': 'Traceroute Test removed successfully'})
+
+    # Display all TxRx SFP Transceiver Tests
+    @app.route('/tests/txrxtransceiver', methods=['GET'])
+    @login_required
+    def showtests_txrxtransceiver():
+        txrxtransceivertests = txrxtransceiverTest.query.all()
+        return render_template('showtests_txrxtransceiver.html', txrxtransceivertests=txrxtransceivertests)
+
+    # Add TxRx SFP Transceiver test
+    @app.route('/tests/addtest_txrxtransceiver', methods=['GET', 'POST'])
+    @login_required
+    def addtest_txrxtransceiver():
+        form = txrxtransceiverTestForm()
+        if request.method == 'POST':
+            if form.validate_on_submit():  # Form validation
+                try:
+                    # Create a new txrxtransceiver test using the form data
+                    new_test = txrxtransceiverTest(
+                        devicehostname_id=form.test_device_hostname.data,
+                        deviceinterface=form.test_deviceinterface.data,
+                        description=form.test_description.data
+                    )
+                    db.session.add(new_test)
+                    db.session.commit()
+                    return redirect(url_for('showtests_txrxtransceiver'))
+                except Exception as e:
+                    db.session.rollback()  # In case of any error, rollback the session
+                    print("Error adding device:", str(e))
+                    return jsonify({'message': 'Database error: ' + str(e)}), 500
+            # If form validation fails, return specific errors
+            error_messages = {field: error for field,
+                              error in form.errors.items()}
+            return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
+        # If GET request, render form
+        return render_template("addtest_txrxtransceiver.html", form=form)
+
+    # Delete Traceroute Test
+    @app.route('/tests/delete_txrxtransceivertest/<int:test_id>', methods=['POST'])
+    @login_required
+    def delete_txrxtransceivertest(test_id):
+        test = txrxtransceiverTest.query.get_or_404(test_id)
+        db.session.delete(test)
+        db.session.commit()
+        return jsonify({'message': 'TxRx SFP Transceiver Test removed successfully'})
+
+    # Display all ACI itraceroute Tests
+    @app.route('/tests/itraceroute', methods=['GET'])
+    @login_required
+    def showtests_itraceroute():
+        itraceroutetests = itracerouteTest.query.all()
+        return render_template('showtests_itraceroute.html', itraceroutetests=itraceroutetests)
+
+    # Add ACI itraceroute test
+    @app.route('/tests/addtest_itraceroutetests', methods=['GET', 'POST'])
+    @login_required
+    def addtest_itraceroutetests():
+        form = itracerouteTestForm()
+        if request.method == 'POST':
+            if form.validate_on_submit():  # Form validation
+                try:
+                    # Create a new itraceroute test using the form data
+                    new_test = itracerouteTest(
+                        devicehostname_id=form.test_device_hostname.data,
+                        srcip=form.test_srcip.data,
+                        dstip=form.test_dstip.data,
+                        vrf=form.test_vrf.data,
+                        encapvlan=form.test_encapvlan.data,
+                        description=form.test_description.data
+                    )
+                    db.session.add(new_test)
+                    db.session.commit()
+                    return redirect(url_for('showtests_itraceroute'))
+                except Exception as e:
+                    db.session.rollback()  # In case of any error, rollback the session
+                    print("Error adding device:", str(e))
+                    return jsonify({'message': 'Database error: ' + str(e)}), 500
+            # If form validation fails, return specific errors
+            error_messages = {field: error for field,
+                              error in form.errors.items()}
+            return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
+        # If GET request, render form
+        return render_template("addtest_itraceroute.html", form=form)
+
+    # Delete ACI itraceroute Test
+    @app.route('/tests/delete_itraceroutetest/<int:test_id>', methods=['POST'])
+    @login_required
+    def delete_itraceroutetest(test_id):
+        test = itracerouteTest.query.get_or_404(test_id)
+        db.session.delete(test)
+        db.session.commit()
+        return jsonify({'message': 'ACI itraceroute test removed successfully'})
 
     # Detail tables showing the results of a specific batch of tests
     @app.route('/test_results/<int:run_id>')
@@ -400,6 +493,18 @@ def create_app():
                                 .join(Device, TestInstance.device_id == Device.id)
                                 .join(tracerouteTest, TestInstance.traceroute_test_id == tracerouteTest.id)
                                 .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "traceroute_test"))
+            
+            txrxtransceiver_base_query = (db.session.query(TestInstance, txrxtransceiverTestResult, Device, txrxtransceiverTest)
+                                .join(txrxtransceiverTestResult, TestInstance.id == txrxtransceiverTestResult.test_instance_id)
+                                .join(Device, TestInstance.device_id == Device.id)
+                                .join(txrxtransceiverTest, TestInstance.txrxtransceiver_test_id ==txrxtransceiverTest.id )
+                                .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "txrxtransceiver_test"))
+            
+            itraceroute_base_query = (db.session.query(TestInstance, itracerouteTestResult, Device, itracerouteTest)
+                                .join(itracerouteTestResult, TestInstance.id == itracerouteTestResult.test_instance_id)
+                                .join(Device, TestInstance.device_id == Device.id)
+                                .join(itracerouteTest, TestInstance.traceroute_test_id == itracerouteTest.id)
+                                .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "itraceroute_test"))
 
             # Calculate totals from unfiltered data
             bgp_totals = {
@@ -415,34 +520,60 @@ def create_app():
                 'incomplete': sum(1 for ti, r, _, _ in traceroute_base_query.filter(tracerouteTestResult.passed == None, TestInstance.device_active_at_run == True).all()),
                 'skipped': sum(1 for ti, _, _, _ in traceroute_base_query.filter(TestInstance.device_active_at_run == False).all())
             }
+            
+            txrxtransceiver_totals = {
+                'pass': sum(1 for _, r, _, _ in txrxtransceiver_base_query.filter(txrxtransceiverTestResult.passed == True).all()),
+                'fail': sum(1 for _, r, _, _ in txrxtransceiver_base_query.filter(txrxtransceiverTestResult.passed == False).all()),
+                'incomplete': sum(1 for ti, r, _, _ in txrxtransceiver_base_query.filter(txrxtransceiverTestResult.passed == None, TestInstance.device_active_at_run == True).all()),
+                'skipped': sum(1 for ti, _, _, _ in txrxtransceiver_base_query.filter(TestInstance.device_active_at_run == False).all())
+            }
+            
+            itraceroute_totals = {
+                'pass': sum(1 for _, r, _, _ in itraceroute_base_query.filter(itracerouteTestResult.passed == True).all()),
+                'fail': sum(1 for _, r, _, _ in itraceroute_base_query.filter(itracerouteTestResult.passed == False).all()),
+                'incomplete': sum(1 for ti, r, _, _ in itraceroute_base_query.filter(itracerouteTestResult.passed == None, TestInstance.device_active_at_run == True).all()),
+                'skipped': sum(1 for ti, _, _, _ in itraceroute_base_query.filter(TestInstance.device_active_at_run == False).all())
+            }
 
             totals = {
-                'pass': bgp_totals['pass'] + traceroute_totals['pass'],
-                'fail': bgp_totals['fail'] + traceroute_totals['fail'],
-                'incomplete': bgp_totals['incomplete'] + traceroute_totals['incomplete'],
-                'skipped': bgp_totals['skipped'] + traceroute_totals['skipped']
+                'pass': bgp_totals['pass'] + traceroute_totals['pass'] + txrxtransceiver_totals['pass'] + itraceroute_totals['pass'],
+                'fail': bgp_totals['fail'] + traceroute_totals['fail'] + txrxtransceiver_totals['fail'] + itraceroute_totals['fail'],
+                'incomplete': bgp_totals['incomplete'] + traceroute_totals['incomplete'] + txrxtransceiver_totals['imcomplete'] + itraceroute_totals['imcomplete'],
+                'skipped': bgp_totals['skipped'] + traceroute_totals['skipped'] + txrxtransceiver_totals['skipped'] + itraceroute_totals['skipped']
             }
 
             # Filtered queries for display
             bgp_query = bgp_base_query
             traceroute_query = traceroute_base_query
+            txrxtransceiver_query = txrxtransceiver_base_query
+            itraceroute_query = itraceroute_base_query
 
             # Apply filters to display results
             if filter_type == 'pass':
                 bgp_query = bgp_query.filter(bgpaspathTestResult.passed == True)
                 traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == True)
+                txrxtransceiver_query = txrxtransceiver_query.filter(txrxtransceiverTestResult.passed == True)
+                itraceroute_query = itraceroute_query.filter(itracerouteTestResult.passed == True)
             elif filter_type == 'fail':
                 bgp_query = bgp_query.filter(bgpaspathTestResult.passed == False)
                 traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == False)
+                txrxtransceiver_query = txrxtransceiver_query.filter(txrxtransceiverTestResult.passed == False)
+                itraceroute_query = itraceroute_query.filter(itracerouteTestResult.passed == False)
             elif filter_type == 'incomplete':
                 bgp_query = bgp_query.filter(bgpaspathTestResult.passed == None, TestInstance.device_active_at_run == True)
                 traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == None, TestInstance.device_active_at_run == True)
+                txrxtransceiver_query = txrxtransceiver_query.filter(txrxtransceiverTestResult.passed == None, TestInstance.device_active_at_run == True)
+                itraceroute_query = itraceroute_query.filter(itracerouteTestResult.passed == None, TestInstance.device_active_at_run == True)
             elif filter_type == 'skipped':
                 bgp_query = bgp_query.filter(TestInstance.device_active_at_run == False)
                 traceroute_query = traceroute_query.filter(TestInstance.device_active_at_run == False)
+                txrxtransceiver_query = txrxtransceiver_query.filter(TestInstance.device_active_at_run == False)
+                itraceroute_query = itraceroute_query.filter(TestInstance.device_active_at_run == False)
 
             bgp_results = bgp_query.all()
             traceroute_results = traceroute_query.all()
+            txrxtransceiver_results = txrxtransceiver_query.all()
+            itraceroute_results = itraceroute_query.all()
 
             # Fetch test run details
             test_instance = db.session.query(TestInstance).filter_by(test_run_id=run_id).first()
@@ -462,6 +593,8 @@ def create_app():
                             filter_type=filter_type,
                             bgp_results=bgp_results,
                             traceroute_results=traceroute_results,
+                            txrxtransceiver_results=txrxtransceiver_results,
+                            itraceroute_results=itraceroute_results,
                             run_timestamp=run_timestamp,
                             run_endtimestamp=run_endtimestamp,
                             run_description=run_description,
@@ -552,6 +685,8 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
         stats = {
             "bgpaspath_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "traceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
+            "txrxtransceiver_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
+            "itraceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
         }
         for inst in instances:
             stats[inst.test_type]["total"] += 1
@@ -597,7 +732,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
             "device_type": "cisco_ios",
             "host": device.mgmtip,
             "username": cred.username,
-            "password": cred.get_password(),  # Decrypt the password
+            "password": cred.get_password(),
             "timeout": 10,
             "session_timeout": 60,
         }
@@ -672,6 +807,61 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             result = tracerouteTestResult(test_instance_id=test.id, rawoutput=rawoutput, numberofhops=numberofhops, passed=passed)
                             db.session.add(result)
                             log_msg = f"Device {device.hostname}: Traceroute test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
+                            with log_lock:
+                                log_lines.append(log_msg)
+                            socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
+
+                        elif test.test_test == "txrxtransceiver_test":
+                            txrxtransceiver_test = test.txrxtransceiver_test
+                            if device.devicetype == "cisco_ios":
+                                rawoutput = conn.send_command(f"show int {txrxtransceiver_test.deviceinterface} transceiver")
+                            elif device.devicetype == "cisco_nxos":
+                                rawoutput = conn.send_command(f"show int {txrxtransceiver_test.deviceinterface} transceiver details")
+                            if rawoutput:
+                                if device.devicetype == "cisco_ios":
+                                    sfppid = get_pid_from_ciscoios_output(rawoutput)
+                                elif device.devicetype == "cisco_nxos":
+                                    sfppid = get_pid_from_cisconxos_output(rawoutput)
+                                if sfppid is not None:
+                                    sfpinfo = lookup_transceiver_info_for_pid(sfppid)
+                                    if sfpinfo is not None:
+                                        if device.devicetype == "cisco_ios":
+                                            txrx = parse_iosxe_transceiver_tx_rx(rawoutput)
+                                        elif device.devicetype == "cisco_nxos":
+                                            txrx = parse_nxos_transceiver_tx_rx(rawoutput)
+                                        if txrx is not None:
+                                            passed = check_txrx_power_levels(txrx)
+                                            if passed is None:
+                                                log_msg = f"Device {device.hostname}: TxRx test ID {test.id} incomplete - SFP found but unable to assess TxRx values"
+                                        else:
+                                            log_msg = f"Device {device.hostname}: TxRx test ID {test.id} incomplete - SFP found but unable to read TxRx values"
+                                            passed = None
+                                    else:
+                                        log_msg = f"Device {device.hostname}: TxRx test ID {test.id} incomplete - SFP not a recognised model"
+                                        passed = None
+                                else:
+                                    log_msg = f"Device {device.hostname}: TxRx test ID {test.id} incomplete - SFP not found"
+                                    passed = None
+                                result = txrxtransceiverTestResult(test_instance_id=test.id, rawoutput=rawoutput, sfpinfo=sfpinfo, txrx=txrx, passed=passed)
+                                db.session.add(result)
+                                if passed is not None:
+                                    log_msg = f"Device {device.hostname}: TxRx test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
+                                with log_lock:
+                                    log_lines.append(log_msg)
+                                socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
+
+                        elif test.test_test == "itraceroute_test":
+                            itraceroute_test = test.itraceroute_test
+                            if device.devicetype == "cisco_aci":
+                                rawoutput = conn.send_command_timing(f"itraceroute external {itraceroute_test.srcip} {itraceroute_test.dstip} vrf {itraceroute_test.vrf} encap vlan {itraceroute_test.encapvlan} icmp")
+                                # example: itraceroute external src-ip 10.242.100.140 10.174.177.1 vrf PROD-INT:PROD-INT-VRF1 encap vlan 106 icmp
+                                passed = is_traceroute_destination_reached(rawoutput)                                
+                            else:
+                                log_msg = f"Device {device.hostname}: itraceroute test not possible as not an ACI device"
+                                passed = None
+                            result = tracerouteTestResult(test_instance_id=test.id, rawoutput=rawoutput, numberofhops=numberofhops, passed=passed)
+                            db.session.add(result)
+                            log_msg = f"Device {device.hostname}: itraceroute test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
                             with log_lock:
                                 log_lines.append(log_msg)
                             socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
@@ -768,6 +958,62 @@ def count_hops(output):
     # Parse traceroute output to count hops (example)
     return len([line for line in output.splitlines() if line.strip().startswith(tuple(str(i) for i in range(1, 31)))])
 
+def is_traceroute_destination_reached(output):
+    """
+    Parses ACI leaf switch itraceroute output and returns True if the destination IP is reached,
+    False otherwise.
+    
+    Args:
+        output (str): Multi-line string of itraceroute output.
+        
+    Returns:
+        bool: True if the destination IP is the last hop in the external path, False otherwise.
+    """
+    try:
+        # Extract the destination IP from the first line
+        dest_match = re.search(r"traceroute to (\S+),", output)
+        if not dest_match:
+            return False
+        dest_ip = dest_match.group(1)
+
+        # Find the external path section
+        lines = output.splitlines()
+        in_external = False
+        hops = []
+
+        for line in lines:
+            # Detect start of external path table
+            if "[ external ]" in line:
+                in_external = True
+                continue
+            # Look for hop lines in external path
+            if in_external and line.strip().startswith("|"):
+                parts = [p.strip() for p in line.split("|") if p.strip()]
+                if len(parts) >= 2 and parts[0].isdigit():
+                    hop_ip = parts[1]
+                    hops.append(hop_ip)
+
+        # Check if the last hop matches the destination IP
+        return hops and hops[-1] == dest_ip
+
+    except Exception:
+        # Return False for any parsing errors
+        return False
+
+def get_pid_from_ciscoios_output(output):
+    # 'show int ... transceiver'
+    # relevant line of output looks like this
+    # Product Identifier (PID)                  = SFP-10G-LR
+    match = re.search(r"Product Identifier \(PID\)\s*=\s*(\S+)", output)
+    return match.group(1) if match else None
+
+def get_pid_from_cisconxos_output(output):
+    # 'show int ... transceiver details'
+    # relevant line of output looks like this
+    # type is QSFP-100G-LR4
+    match = re.search(r"type is (\S+)", output)
+    return match.group(1) if match else None
+        
 def lookup_transceiver_info_for_pid(pid):
     '''
     info = lookup_transceiver_info_for_pid("GLC-SX-MM")
@@ -891,9 +1137,102 @@ def parse_iosxe_transceiver_tx_rx(output):
 
     return tx_rx_values or None
 
+def check_txrx_power_levels(data, threshold=-8):
+    try:
+        # Iterate through all lanes in the dataset
+        for lane_data in data.values():
+            # Get tx_dBm and rx_dBm
+            tx = lane_data.get('tx_dBm')
+            rx = lane_data.get('rx_dBm')
+            
+            # Check for None, "N/A", or non-numeric values
+            for value in (tx, rx):
+                if value is None or value == "N/A" or not isinstance(value, (int, float)):
+                    return None
+                
+                # Compare against threshold (below threshold means > -8 mathematically)
+                if value <= threshold:
+                    return False
+        
+        # All values are above threshold
+        return True
+    
+    except (AttributeError, TypeError, KeyError):
+        # Handle malformed data (e.g., data not a dict, missing keys)
+        return None
+
+import re
+
 def parse_nxos_transceiver_tx_rx(output):
-    # to be written
-    pass
+    """
+    Parses Cisco NX-OS output of 'show interface ... transceiver' and returns Tx/Rx values.
+    Works for single-lane and multi-lane SFPs.
+    
+    Returns a dict like:
+    # Single-lane SFP example:
+    { 0: {'tx_dBm': -2.1, 'rx_dBm': -3.2} }
+    
+    # Multi-lane SFP example:
+    {
+        0: {'tx_dBm': -1.6, 'rx_dBm': -2.0},
+        1: {'tx_dBm': -1.5, 'rx_dBm': -2.1},
+        2: {'tx_dBm': -1.4, 'rx_dBm': -2.2},
+        3: {'tx_dBm': -1.5, 'rx_dBm': -2.0}
+    }
+    
+    Returns None if no valid Tx/Rx values are found.
+    """
+    tx_rx_values = {}
+    lines = output.splitlines()
+    current_lane = None
+
+    for line in lines:
+        # Look for lane number
+        lane_match = re.match(r"Lane Number:(\d+)", line.strip())
+        if lane_match:
+            current_lane = int(lane_match.group(1)) - 1  # Convert to 0-based indexing
+            continue
+        
+        # Look for Tx Power and Rx Power in the same line
+        if "Tx Power" in line and "Rx Power" in line and current_lane is not None:
+            try:
+                # Split the line and extract values
+                parts = line.strip().split()
+                # Tx Power is typically the first numeric value after "Tx Power"
+                # Rx Power follows it
+                for i, part in enumerate(parts):
+                    if part == "Tx":
+                        tx_str = parts[i + 2]  # Skip "Power" and get value
+                        rx_str = parts[i + 5]  # Skip to Rx Power value
+                        break
+                # Convert to float
+                tx = float(tx_str)
+                rx = float(rx_str)
+                # Store in dict
+                tx_rx_values[current_lane] = {"tx_dBm": tx, "rx_dBm": rx}
+            except (ValueError, IndexError):
+                # Skip if conversion fails or indices are off
+                continue
+
+    # For single-lane SFPs, check if no lane numbers were found
+    if not tx_rx_values:
+        for line in lines:
+            if "Tx Power" in line and "Rx Power" in line:
+                try:
+                    parts = line.strip().split()
+                    for i, part in enumerate(parts):
+                        if part == "Tx":
+                            tx_str = parts[i + 2]
+                            rx_str = parts[i + 5]
+                            break
+                    tx = float(tx_str)
+                    rx = float(rx_str)
+                    tx_rx_values[0] = {"tx_dBm": tx, "rx_dBm": rx}
+                    break
+                except (ValueError, IndexError):
+                    continue
+
+    return tx_rx_values or None
 
 if __name__ == '__main__':
     # For local development only
