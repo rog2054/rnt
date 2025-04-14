@@ -1148,19 +1148,13 @@ def parse_iosxe_transceiver_tx_rx(output):
 
         # Look for the data row directly
         for line in lines:
-            if "Tx Power" in line and "Rx Power" in line:
-                headers = line.split()
-            elif line.strip() and any(char.isdigit() for char in line) and headers:
-                # Parse data row for single-lane SFP
-                parts = line.split()
-                if len(parts) >= 5:  # Ensure enough columns (port, temp, voltage, current, tx, rx)
+            if line.strip() and any(char.isdigit() for char in line):
+                parts = ' '.join(line.split()).split()
+                if len(parts) >= 6:  # Port, Temp, Voltage, Current, Tx, Rx
                     try:
-                        # Find indices for Tx Power and Rx Power
-                        tx_index = headers.index("Tx") if "Tx" in headers else headers.index("Power")
-                        rx_index = headers.index("Rx") if "Rx" in headers else headers.index("Power", headers.index("Tx") + 1)
-                        tx = float(parts[tx_index])
-                        rx = float(parts[rx_index])
-                        tx_rx_values[0] = {"tx_dBm": tx, "rx_dBm": rx}  # Store single-lane result at index 0
+                        tx = float(parts[4])  # Tx Power
+                        rx = float(parts[5])  # Rx Power
+                        tx_rx_values[0] = {"tx_dBm": tx, "rx_dBm": rx}
                         break
                     except (ValueError, IndexError):
                         continue
