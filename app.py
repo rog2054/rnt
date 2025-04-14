@@ -1089,9 +1089,6 @@ def lookup_transceiver_info_for_pid(pid):
     "QSFP-100G-DR-S":      {"lanes": 1, "type": "SM", "distance": "500 m", "speed": "100G"}
     }
 
-    # normalise to remove vendor suffixes and -S etc
-    pid = pid.split("-")[0] + "-" + pid.split("-")[1]
-    logger.info(f"split pid within lookup_transceiver_info_for_pid: '{pid}'")
     return transceiver_info.get(pid) # returns None is no match found
 
 def parse_iosxe_transceiver_tx_rx(output):
