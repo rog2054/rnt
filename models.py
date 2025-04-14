@@ -2,7 +2,10 @@ from datetime import datetime
 from flask_login import UserMixin
 import bcrypt
 from extensions import cipher, db
+import json
+from sqlalchemy.ext.declarative import declarative_base
 
+Base = declarative_base()
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -173,6 +176,30 @@ class txrxtransceiverTestResult(db.Model):
     txrx = db.Column(db.Text)
     passed = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    @property
+    def sfpinfo_dict(self):
+        """Deserialize sfpinfo JSON string to dict when accessed."""
+        if self.sfpinfo:
+            return json.loads(self.sfpinfo)
+        return None
+
+    @sfpinfo_dict.setter
+    def sfpinfo_dict(self, value):
+        """Serialize dict to JSON string when setting sfpinfo."""
+        self.sfpinfo = json.dumps(value) if value is not None else None
+
+    @property
+    def txrx_dict(self):
+        """Deserialize txrx JSON string to dict when accessed."""
+        if self.txrx:
+            return json.loads(self.txrx)
+        return None
+
+    @txrx_dict.setter
+    def txrx_dict(self, value):
+        """Serialize dict to JSON string when setting txrx."""
+        self.txrx = json.dumps(value) if value is not None else None
     
 class itracerouteTestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
