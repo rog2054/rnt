@@ -191,6 +191,26 @@ def create_app():
                     traceroute_test_id=test.id
                 )
                 test_instances.append(instance)
+                
+            txrxtransceiver_tests = txrxtransceiverTest.query.all()
+            for test in txrxtransceiver_tests:
+                instance = TestInstance(
+                    test_run_id=test_run.id,
+                    device_id=test.devicehostname_id,
+                    test_type="txrxtransceiver_test",
+                    txrxtransceiver_test_id=test.id
+                )
+                test_instances.append(instance)
+                
+            itraceroute_tests = itracerouteTest.query.all()
+            for test in itraceroute_tests:
+                instance = TestInstance(
+                    test_run_id=test_run.id,
+                    device_id=test.devicehostname_id,
+                    test_type="itraceroute_test",
+                    itraceroute_test_id=test.id
+                )
+                test_instances.append(instance)
 
             db.session.bulk_save_objects(test_instances)
             db.session.commit()
