@@ -180,7 +180,8 @@
                     {% if result.txrx_dict %}
                     <ul>
                         {% for lane, values in result.txrx_dict.items() %}
-                        <li><strong>Lane {{ lane + 1 }}:</strong> Tx {{ values.tx_dBm }} dBm, Rx {{ values.rx_dBm }} dBm
+                        <li><strong>Lane {{ lane|int + 1 }}:</strong> Tx {{ values.tx_dBm }} dBm, Rx {{ values.rx_dBm }}
+                            dBm
                         </li>
                         {% endfor %}
                     </ul>
