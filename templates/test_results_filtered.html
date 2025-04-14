@@ -165,10 +165,28 @@
                     {% else %}
                     Skipped (Connection Error)
                     {% endif %}<br>
-                    <strong>SFP info:</strong><br>
-                    <pre>{{ txrxtransceiver_test.sfpinfo }}</pre>
-                    <strong>TxRx values:</strong><br>
-                    <pre>{{ txrxtransceiver_test.txrx }}</pre>
+                    <strong>SFP Info:</strong><br>
+                    {% if result.sfpinfo_dict %}
+                    <ul>
+                        <li><strong>Lanes:</strong> {{ result.sfpinfo_dict.lanes }}</li>
+                        <li><strong>Type:</strong> {{ result.sfpinfo_dict.type }}</li>
+                        <li><strong>Distance:</strong> {{ result.sfpinfo_dict.distance }}</li>
+                        <li><strong>Speed:</strong> {{ result.sfpinfo_dict.speed }}</li>
+                    </ul>
+                    {% else %}
+                    <pre>No SFP info available</pre>
+                    {% endif %}
+                    <strong>TxRx Values:</strong><br>
+                    {% if result.txrx_dict %}
+                    <ul>
+                        {% for lane, values in result.txrx_dict.items() %}
+                        <li><strong>Lane {{ lane + 1 }}:</strong> Tx {{ values.tx_dBm }} dBm, Rx {{ values.rx_dBm }} dBm
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <pre>No Tx/Rx values available</pre>
+                    {% endif %}
                     <strong>Raw Output:</strong><br>
                     <pre>{{ result.rawoutput if result else "No output" }}</pre>
                 </td>
