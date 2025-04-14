@@ -838,6 +838,9 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             elif device.devicetype == "cisco_nxos":
                                 rawoutput = conn.send_command(f"show int {txrxtransceiver_test.deviceinterface} transceiver details")
                             if rawoutput:
+                                # set default values
+                                txrx = None
+                                sfpinfo = None
                                 if device.devicetype == "cisco_ios":
                                     sfppid = get_pid_from_ciscoios_output(rawoutput)
                                 elif device.devicetype == "cisco_nxos":
