@@ -843,12 +843,16 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                                 elif device.devicetype == "cisco_nxos":
                                     sfppid = get_pid_from_cisconxos_output(rawoutput)
                                 if sfppid is not None:
+                                    logger.info(f"sfppid: '{sfppid}' for run_id: {test_run_id}")
                                     sfpinfo = lookup_transceiver_info_for_pid(sfppid)
                                     if sfpinfo is not None:
+                                        logger.info(f"sfpinfo: '{sfpinfo}' for run_id: {test_run_id}")
                                         if device.devicetype == "cisco_ios":
                                             txrx = parse_iosxe_transceiver_tx_rx(rawoutput)
+                                            logger.info(f"txrx(ios): '{txrx}' for run_id: {test_run_id}")
                                         elif device.devicetype == "cisco_nxos":
                                             txrx = parse_nxos_transceiver_tx_rx(rawoutput)
+                                            logger.info(f"txrx(nxos): '{txrx}' for run_id: {test_run_id}")
                                         if txrx is not None:
                                             passed = check_txrx_power_levels(txrx)
                                             if passed is None:
@@ -862,6 +866,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                                 else:
                                     log_msg = f"Device {device.hostname}: TxRx test ID {test.id} incomplete - SFP not found"
                                     passed = None
+                                logger.info(f"txrx before result: '{txrx}' for run_id: {test_run_id}")
                                 result = txrxtransceiverTestResult(test_instance_id=test.id, rawoutput=rawoutput, sfpinfo=sfpinfo, txrx=txrx, passed=passed)
                                 db.session.add(result)
                                 if passed is not None:
