@@ -831,7 +831,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                                 log_lines.append(log_msg)
                             socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
 
-                        elif test.test_test == "txrxtransceiver_test":
+                        elif test.test_type == "txrxtransceiver_test":
                             txrxtransceiver_test = test.txrxtransceiver_test
                             if device.devicetype == "cisco_ios":
                                 rawoutput = conn.send_command(f"show int {txrxtransceiver_test.deviceinterface} transceiver")
@@ -870,7 +870,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                                     log_lines.append(log_msg)
                                 socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
 
-                        elif test.test_test == "itraceroute_test":
+                        elif test.test_type == "itraceroute_test":
                             itraceroute_test = test.itraceroute_test
                             if device.devicetype == "cisco_aci":
                                 rawoutput = conn.send_command_timing(f"itraceroute external {itraceroute_test.srcip} {itraceroute_test.dstip} vrf {itraceroute_test.vrf} encap vlan {itraceroute_test.encapvlan} icmp")
