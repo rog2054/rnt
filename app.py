@@ -991,20 +991,22 @@ def count_hops(output):
 def is_traceroute_destination_reached(output):
     """
     Parses ACI leaf switch itraceroute output and returns True if the destination IP is reached,
-    False otherwise.
-    
+    False otherwise, or None if parsing fails.
+
     Args:
         output (str): Multi-line string of itraceroute output.
-        
+
     Returns:
-        bool: True if the destination IP is the last hop in the external path, False otherwise.
+        bool or None: True if the destination IP is the last hop, False if not, None if parsing fails.
     """
     try:
         # Extract the destination IP from the first line
         dest_match = re.search(r"traceroute to (\S+),", output)
         if not dest_match:
-            return False
+            logging.info("No destination IP found in traceroute output")
+            return None
         dest_ip = dest_match.group(1)
+        logging.info(f"Destination IP: {dest_ip}")
 
         # Find the external path section
         lines = output.splitlines()
@@ -1013,9 +1015,10 @@ def is_traceroute_destination_reached(output):
 
         for line in lines:
             # Detect start of external path table
-            logger.info (f"is_traceroute_destination_reached debug line: '{line}'")
+            logging.info(f"Processing line: '{line}'")
             if "[ external ]" in line:
                 in_external = True
+                logging.info("Found external path section")
                 continue
             # Look for hop lines in external path
             if in_external and line.strip().startswith("|"):
@@ -1023,10 +1026,21 @@ def is_traceroute_destination_reached(output):
                 if len(parts) >= 2 and parts[0].isdigit():
                     hop_ip = parts[1]
                     hops.append(hop_ip)
+                    logging.info(f"Added hop: {hop_ip}")
+
+        logging.info(f"Hops collected: {hops}")
+        if not hops:
+            logging.info("No hops found in external path")
+            return False
 
         # Check if the last hop matches the destination IP
-        logger.info (f"is_traceroute_destination_reached hops: '{hops}")
-        return hops and hops[-1] == dest_ip
+        result = hops[-1] == dest_ip
+        logging.info(f"Last hop {hops[-1]} {'matches' if result else 'does not match'} destination {dest_ip}")
+        return result
+
+    except Exception as e:
+        logging.error(f"Error parsing traceroute output: {str(e)}")
+        return None
 
     except Exception:
         # Return False for any parsing errors
