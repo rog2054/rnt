@@ -869,8 +869,9 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                                 else:
                                     log_msg = f"Device {device.hostname}: TxRx test ID {test.id} incomplete - SFP not found"
                                     passed = None
-                                logger.info(f"txrx before result: '{txrx}' for run_id: {test_run_id}")
-                                result = txrxtransceiverTestResult(test_instance_id=test.id, rawoutput=rawoutput, sfpinfo=sfpinfo, txrx=txrx, passed=passed)
+                                result = txrxtransceiverTestResult(test_instance_id=test.id, rawoutput=rawoutput, passed=passed)
+                                result.sfpinfo_dict = sfpinfo  # Serialize sfpinfo to JSON string
+                                result.txrx_dict = txrx        # Serialize txrx to JSON string
                                 db.session.add(result)
                                 if passed is not None:
                                     log_msg = f"Device {device.hostname}: TxRx test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
