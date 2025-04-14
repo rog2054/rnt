@@ -140,6 +140,7 @@
             <tr class="summary-row" data-toggle-id="txrxtransceiver-{{ test_instance.id }}">
                 <td>{{ device.siteinfo or device.hostname }}</td>
                 <td>{{ txrxtransceiver_test.deviceinterface }}</td>
+                <td>{{ txrxtransceiver_test.description }}</td>
                 <td>
                     {% if result and result.passed is not none %}
                     {% if result.passed %}
