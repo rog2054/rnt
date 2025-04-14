@@ -888,7 +888,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             else:
                                 log_msg = f"Device {device.hostname}: itraceroute test not possible as not an ACI device"
                                 passed = None
-                            result = tracerouteTestResult(test_instance_id=test.id, rawoutput=rawoutput, numberofhops=numberofhops, passed=passed)
+                            result = tracerouteTestResult(test_instance_id=test.id, rawoutput=rawoutput, passed=passed)
                             db.session.add(result)
                             log_msg = f"Device {device.hostname}: itraceroute test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
                             with log_lock:
