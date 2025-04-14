@@ -882,7 +882,10 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                         elif test.test_type == "itraceroute_test":
                             itraceroute_test = test.itraceroute_test
                             if device.devicetype == "cisco_aci":
-                                rawoutput = conn.send_command_timing(f"itraceroute external src-ip {itraceroute_test.srcip} {itraceroute_test.dstip} vrf {itraceroute_test.vrf} encap vlan {itraceroute_test.encapvlan} icmp")
+                                rawoutput = conn.send_command(
+    command_string=f"itraceroute external src-ip {itraceroute_test.srcip} {itraceroute_test.dstip} vrf {itraceroute_test.vrf} encap vlan {itraceroute_test.encapvlan} icmp",
+    timeout=45
+)
                                 # example: itraceroute external src-ip 10.242.100.140 10.174.177.1 vrf PROD-INT:PROD-INT-VRF1 encap vlan 106 icmp
                                 logger.info (f"itraceroute_test rawoutput: {rawoutput} for run_id: {test_run_id}")
                                 passed = is_traceroute_destination_reached(rawoutput)                                
