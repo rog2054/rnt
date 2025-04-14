@@ -124,7 +124,7 @@
     {% endif %}
 
     <!-- TxRx SFP Transceiver Tests Table -->
-    {% if traceroute_results|length > 0 %}
+    {% if txrxtransceiver_results|length > 0 %}
     <h2>TxRx SFP Transceiver Tests</h2>
     <table class="table table-striped" id="txrxtransceiver-table">
         <thead>
@@ -181,7 +181,7 @@
     <!-- itraceroute Tests Table -->
     {% if itraceroute_results|length > 0 %}
     <h2>itraceroute Tests</h2>
-    <table class="table table-striped" id="traceroute-table">
+    <table class="table table-striped" id="itraceroute-table">
         <thead>
             <tr>
                 <th>Tested from Device</th>
