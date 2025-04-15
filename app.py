@@ -748,8 +748,14 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
             emit_stats_update()
             return
 
+        DEVICE_TYPE_MAP = {
+            "cisco_ios": "cisco_ios",
+            "cisco_nxos": "cisco_nxos",
+            "cisco_aci": "cisco_nxos",
+        }
+
         conn_params = {
-            "device_type": "cisco_ios",
+            "device_type": DEVICE_TYPE_MAP.get(device.device_type, "cisco_ios"),  # Fallback to cisco_nxos
             "host": device.mgmtip,
             "username": cred.username,
             "password": cred.get_password(),
@@ -883,9 +889,12 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             itraceroute_test = test.itraceroute_test
                             if device.devicetype == "cisco_aci":
                                 rawoutput = conn.send_command(
-    command_string=f"itraceroute external src-ip {itraceroute_test.srcip} {itraceroute_test.dstip} vrf {itraceroute_test.vrf} encap vlan {itraceroute_test.encapvlan} icmp",
-    timeout=45
-)
+                                    command_string=f"itraceroute external src-ip {itraceroute_test.srcip} {itraceroute_test.dstip} vrf {itraceroute_test.vrf} encap vlan {itraceroute_test.encapvlan} icmp",
+                                    timeout=60,  # Buffer for 20–30s runtime
+                                    use_textfsm=False,  # Avoid parsing issues with itraceroute output
+                                    strip_prompt=True,   # Remove prompt from output
+                                    strip_command=True   # Remove echoed command from output
+                                )
                                 # example: itraceroute external src-ip 10.242.100.140 10.174.177.1 vrf PROD-INT:PROD-INT-VRF1 encap vlan 106 icmp
                                 logger.info (f"itraceroute_test rawoutput: {rawoutput} for run_id: {test_run_id}")
                                 passed = is_traceroute_destination_reached(rawoutput)                                
