@@ -31,7 +31,7 @@
 <h2>Status Updates</h2>
 <div id="status-log" class="border p-3" style="height: 450px; overflow-y: auto;"></div>
 
-<div id="results-button" style="display:block;">
+<div id="results-button" style="display:none;">
     <a href="{{ url_for('test_results', run_id=test_run.id) }}" class="btn btn-primary mt-3">View Results</a>
 </div>
 
@@ -112,6 +112,7 @@
         });
         if (runCompletedMessage) {
             log.innerHTML += runCompletedMessage;
+            document.getElementById('results-button').style.display = 'block';
         }
         log.scrollTop = log.scrollHeight;
     });
@@ -136,10 +137,8 @@
             document.getElementById('itraceroute_running').textContent = stats.itraceroute_test.running;
             document.getElementById('itraceroute_skipped').textContent = stats.itraceroute_test.skipped;
             document.getElementById('itraceroute_total').textContent = stats.itraceroute_test.total;
-            if (stats.bgpaspathtest_test.running === 0 && stats.traceroute_test.running === 0 && stats.txrxtransceiver_test.running === 0 && stats.itraceroute_test.running === 0) {
-                document.getElementById('results-button').style.display = 'block';  // Show button
-            }
         }
+    }
     });
 
     });
