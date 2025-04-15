@@ -890,8 +890,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             if device.devicetype == "cisco_aci":
                                 rawoutput = conn.send_command(
                                     command_string=f"itraceroute external src-ip {itraceroute_test.srcip} {itraceroute_test.dstip} vrf {itraceroute_test.vrf} encap vlan {itraceroute_test.encapvlan} icmp",
-                                    delay_factor=4,      # Multiplies default delays (e.g., 4x longer waits)
-                                    max_loops=3000,      # Extends wait iterations (~60s for nxos)
+                                    read_timeout=90,
                                     use_textfsm=False,
                                     strip_prompt=True,
                                     strip_command=True
