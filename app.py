@@ -523,9 +523,9 @@ def create_app():
             itraceroute_base_query = (db.session.query(TestInstance, itracerouteTestResult, Device, itracerouteTest)
                                 .join(itracerouteTestResult, TestInstance.id == itracerouteTestResult.test_instance_id)
                                 .join(Device, TestInstance.device_id == Device.id)
-                                .join(itracerouteTest, TestInstance.traceroute_test_id == itracerouteTest.id)
+                                .join(itracerouteTest, TestInstance.itraceroute_test_id == itracerouteTest.id)
                                 .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "itraceroute_test"))
-
+            
             # Calculate totals from unfiltered data
             bgp_totals = {
                 'pass': sum(1 for _, r, _, _ in bgp_base_query.filter(bgpaspathTestResult.passed == True).all()),
