@@ -755,7 +755,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
         }
 
         conn_params = {
-            "device_type": DEVICE_TYPE_MAP.get(device.device_type, "cisco_ios"),  # Fallback to cisco_nxos
+            "device_type": DEVICE_TYPE_MAP.get(device.devicetype, "cisco_ios"),  # Fallback to cisco_nxos
             "host": device.mgmtip,
             "username": cred.username,
             "password": cred.get_password(),
