@@ -863,7 +863,10 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                                             txrx = parse_nxos_transceiver_tx_rx(rawoutput)
                                             logger.info(f"txrx(nxos): '{txrx}' for run_id: {test_run_id}")
                                         if txrx is not None:
-                                            passed = check_txrx_power_levels(txrx)
+                                            if device.devicetype == "cisco_ios":
+                                                passed = check_txrx_power_levels_ios(txrx)
+                                            elif device.devicetype == "cisco_nxos":
+                                                passed = check_txrx_power_levels_nxos(txrx)
                                             if passed is None:
                                                 log_msg = f"Device {device.hostname}: TxRx test ID {test.id} incomplete - SFP found but unable to assess TxRx values"
                                         else:
@@ -1190,7 +1193,7 @@ def parse_iosxe_transceiver_tx_rx(output):
 
     return tx_rx_values or None
 
-def check_txrx_power_levels(data, threshold=-8):
+def check_txrx_power_levels_ios(data, threshold=-8):
     try:
         # Iterate through all lanes in the dataset
         for lane_data in data.values():
@@ -1214,73 +1217,121 @@ def check_txrx_power_levels(data, threshold=-8):
         # Handle malformed data (e.g., data not a dict, missing keys)
         return None
 
-import re
+def check_txrx_power_levels_nxos(data):
+    """
+    Parses the txrx dict from parse_nxos_transceiver_tx_rx and returns True if all lanes
+    are within tolerance, False if any are not, or None if there is an error determining
+    the result.
+
+    Args:
+        data: Dict from parse_nxos_transceiver_tx_rx, e.g.,
+              {0: {'tx_dBm': -2.63, 'rx_dBm': -3.62, 'within_tolerance': 'yes'}, ...}
+
+    Returns:
+        bool: True if all lanes have within_tolerance='yes', False if any are 'no'.
+        None: If data is None, empty, or has invalid format.
+    """
+    # Check for invalid input
+    if data is None or not isinstance(data, dict) or not data:
+        return None
+
+    try:
+        # Check each lane's within_tolerance
+        for lane_data in data.values():
+            if 'within_tolerance' not in lane_data:
+                return None
+            if lane_data['within_tolerance'] != 'yes':
+                return False
+        # All lanes are 'yes'
+        return True
+    except (KeyError, TypeError):
+        # Handle unexpected dict structure
+        return None
 
 def parse_nxos_transceiver_tx_rx(output):
     """
-    Parses Cisco NX-OS output of 'show interface ... transceiver' and returns Tx/Rx values.
-    Works for single-lane and multi-lane SFPs.
-    
+    Parses Cisco NX-OS 'show interface ... transceiver' output for Tx/Rx values.
+    Works for single-lane and multi-lane SFPs. Includes within_tolerance check.
+
     Returns a dict like:
-    # Single-lane SFP example:
-    { 0: {'tx_dBm': -2.1, 'rx_dBm': -3.2} }
-    
-    # Multi-lane SFP example:
+    # Single-lane SFP:
+    { 0: {'tx_dBm': -2.63, 'rx_dBm': -3.62, 'within_tolerance': 'yes'} }
+
+    # Multi-lane SFP:
     {
-        0: {'tx_dBm': -1.6, 'rx_dBm': -2.0},
-        1: {'tx_dBm': -1.5, 'rx_dBm': -2.1},
-        2: {'tx_dBm': -1.4, 'rx_dBm': -2.2},
-        3: {'tx_dBm': -1.5, 'rx_dBm': -2.0}
+        0: {'tx_dBm': 2.70, 'rx_dBm': -2.44, 'within_tolerance': 'yes'},
+        1: {'tx_dBm': 1.08, 'rx_dBm': -2.84, 'within_tolerance': 'yes'},
+        2: {'tx_dBm': 0.93, 'rx_dBm': -2.61, 'within_tolerance': 'yes'},
+        3: {'tx_dBm': 2.03, 'rx_dBm': -3.50, 'within_tolerance': 'yes'}
     }
-    
+
     Returns None if no valid Tx/Rx values are found.
     """
     tx_rx_values = {}
     lines = output.splitlines()
     current_lane = None
 
+    # Regex to match Tx/Rx Power lines
+    power_pattern = re.compile(
+        r"Tx Power\s+([-]?\d+\.\d+\s+dBm)\s+([-]?\d+\.\d+\s+dBm)\s+([-]?\d+\.\d+\s+dBm)\s+([-]?\d+\.\d+\s+dBm)\s+([-]?\d+\.\d+\s+dBm)\s*"
+        r"Rx Power\s+([-]?\d+\.\d+\s+dBm)\s+([-]?\d+\.\d+\s+dBm)\s+([-]?\d+\.\d+\s+dBm)\s+([-]?\d+\.\d+\s+dBm)\s+([-]?\d+\.\d+\s+dBm)"
+    )
+
     for line in lines:
         # Look for lane number
         lane_match = re.match(r"Lane Number:(\d+)", line.strip())
         if lane_match:
-            current_lane = int(lane_match.group(1)) - 1  # Convert to 0-based indexing
+            current_lane = int(lane_match.group(1)) - 1  # 0-based indexing
             continue
-        
-        # Look for Tx Power and Rx Power in the same line
-        if "Tx Power" in line and "Rx Power" in line and current_lane is not None:
+
+        # Match Tx/Rx Power lines
+        power_match = power_pattern.search(line.strip())
+        if power_match and current_lane is not None:
             try:
-                # Split the line and extract values
-                parts = line.strip().split()
-                # Tx Power is typically the first numeric value after "Tx Power"
-                # Rx Power follows it
-                for i, part in enumerate(parts):
-                    if part == "Tx":
-                        tx_str = parts[i + 2]  # Skip "Power" and get value
-                        rx_str = parts[i + 5]  # Skip to Rx Power value
-                        break
-                # Convert to float
-                tx = float(tx_str)
-                rx = float(rx_str)
-                # Store in dict
-                tx_rx_values[current_lane] = {"tx_dBm": tx, "rx_dBm": rx}
+                # Extract values: current, high/low alarm, high/low warning
+                tx_current = float(power_match.group(1).split()[0])  # e.g., 2.70
+                tx_high_warning = float(power_match.group(4).split()[0])  # e.g., 4.49
+                tx_low_warning = float(power_match.group(5).split()[0])  # e.g., -4.30
+                rx_current = float(power_match.group(6).split()[0])  # e.g., -2.44
+                rx_high_warning = float(power_match.group(9).split()[0])  # e.g., 4.49
+                rx_low_warning = float(power_match.group(10).split()[0])  # e.g., -10.60
+
+                # Check if within tolerance
+                tx_within = tx_low_warning <= tx_current <= tx_high_warning
+                rx_within = rx_low_warning <= rx_current <= rx_high_warning
+                within_tolerance = "yes" if tx_within and rx_within else "no"
+
+                # Store results
+                tx_rx_values[current_lane] = {
+                    "tx_dBm": tx_current,
+                    "rx_dBm": rx_current,
+                    "within_tolerance": within_tolerance
+                }
             except (ValueError, IndexError):
-                # Skip if conversion fails or indices are off
                 continue
 
-    # For single-lane SFPs, check if no lane numbers were found
+    # Handle single-lane SFPs (no Lane Number)
     if not tx_rx_values:
         for line in lines:
-            if "Tx Power" in line and "Rx Power" in line:
+            power_match = power_pattern.search(line.strip())
+            if power_match:
                 try:
-                    parts = line.strip().split()
-                    for i, part in enumerate(parts):
-                        if part == "Tx":
-                            tx_str = parts[i + 2]
-                            rx_str = parts[i + 5]
-                            break
-                    tx = float(tx_str)
-                    rx = float(rx_str)
-                    tx_rx_values[0] = {"tx_dBm": tx, "rx_dBm": rx}
+                    tx_current = float(power_match.group(1).split()[0])
+                    tx_high_warning = float(power_match.group(4).split()[0])
+                    tx_low_warning = float(power_match.group(5).split()[0])
+                    rx_current = float(power_match.group(6).split()[0])
+                    rx_high_warning = float(power_match.group(9).split()[0])
+                    rx_low_warning = float(power_match.group(10).split()[0])
+
+                    tx_within = tx_low_warning <= tx_current <= tx_high_warning
+                    rx_within = rx_low_warning <= rx_current <= rx_high_warning
+                    within_tolerance = "yes" if tx_within and rx_within else "no"
+
+                    tx_rx_values[0] = {
+                        "tx_dBm": tx_current,
+                        "rx_dBm": rx_current,
+                        "within_tolerance": within_tolerance
+                    }
                     break
                 except (ValueError, IndexError):
                     continue
