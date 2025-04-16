@@ -1072,7 +1072,7 @@ def get_pid_from_cisconxos_output(output):
     # 'show int ... transceiver details'
     # relevant line of output looks like this
     # type is QSFP-100G-LR4
-    match = re.search(r"type is (\S+)", output)
+    match = re.search(r"type is (.+)", output)
     return match.group(1) if match else None
         
 def lookup_transceiver_info_for_pid(pid):
