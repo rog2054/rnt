@@ -1233,18 +1233,23 @@ def check_txrx_power_levels_nxos(data):
     """
     # Check for invalid input
     if data is None or not isinstance(data, dict) or not data:
+        logger.info(f"check_txrx_power_levels_nxos: problem with data '{data}' returning None")
         return None
 
     try:
         # Check each lane's within_tolerance
         for lane_data in data.values():
             if 'within_tolerance' not in lane_data:
+                logger.info(f"check_txrx_power_levels_nxos: within_tolerence value not found in data '{data}' returning None")
                 return None
             if lane_data['within_tolerance'] != 'yes':
+                logger.info(f"check_txrx_power_levels_nxos: within_tolerence value not 'yes' in '{data}' returning False")
                 return False
         # All lanes are 'yes'
+        logger.info(f"check_txrx_power_levels_nxos: within_tolerence values all Yes in data '{data}' returning True")
         return True
     except (KeyError, TypeError):
+        logger.info(f"check_txrx_power_levels_nxos: problem with data (KeyError or TypeError) '{data}' returning None")
         # Handle unexpected dict structure
         return None
 
