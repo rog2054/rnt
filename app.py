@@ -1107,6 +1107,8 @@ def lookup_transceiver_info_for_pid(pid):
     "SFP-10G-DWDM":    {"lanes": 1, "type": "SM", "distance": "up to 80 km", "speed": "10G"},
     "SFP-10G-ZR-S":    {"lanes": 1, "type": "SM", "distance": "80 km", "speed": "10G"},
     "SFP-10G-SR-S":    {"lanes": 1, "type": "MM", "distance": "300 m", "speed": "10G"},
+    "10Gbase-SR":      {"lanes": 1, "type": "MM", "distance": "300 m", "speed": "10G"},
+    "Fabric Extender Transceiver": {"lanes": 1, "type": "MM", "distance": "100 m", "speed": "10G"},
 
     # --- 100G QSFP28 (Mostly 4-lane) ---
     "QSFP-100G-SR4":       {"lanes": 4, "type": "MM", "distance": "100 m", "speed": "100G"},
@@ -1252,7 +1254,6 @@ def check_txrx_power_levels_nxos(data):
         logger.info(f"check_txrx_power_levels_nxos: problem with data (KeyError or TypeError) '{data}' returning None")
         # Handle unexpected dict structure
         return None
-
 
 def parse_nxos_transceiver_tx_rx(output):
     """
