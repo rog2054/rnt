@@ -52,16 +52,29 @@ pipeline {
             }
         }
 
+        stage('Prepare Test Database') {
+            steps {
+                script {
+                    def hostDbPath = "${WORKSPACE}/test_db"
+                    sh "mkdir -p ${hostDbPath}"
+                    sh "cp /home/juser/rnt/instance/config.db ${hostDbPath}/config.db"
+                    sh "chmod 664 ${hostDbPath}/config.db"
+                }
+            }
+        }
+
 
         stage('Run Docker Container') {
             steps {
                 script {
+                    def hostDbPath = "${WORKSPACE}/test_db"
+                    sh "mkdir -p ${hostDbPath}"
                     // Stop and remove any existing container with the same name (if it exists)
                     sh 'docker stop flask-app-container || true'
                     sh 'docker rm flask-app-container || true'
 
                     // Run the new container and capture the container ID
-                    def containerId = sh(script: "docker run -d --name flask-app-container -p 5000:5000 ${DOCKER_IMAGE}:latest", returnStdout: true).trim()
+                    def containerId = sh(script: "docker run -d --name flask-app-container -p 5000:5000 -v ${hostDbPath}:/app/instance ${DOCKER_IMAGE}:latest", returnStdout: true).trim()
                     echo "Started container with ID: ${containerId}"
 
                     // Wait briefly to ensure the container starts
