@@ -132,6 +132,11 @@ def create_app():
             else:
                 new_user = User(username=username)
                 new_user.set_password(password)
+                if current_user.id:
+                    new_user.created_by_id = current_user.id
+                else:
+                    # default to admin as creator if not logged in, as that means the admin is creating the initial user account
+                    new_user.created_by_id = 1
                 db.session.add(new_user)
                 db.session.commit()
                 if user_count == 0:
@@ -231,10 +236,11 @@ def create_app():
             new_credential = DeviceCredential(
                 username=username, passwordexpiry=is_passwordexpiry)
             new_credential.set_password(password)  # Encrypt the password
+            new_credential.created_by_id=current_user.id
             db.session.add(new_credential)
             db.session.commit()
             return jsonify({'message': 'User added'})
-        credentials = DeviceCredential.query.all()
+        credentials = DeviceCredential.query.filter_by(hidden=False).all()
         return render_template('credentials.html', credentials=credentials, form=form)
 
     # Delete credential
@@ -242,14 +248,14 @@ def create_app():
     @login_required
     def delete_credential(credential_id):
         credential = DeviceCredential.query.get_or_404(credential_id)
-        db.session.delete(credential)
+        credential.hidden = True
         db.session.commit()
         return jsonify({'message': 'Credential deleted successfully'})
 
     @app.route('/devices')
     @login_required
     def device_list():
-        devices = Device.query.all()
+        devices = Device.query.filter_by(hidden=False).all()
         return render_template('devices.html', devices=devices)
 
     # Route to display the add device form
@@ -268,7 +274,8 @@ def create_app():
                         username_id=form.username.data, #dropdown
                         siteinfo=form.siteinfo.data,
                         lanip=form.lanip.data,
-                        numerictraceroute=form.numerictraceroute.data
+                        numerictraceroute=form.numerictraceroute.data,
+                        created_by_id=current_user.id
                     )
                     db.session.add(new_device)
                     db.session.commit()
@@ -290,7 +297,7 @@ def create_app():
     @login_required
     def delete_device(device_id):
         device = Device.query.get_or_404(device_id)
-        db.session.delete(device)
+        device.hidden = True
         db.session.commit()
         return jsonify({'message': 'Device removed successfully'})
 
@@ -307,7 +314,7 @@ def create_app():
     @app.route('/tests/bgpaspath', methods=['GET'])
     @login_required
     def showtests_bgpaspath():
-        bgpaspathtests = bgpaspathTest.query.all()
+        bgpaspathtests = bgpaspathTest.query.filter_by(hidden=False).all()
         return render_template('showtests_bgpaspath.html', bgpaspathtests=bgpaspathtests)
 
     # Add AS-path test
@@ -324,7 +331,8 @@ def create_app():
                         testipv4prefix=form.test_ipv4prefix.data,
                         checkasinpath=form.test_checkasinpath.data,
                         checkaswantresult=form.test_checkaswantresult.data,
-                        description=form.test_description.data
+                        description=form.test_description.data,
+                        created_by_id=current_user.id
                     )
                     db.session.add(new_test)
                     db.session.commit()
@@ -346,7 +354,7 @@ def create_app():
     @login_required
     def delete_bgptest(test_id):
         test = bgpaspathTest.query.get_or_404(test_id)
-        db.session.delete(test)
+        test.hidden = True
         db.session.commit()
         return jsonify({'message': 'BGP AS-path Test removed successfully'})
 
@@ -354,7 +362,7 @@ def create_app():
     @app.route('/tests/traceroute', methods=['GET'])
     @login_required
     def showtests_traceroute():
-        traceroutetests = tracerouteTest.query.all()
+        traceroutetests = tracerouteTest.query.filter_by(hidden=False).all()
         return render_template('showtests_traceroute.html', traceroutetests=traceroutetests)
 
     # Add Traceroute test
@@ -369,7 +377,8 @@ def create_app():
                     new_test = tracerouteTest(
                         devicehostname_id=form.test_device_hostname.data,
                         destinationip=form.test_destinationip.data,
-                        description=form.test_description.data
+                        description=form.test_description.data,
+                        created_by_id=current_user.id
                     )
                     db.session.add(new_test)
                     db.session.commit()
@@ -391,7 +400,7 @@ def create_app():
     @login_required
     def delete_traceroutetest(test_id):
         test = tracerouteTest.query.get_or_404(test_id)
-        db.session.delete(test)
+        test.hidden = True
         db.session.commit()
         return jsonify({'message': 'Traceroute Test removed successfully'})
 
@@ -399,7 +408,7 @@ def create_app():
     @app.route('/tests/txrxtransceiver', methods=['GET'])
     @login_required
     def showtests_txrxtransceiver():
-        txrxtransceivertests = txrxtransceiverTest.query.all()
+        txrxtransceivertests = txrxtransceiverTest.query.filter_by(hidden=False).all()
         return render_template('showtests_txrxtransceiver.html', txrxtransceivertests=txrxtransceivertests)
 
     # Add TxRx SFP Transceiver test
@@ -414,7 +423,8 @@ def create_app():
                     new_test = txrxtransceiverTest(
                         devicehostname_id=form.test_device_hostname.data,
                         deviceinterface=form.test_deviceinterface.data,
-                        description=form.test_description.data
+                        description=form.test_description.data,
+                        created_by_id=current_user.id
                     )
                     db.session.add(new_test)
                     db.session.commit()
@@ -435,7 +445,7 @@ def create_app():
     @login_required
     def delete_txrxtransceivertest(test_id):
         test = txrxtransceiverTest.query.get_or_404(test_id)
-        db.session.delete(test)
+        test.hidden=True
         db.session.commit()
         return jsonify({'message': 'TxRx SFP Transceiver Test removed successfully'})
 
@@ -443,7 +453,7 @@ def create_app():
     @app.route('/tests/itraceroute', methods=['GET'])
     @login_required
     def showtests_itraceroute():
-        itraceroutetests = itracerouteTest.query.all()
+        itraceroutetests = itracerouteTest.query.filter_by(hidden=False).all()
         return render_template('showtests_itraceroute.html', itraceroutetests=itraceroutetests)
 
     # Add ACI itraceroute test
@@ -461,7 +471,8 @@ def create_app():
                         dstip=form.test_dstip.data,
                         vrf=form.test_vrf.data,
                         encapvlan=form.test_encapvlan.data,
-                        description=form.test_description.data
+                        description=form.test_description.data,
+                        created_by_id = current_user.id
                     )
                     db.session.add(new_test)
                     db.session.commit()
@@ -482,7 +493,7 @@ def create_app():
     @login_required
     def delete_itraceroutetest(test_id):
         test = itracerouteTest.query.get_or_404(test_id)
-        db.session.delete(test)
+        test.hidden = True
         db.session.commit()
         return jsonify({'message': 'ACI itraceroute test removed successfully'})
 
