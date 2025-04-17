@@ -12,7 +12,10 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(120), nullable=False)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_user_created_by_id'), nullable=True)
-    created_by = db.relationship('User', backref='user')
+    created_by = db.relationship('User', remote_side=[id], backref='created_users')
+
+    def __repr__(self):
+        return f'<User {self.username}>'
     
     def set_password(self, password):
         self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
