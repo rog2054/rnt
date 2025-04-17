@@ -23,6 +23,9 @@ class DeviceCredential(db.Model):
     username = db.Column(db.String(100), nullable=False)
     password = db.Column(db.String(100), nullable=True)
     passwordexpiry = db.Column(db.Boolean, default=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.relationship('User', backref='devicecredentials')
+    hidden = db.Column(db.Boolean, default=False)
     
     def set_password(self, password):
         """Encrypt and set the password."""
@@ -54,6 +57,9 @@ class Device(db.Model):
     lanip = db.Column(db.String(100))
     numerictraceroute = db.Column(db.Boolean, default=True)
     active = db.Column(db.Boolean, default=True)
+    hidden = db.Column(db.Boolean, default=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.relationship('User', backref='devices')
     tests = db.relationship("TestInstance", backref="device")
     # traceroute 10.174.88.1 source 10.55.33.253 numeric
 
@@ -70,6 +76,9 @@ class bgpaspathTest(db.Model):
     checkasinpath = db.Column(db.String(30), nullable=False)
     checkaswantresult = db.Column(db.Boolean, default=False, nullable=False)
     description = db.Column(db.String(200))
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.relationship('User', backref='bgpaspathtests')
+    hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="bgpaspath_test")
 
 
@@ -83,6 +92,9 @@ class tracerouteTest(db.Model):
     devicehostname = db.relationship('Device', backref='tracerouteTests')
     destinationip = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(200))
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.relationship('User', backref='traceroutetests')
+    hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="traceroute_test")
 
 class txrxtransceiverTest(db.Model):
@@ -95,6 +107,9 @@ class txrxtransceiverTest(db.Model):
     devicehostname = db.relationship('Device',backref='txrxtransceiver_tests')
     deviceinterface = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(200))
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.relationship('User', backref='txrxtransceivertests')
+    hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="txrxtransceiver_test")
 
 class itracerouteTest(db.Model):
@@ -110,6 +125,9 @@ class itracerouteTest(db.Model):
     vrf = db.Column(db.String(100), nullable=False)
     encapvlan = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(200))
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.relationship('User', backref='itraceroutetests')
+    hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="itraceroute_test")
 
 class TestRun(db.Model):
@@ -120,6 +138,9 @@ class TestRun(db.Model):
     description = db.Column(db.String(200), nullable=False)
     # "pending", "running", "completed"
     status = db.Column(db.String(20), default="pending")
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    created_by = db.relationship('User', backref='testruns')
+    hidden = db.Column(db.Boolean, default=False)
     log = db.Column(db.Text, nullable=True)
     # Relationships
     tests = db.relationship("TestInstance", backref="test_run")
