@@ -177,7 +177,7 @@ def create_app():
             db.session.commit()
 
             test_instances = []
-            bgp_tests = bgpaspathTest.query.all()
+            bgp_tests = bgpaspathTest.query.filter_by(hidden=False).all()
             for test in bgp_tests:
                 instance = TestInstance(
                     test_run_id=test_run.id,
@@ -187,7 +187,7 @@ def create_app():
                 )
                 test_instances.append(instance)
 
-            traceroute_tests = tracerouteTest.query.all()
+            traceroute_tests = tracerouteTest.query.filter_by(hidden=False).all()
             for test in traceroute_tests:
                 instance = TestInstance(
                     test_run_id=test_run.id,
@@ -197,7 +197,7 @@ def create_app():
                 )
                 test_instances.append(instance)
                 
-            txrxtransceiver_tests = txrxtransceiverTest.query.all()
+            txrxtransceiver_tests = txrxtransceiverTest.query.filter_by(hidden=False).all()
             for test in txrxtransceiver_tests:
                 instance = TestInstance(
                     test_run_id=test_run.id,
@@ -207,7 +207,7 @@ def create_app():
                 )
                 test_instances.append(instance)
                 
-            itraceroute_tests = itracerouteTest.query.all()
+            itraceroute_tests = itracerouteTest.query.filter_by(hidden=False).all()
             for test in itraceroute_tests:
                 instance = TestInstance(
                     test_run_id=test_run.id,
