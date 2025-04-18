@@ -1,37 +1,148 @@
-<nav class="sidebar bg-dark text-white p-3" style="min-width: 250px; height: 100vh;">
-    <h4 class="mb-4">Roger's Network Tools</h4>
-    <div class="d-flex flex-column" style="height: calc(100vh - 100px);">
-        <ul class="nav flex-column">
-            <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('credentials') }}">Credentials</a>
+<!-- Mobile sidebar button -->
+<button class="sidebar-menu-button">
+    <span class="material-symbols-rounded">menu</span>
+</button>
+
+<aside class="sidebar">
+    <!-- Sidebar Header -->
+    <header class="sidebar-header">
+        <a href="#" class="header-logo">
+            <img src="{{ url_for('static', filename='rntlogo.png') }}" alt="Roger's Network Tools">
+        </a>
+        <button class="sidebar-toggler">
+            <span class="material-symbols-rounded">chevron_left</span>
+        </button>
+    </header>
+
+    <nav class="sidebar-nav">
+        <ul class="sb-nav-list primary-nav">
+            <li class="sb-nav-item">
+                <a href="{{ url_for('device_list') }}" class="sb-nav-link">
+                    <span class="material-symbols-rounded sb-rotate-icon-45" aria-label="Router">drag_pan</span>
+                    <span class="sb-nav-label">Manage Devices</span>
+                </a>
+                <ul class="sb-dropdown-menu">
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('device_list') }}" class="sb-nav-link">
+                            <span class="sb-dropdown-title">Manage Devices</a>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('device_list') }}">Manage Devices</a>
+            <!-- Dropdown -->
+            <li class="sb-nav-item sb-dropdown-container">
+                <a href="#" class="sb-nav-link sb-dropdown-toggle">
+                    <span class="material-symbols-rounded">add_task</span>
+                    <span class="sb-nav-label">Create Tests</span>
+                    <span class="sb-dropdown-icon material-symbols-rounded">keyboard_arrow_down</span>
+                </a>
+                <!-- Dropdown Menu -->
+                <ul class="sb-dropdown-menu">
+                    <li class="sb-nav-item">
+                        <a class="sb-nav-link sb-dropdown-title">Create Tests</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('showtests_bgpaspath') }}" class="sb-nav-link sb-dropdown-link">BGP
+                            AS-Path</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('showtests_traceroute') }}"
+                            class="sb-nav-link sb-dropdown-link">Traceroute</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('showtests_txrxtransceiver') }}" class="sb-nav-link sb-dropdown-link">TxRx
+                            SFP
+                            Transceiver</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('showtests_itraceroute') }}" class="sb-nav-link sb-dropdown-link">ACI
+                            iTraceroute</a>
+                    </li>
+                </ul>
             </li>
-            <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('showtests_bgpaspath') }}">BGP AS-Path Tests</a>
+            <li class="sb-nav-item">
+                <a href="{{ url_for('run_tests') }}" class="sb-nav-link">
+                    <span class="material-symbols-rounded">play_circle</span>
+                    <span class="sb-nav-label">Run Tests</span>
+                </a>
+                <ul class="sb-dropdown-menu">
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('run_tests') }}" class="sb-nav-link">
+                            <span class="sb-dropdown-title">Run Tests</a>
+                        </a>
+                    </li>
+                </ul>
             </li>
-            <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('showtests_traceroute') }}">Traceroute Tests</a>
+            <!-- Dropdown -->
+            <li class="sb-nav-item sb-dropdown-container">
+                <a href="#" class="sb-nav-link sb-dropdown-toggle">
+                    <span class="material-symbols-rounded">rubric</span>
+                    <span class="sb-nav-label">View Results</span>
+                    <span class="sb-dropdown-icon material-symbols-rounded">keyboard_arrow_down</span>
+                </a>
+                <!-- Dropdown Menu -->
+                <ul class="sb-dropdown-menu">
+                    <li class="sb-nav-item">
+                        <a class="sb-nav-link sb-dropdown-title">View Results</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="#" class="sb-nav-link sb-dropdown-link">Your Tests</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="#" class="sb-nav-link sb-dropdown-link">ALL Tests</a>
+                    </li>
+                </ul>
             </li>
-            <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('showtests_txrxtransceiver') }}">TxRx SFP Transceiver
-                    Tests</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('showtests_itraceroute') }}">ACI itraceroute Tests</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('run_tests') }}">Run Tests</a>
+            <li class="sb-nav-item">
+                <a href="#compare-results" class="sb-nav-link">
+                    <span class="material-symbols-rounded">text_compare</span>
+                    <span class="sb-nav-label">Compare Results</span>
+                </a>
+                <ul class="sb-dropdown-menu">
+                    <li class="sb-nav-item">
+                        <a href="#compare-results" class="sb-nav-link">
+                            <span class="sb-dropdown-title">Compare Results</a>
+                        </a>
+                    </li>
+                </ul>
             </li>
         </ul>
-        <ul class="nav flex-column mt-auto">
-            <li class="nav-item">
-                <a class="nav-link text-white" href="{{ url_for('logout') }}">Logoff</a>
+
+        <!-- Secondary Bottom Nav -->
+        <ul class="sb-nav-list secondary-nav">
+            <!-- Dropdown -->
+            <li class="sb-nav-item sb-dropdown-container">
+                <a href="#" class="sb-nav-link sb-dropdown-toggle">
+                    <span class="material-symbols-rounded">settings</span>
+                    <span class="sb-nav-label">Settings</span>
+                    <span class="sb-dropdown-icon material-symbols-rounded">keyboard_arrow_down</span>
+                </a>
+                <!-- Dropdown Menu -->
+                <ul class="sb-dropdown-menu">
+                    <li class="sb-nav-item">
+                        <a class="sb-nav-link sb-dropdown-title">Settings</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="#" class="sb-nav-link sb-dropdown-link">Change Your Password</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('credentials') }}" class="sb-nav-link sb-dropdown-link">Device
+                            Credentials</a>
+                    </li>
+                </ul>
             </li>
-            <li class="nav-item">
-                <small class="text-secondary d-block ps-3">Version: 0.{{ version }}</small>
+            <li class="sb-nav-item">
+                <a href="{{ url_for('logout') }}" class="sb-nav-link">
+                    <span class="material-symbols-rounded">logout</span>
+                    <span class="sb-nav-label">Sign Out</span>
+                </a>
+                <ul class="sb-dropdown-menu">
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('logout') }}" class="sb-nav-link">
+                            <span class="sb-dropdown-title">Sign Out</a>
+                        </a>
+                    </li>
+                </ul>
             </li>
-        </ul>
-    </div>
-</nav>
+    </nav>
+</aside>

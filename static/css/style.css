@@ -1,13 +1,28 @@
-.sidebar {
+/* .sidebar {
     position: fixed;
     top: 0;
     bottom: 0;
     left: 0;
     z-index: 100;
 }
+*/
+
+:root {
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 85px;
+}
 
 .content {
-    margin-left: 250px;
+    margin-left: var(--sidebar-width);
+    transition: margin-left 0.3s ease;
+}
+
+.sidebar.collapsed~.content {
+    margin-left: var(--sidebar-collapsed-width);
+}
+
+body:not(:has(.sidebar)) .content {
+    margin-left: 0;
 }
 
 .progress {
