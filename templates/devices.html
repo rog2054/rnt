@@ -29,16 +29,16 @@
                 <button class="toggle-active" data-id="{{ device.id }}" data-active="{{ device.active|lower }}"
                     style="background: none; border: none; padding: 0;">
                     {% if device.active %}
-                    <i class="fas fa-toggle-on text-success" title="Click to disable"></i>
+                    <span class="material-symbols-rounded text-success" title="Click to disable">toggle_on</span>
                     {% else %}
-                    <i class="fas fa-toggle-off text-muted" title="Click to enable"></i>
+                    <span class="material-symbols-rounded text-muted" title="Click to enable">toggle_off</span>
                     {% endif %}
                 </button>
             </td>
             <td>
                 <button class="delete-device" data-id="{{ device.id }}"
                     style="background: none; border: none; padding: 0;">
-                    <i class="fas fa-trash-alt"></i>
+                    <span class="material-symbols-rounded" title="Click to delete">delete</span>
                 </button>
             </td>
         </tr>
@@ -109,11 +109,11 @@
                         // Update the button's state dynamically
                         $button.data('active', newActive); // Update data-active attribute
                         if (newActive) {
-                            $button.html('<i class="fas fa-toggle-on text-success" title="Click to disable"></i>');
+                            $button.html('<span class="material-symbols-rounded text-success" title="Click to disable">toggle_on</span>');
                         } else {
-                            $button.html('<i class="fas fa-toggle-off text-muted" title="Click to enable"></i>');
+                            $button.html('<span class="material-symbols-rounded text-muted" title="Click to enable">toggle_off</span>');
                         }
-                        alert(response.message);
+                        // alert(response.message);
                         // location.reload(); // Uncomment if you prefer reloading
                     },
                     error: function (xhr) {

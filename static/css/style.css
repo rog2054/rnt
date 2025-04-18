@@ -51,9 +51,14 @@ body:not(:has(.sidebar)) .content {
     /* Default color */
 }
 
-.delete-device:hover i {
+.delete-device .material-symbols-rounded {
+    color: #6c757d;
+    /* Bootstrap’s default gray for text-muted, or your custom gray */
+}
+
+.delete-device:hover .material-symbols-rounded {
     color: red;
-    /* Change color on hover */
+    /* No need for !important if text-muted is removed */
 }
 
 .delete-test i {
