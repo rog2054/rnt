@@ -173,6 +173,7 @@ def create_app():
         form = TestRunForm()
         if form.validate_on_submit():
             test_run = TestRun(description=form.description.data, status="pending")  # Start as pending
+            test_run.created_by_id = current_user.id
             db.session.add(test_run)
             db.session.commit()
 
