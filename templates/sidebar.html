@@ -86,10 +86,11 @@
                         <a class="sb-nav-link sb-dropdown-title">View Results</a>
                     </li>
                     <li class="sb-nav-item">
-                        <a href="#" class="sb-nav-link sb-dropdown-link">Your Tests</a>
+                        <a href="{{ url_for('list_test_results', user_id=current_user.id) }}"
+                            class="sb-nav-link sb-dropdown-link">Your Tests</a>
                     </li>
                     <li class="sb-nav-item">
-                        <a href="#" class="sb-nav-link sb-dropdown-link">ALL Tests</a>
+                        <a href="{{ url_for('list_test_results') }}" class="sb-nav-link sb-dropdown-link">ALL Tests</a>
                     </li>
                 </ul>
             </li>
