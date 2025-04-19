@@ -15,6 +15,7 @@ from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticati
 import logging
 import re
 from datetime import datetime, timezone
+from sqlalchemy import func
 
 
 # Globals
@@ -498,6 +499,119 @@ def create_app():
         db.session.commit()
         return jsonify({'message': 'ACI itraceroute test removed successfully'})
 
+    @app.route('/test_results', defaults={'user_id': None})
+    @app.route('/test_results/<int:user_id>')
+    @login_required
+    def list_test_results(user_id):
+        """
+        Display a table of all test runs initiated by a given user.
+        If no user_id is provided, show test runs for all users.
+        Hidden test results are omitted, sorted by start_time (most recent first).
+        Includes total number of TestInstance records per TestRun (excluding skipped tests).
+        """
+        # Base query for TestRun
+        query = db.session.query(TestRun).filter(TestRun.hidden == False)
+        if user_id is not None:
+            query = query.filter(TestRun.created_by_id == user_id)
+        query = query.order_by(TestRun.start_time.desc())
+        test_runs = query.all()
+
+        # Query to count total TestInstance records per TestRun (excluding skipped)
+        # Subquery for each test type, filtering for device_active_at_run == True
+        bgp_counts = (
+            db.session.query(
+                TestRun.id.label('test_run_id'),
+                func.count(TestInstance.id).label('test_count')
+            )
+            .join(TestInstance, TestRun.id == TestInstance.test_run_id)
+            .join(bgpaspathTestResult, TestInstance.id == bgpaspathTestResult.test_instance_id)
+            .filter(
+                TestRun.hidden == False,
+                TestInstance.test_type == "bgpaspath_test",
+                TestInstance.device_active_at_run == True
+            )
+            .group_by(TestRun.id)
+        )
+
+        traceroute_counts = (
+            db.session.query(
+                TestRun.id.label('test_run_id'),
+                func.count(TestInstance.id).label('test_count')
+            )
+            .join(TestInstance, TestRun.id == TestInstance.test_run_id)
+            .join(tracerouteTestResult, TestInstance.id == tracerouteTestResult.test_instance_id)
+            .filter(
+                TestRun.hidden == False,
+                TestInstance.test_type == "traceroute_test",
+                TestInstance.device_active_at_run == True
+            )
+            .group_by(TestRun.id)
+        )
+
+        txrxtransceiver_counts = (
+            db.session.query(
+                TestRun.id.label('test_run_id'),
+                func.count(TestInstance.id).label('test_count')
+            )
+            .join(TestInstance, TestRun.id == TestInstance.test_run_id)
+            .join(txrxtransceiverTestResult, TestInstance.id == txrxtransceiverTestResult.test_instance_id)
+            .filter(
+                TestRun.hidden == False,
+                TestInstance.test_type == "txrxtransceiver_test",
+                TestInstance.device_active_at_run == True
+            )
+            .group_by(TestRun.id)
+        )
+
+        itraceroute_counts = (
+            db.session.query(
+                TestRun.id.label('test_run_id'),
+                func.count(TestInstance.id).label('test_count')
+            )
+            .join(TestInstance, TestRun.id == TestInstance.test_run_id)
+            .join(itracerouteTestResult, TestInstance.id == itracerouteTestResult.test_instance_id)
+            .filter(
+                TestRun.hidden == False,
+                TestInstance.test_type == "itraceroute_test",
+                TestInstance.device_active_at_run == True
+            )
+            .group_by(TestRun.id)
+        )
+
+        # Combine counts using UNION ALL and wrap in a subquery
+        total_counts_subquery = (
+            bgp_counts.union_all(
+                traceroute_counts,
+                txrxtransceiver_counts,
+                itraceroute_counts
+            )
+            .subquery()
+        )
+
+        # Aggregate total counts per test_run_id
+        total_counts = (
+            db.session.query(
+                total_counts_subquery.c.test_run_id,
+                func.sum(total_counts_subquery.c.test_count).label('total_tests')
+            )
+            .group_by(total_counts_subquery.c.test_run_id)
+            .all()
+        )
+
+        # Convert to dictionary
+        total_counts_dict = {row.test_run_id: row.total_tests for row in total_counts}
+
+        # Attach total_tests to each TestRun object
+        for test_run in test_runs:
+            test_run.total_tests = total_counts_dict.get(test_run.id, 0)
+
+        return render_template(
+            'list_test_results.html',
+            user_id=user_id,
+            list_test_query_results=test_runs
+        )
+                            
+    
     # Detail tables showing the results of a specific batch of tests
     @app.route('/test_results/<int:run_id>')
     @login_required

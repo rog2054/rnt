@@ -179,3 +179,53 @@ th.sortable:hover {
     background-color: #007bff;
     color: white;
 }
+
+/* Style for the details button */
+.details-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    /* Space between icon and text */
+    padding: 8px 16px;
+    background-color: #6200ea;
+    /* Material Design purple (or choose your color) */
+    color: white;
+    text-decoration: none;
+    /* Remove underline */
+    border-radius: 4px;
+    /* Rounded corners */
+    font-family: 'Roboto', sans-serif;
+    /* Material Design font (optional) */
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    /* Subtle shadow */
+}
+
+/* Hover effect */
+.details-button:hover {
+    background-color: #7c4dff;
+    /* Lighter purple on hover */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    /* Elevated shadow */
+}
+
+/* Icon styling */
+.details-button .material-symbols-rounded {
+    font-size: 20px;
+    /* Adjust icon size */
+    vertical-align: middle;
+}
+
+/* Focus and active states for accessibility */
+.details-button:focus {
+    outline: 2px solid #bb86fc;
+    /* Material Design focus ring */
+    outline-offset: 2px;
+}
+
+.details-button:active {
+    background-color: #3700b3;
+    /* Darker purple on click */
+}
