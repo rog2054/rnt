@@ -172,8 +172,8 @@ body {
 
 .sidebar-nav .sb-dropdown-container.open .sb-dropdown-icon {
     transform: rotate(180deg);
+    z-index: 1500;
 }
-
 
 .sidebar-nav .sb-dropdown-menu {
     height: 0;
@@ -181,7 +181,9 @@ body {
     list-style: none;
     padding-left: 15px;
     transition: height 0.4s ease;
+    z-index: 2000;
 }
+
 
 .sidebar.collapsed .sb-dropdown-menu {
     position: absolute;
@@ -196,6 +198,7 @@ body {
     border-radius: 0 10px 10px 0;
     transition: 0s;
 }
+
 
 /* Bottom-align sub-menus in secondary nav (collapsed state only) */
 .sidebar.collapsed .secondary-nav .sb-dropdown-menu {
@@ -265,4 +268,36 @@ body {
     .sidebar.collapsed .sidebar-nav .primary-nav {
         transform: translateY(15px);
     }
+}
+
+/* override bootstrap form-related items to avoid stacking render issues */
+.content,
+.form-container,
+#credentialForm,
+.mb-3,
+.form-group {
+    position: static !important;
+    /* Avoid stacking context */
+    z-index: auto !important;
+    /* Reset z-index */
+    overflow: visible !important;
+    /* Prevent clipping */
+    filter: none !important;
+    /* Remove blur */
+    transform: none !important;
+    /* Avoid stacking context */
+    opacity: 1 !important;
+    /* Ensure visibility */
+}
+
+.form-control,
+.form-check-input {
+    z-index: auto !important;
+    filter: none !important;
+}
+
+/* Specifically target position-relative div */
+.mb-3.position-relative {
+    position: static !important;
+    /* Remove stacking context */
 }
