@@ -40,9 +40,14 @@ body:not(:has(.sidebar)) .content {
     /* Default color */
 }
 
-.delete-credential:hover i {
+.delete-credential .material-symbols-rounded {
+    color: #6c757d;
+    /* Bootstrap’s default gray for text-muted, or your custom gray */
+}
+
+.delete-credential:hover .material-symbols-rounded {
     color: red;
-    /* Change color on hover */
+    /* No need for !important if text-muted is removed */
 }
 
 .delete-device i {
@@ -67,10 +72,16 @@ body:not(:has(.sidebar)) .content {
     /* Default color */
 }
 
-.delete-test:hover i {
-    color: red;
-    /* Change color on hover */
+.delete-test .material-symbols-rounded {
+    color: #6c757d;
+    /* Bootstrap’s default gray for text-muted, or your custom gray */
 }
+
+.delete-test:hover .material-symbols-rounded {
+    color: red;
+    /* No need for !important if text-muted is removed */
+}
+
 
 #status-log {
     padding: 0;

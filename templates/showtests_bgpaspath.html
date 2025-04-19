@@ -11,9 +11,10 @@
             <th>ID</th>
             <th>Connect to device</th>
             <th>Search AS-path for Prefix</th>
-            <th>Check for this ASN in the as-path</th>
-            <th>Should the ASN exist in the as-path?</th>
+            <th>Check as-path for ASN</th>
+            <th>Should ASN exist in AS-path?</th>
             <th>Description of Test</th>
+            <th>Remove</th>
         </tr>
     </thead>
     <tbody>
@@ -27,7 +28,7 @@
             <td>{{ test.description }} </td>
             <td>
                 <button class="delete-test" data-id="{{ test.id }}" style="background: none; border: none; padding: 0;">
-                    <i class="fas fa-trash-alt"></i>
+                    <span class="material-symbols-rounded" title="Click to delete">delete</span>
                 </button>
             </td>
         </tr>
