@@ -12,7 +12,7 @@
             <th>Hostname</th>
             <th>Site Info</th>
             <th>Mgmt IP</th>
-            <th>SSH User</th>
+            <!-- <th>SSH User</th> -->
             <th>Status</th>
             <th>Remove</th>
         </tr>
@@ -24,7 +24,7 @@
             <td>{{ device.hostname }}</td>
             <td>{{ device.siteinfo }}</td>
             <td>{{ device.mgmtip }}</td>
-            <td>{{ device.username.username if device.username else "N/A" }}</td>
+            <!-- <td>{{ device.username.username if device.username else "N/A" }}</td> -->
             <td>
                 <button class="toggle-active" data-id="{{ device.id }}" data-active="{{ device.active|lower }}"
                     style="background: none; border: none; padding: 0;">
