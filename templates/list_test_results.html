@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+{% block title %}View Results{% endblock %}
+{% block head %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
+{% block content %}
+
+{% if user_id is none %}
+<h1>Viewing ALL Results</h1>
+{% else %}
+<h1>Viewing Results</h1>
+{% endif %}
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Description</th>
+            <th>Start Time</th>
+            {% if user_id is none %}
+            <th>Created By</th>
+            {% endif %}
+            <th>Total Tested</th>
+            <th>Results</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for test_run in list_test_query_results %}
+        <tr>
+            <td>{{ test_run.id }}</td>
+            <td>{{ test_run.description }}</td>
+            <td>{{ test_run.formatted_start_time }}</td>
+            {% if user_id is none %}
+            <td>{{ test_run.created_by.username or 'Unknown' }}</td>
+            {% endif %}
+            <td>{{ test_run.total_tests }}</td>
+            <td><a href="{{ url_for('test_results_filtered', run_id=test_run.id, filter_type='pass') }}"
+                    class="details-button">
+                    <span class="material-symbols-rounded">list_alt</span>
+                    View Details
+                </a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}
+{% block scripts %}
+{% endblock %}
