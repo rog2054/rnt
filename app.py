@@ -782,14 +782,6 @@ def create_app():
                 return redirect(url_for('compare_test_runs_byrawoutput', run_id_1=test_run_1_id, run_id_2=test_run_2_id))
         return render_template('compare_test_runs_picker.html', form=form)
 
-    # Mapping of test_type to TestInstance field names to allow determination of the field names within a common function for all 4 test types.
-    # Used within the compare_results/byresult and compare_results/byrawoutput routes
-    TEST_TYPE_FIELD_MAP = {
-        'bgpaspath_test': 'bgpaspath_test_id',
-        'traceroute_test': 'traceroute_test_id',
-        'txrxtransceiver_test': 'txrxtransceiver_test_id',
-        'itraceroute_test': 'itraceroute_test_id'
-    }
 
     @app.route('/compare_results/byresult', methods=['GET'])
     @login_required
@@ -812,80 +804,116 @@ def create_app():
         # Helper function to fetch comparison data for a test type
         def get_comparison_data(test_type, test_model, result_model):
             # Query TestInstances for both TestRuns, joining with test and result
-            instances_1 = db.session.query(
-                TestInstance,
-                test_model,
-                result_model,
-                Device
-            ).join(
-                test_model,
-                getattr(TestInstance, f"{test_type}_test_id") == test_model.id
-            ).outerjoin(
-                result_model,
-                TestInstance.id == result_model.test_instance_id
-            ).join(
-                Device,
-                TestInstance.device_id == Device.id
-            ).filter(
-                TestInstance.test_run_id == run_id_1,
-                TestInstance.test_type == test_type
-            ).all()
+            field_name = f"{test_type}_id"
+                        
+            try:
+                instances_1 = db.session.query(
+                    TestInstance,
+                    test_model,
+                    result_model,
+                    Device
+                ).join(
+                    test_model,
+                    getattr(TestInstance, field_name) == test_model.id
+                ).outerjoin(
+                    result_model,
+                    TestInstance.id == result_model.test_instance_id
+                ).join(
+                    Device,
+                    TestInstance.device_id == Device.id
+                ).filter(
+                    TestInstance.test_run_id == run_id_1,
+                    TestInstance.test_type == test_type
+                ).all()
 
-            instances_2 = db.session.query(
-                TestInstance,
-                test_model,
-                result_model,
-                Device
-            ).join(
-                test_model,
-                getattr(TestInstance, f"{test_type}_test_id") == test_model.id
-            ).outerjoin(
-                result_model,
-                TestInstance.id == result_model.test_instance_id
-            ).join(
-                Device,
-                TestInstance.device_id == Device.id
-            ).filter(
-                TestInstance.test_run_id == run_id_2,
-                TestInstance.test_type == test_type
-            ).all()
+                instances_2 = db.session.query(
+                    TestInstance,
+                    test_model,
+                    result_model,
+                    Device
+                ).join(
+                    test_model,
+                    getattr(TestInstance, field_name) == test_model.id
+                ).outerjoin(
+                    result_model,
+                    TestInstance.id == result_model.test_instance_id
+                ).join(
+                    Device,
+                    TestInstance.device_id == Device.id
+                ).filter(
+                    TestInstance.test_run_id == run_id_2,
+                    TestInstance.test_type == test_type
+                ).all()
 
-            # Organize by test ID for comparison
-            results = []
-            test_ids = set([i[1].id for i in instances_1] + [i[1].id for i in instances_2])
-            for test_id in test_ids:
-                inst_1 = next((i for i in instances_1 if i[1].id == test_id), None)
-                inst_2 = next((i for i in instances_2 if i[1].id == test_id), None)
+                test_ids = set([i[1].id for i in instances_1] + [i[1].id for i in instances_2])
 
-                comparison = {
-                    'test_id': test_id,
-                    'description': inst_1[1].description if inst_1 else inst_2[1].description,
-                    'device_hostname': inst_1[3].hostname if inst_1 else inst_2[3].hostname,
-                    'passed_1': inst_1[2].passed if inst_1 and inst_1[2] else None,
-                    'passed_2': inst_2[2].passed if inst_2 and inst_2[2] else None,
-                    'active_1': inst_1[0].device_active_at_run if inst_1 else False,
-                    'active_2': inst_2[0].device_active_at_run if inst_2 else False,
-                    'rawoutput_1': inst_1[2].rawoutput if inst_1 and inst_1[2] else None,
-                    'rawoutput_2': inst_2[2].rawoutput if inst_2 and inst_2[2] else None
-                }
-                # Determine if results are same/different
-                if comparison['passed_1'] is None or comparison['passed_2'] is None:
-                    comparison['status'] = 'N/A'
-                else:
-                    comparison['status'] = 'Same' if comparison['passed_1'] == comparison['passed_2'] else 'Different'
-                results.append(comparison)
-            return results
+                results = []
+                for test_id in test_ids:
+                    inst_1 = next((i for i in instances_1 if i[1].id == test_id), None)
+                    inst_2 = next((i for i in instances_2 if i[1].id == test_id), None)
 
-        # Fetch comparison data for each test type
-        bgpaspath_results = get_comparison_data('bgpaspath', bgpaspathTest, bgpaspathTestResult)
-        traceroute_results = get_comparison_data('traceroute', tracerouteTest, tracerouteTestResult)
-        txrxtransceiver_results = get_comparison_data('txrxtransceiver', txrxtransceiverTest, txrxtransceiverTestResult)
-        itraceroute_results = get_comparison_data('itraceroute', itracerouteTest, itracerouteTestResult)
+                    # Derive states based on device_active_at_run and passed
+                    state_1 = 'skipped' if inst_1 and not inst_1[0].device_active_at_run else \
+                                'pass' if inst_1 and inst_1[2] and inst_1[2].passed is True else \
+                                'fail' if inst_1 and inst_1[2] and inst_1[2].passed is False else \
+                                'n/a' if inst_1 and inst_1[2] and inst_1[2].passed is None else 'missing'
+                    state_2 = 'skipped' if inst_2 and not inst_2[0].device_active_at_run else \
+                                'pass' if inst_2 and inst_2[2] and inst_2[2].passed is True else \
+                                'fail' if inst_2 and inst_2[2] and inst_2[2].passed is False else \
+                                'n/a' if inst_2 and inst_2[2] and inst_2[2].passed is None else 'missing'
 
+                    comparison = {
+                        'test_id': test_id,
+                        'description': inst_1[1].description if inst_1 else inst_2[1].description,
+                        'device_hostname': inst_1[3].hostname if inst_1 else inst_2[3].hostname,
+                        'state_1': state_1,
+                        'state_2': state_2,
+                        'active_1': inst_1[0].device_active_at_run if inst_1 else False,
+                        'active_2': inst_2[0].device_active_at_run if inst_2 else False,
+                        'rawoutput_1': 'Skipped' if state_1 == 'skipped' else \
+                                        inst_1[2].rawoutput if inst_1 and inst_1[2] and state_1 not in ('n/a', 'missing') else \
+                                        'No Result' if state_1 == 'n/a' else 'Missing',
+                        'rawoutput_2': 'Skipped' if state_2 == 'skipped' else \
+                                        inst_2[2].rawoutput if inst_2 and inst_2[2] and state_2 not in ('n/a', 'missing') else \
+                                        'No Result' if state_2 == 'n/a' else 'Missing'
+                    }
+
+                    # Status logic for hiding and display
+                    if state_1 == state_2 and state_1 != 'missing':
+                        comparison['status'] = 'Same'
+                        comparison['display_status'] = state_1.capitalize() if state_1 != 'n/a' else 'N/A'
+                        comparison['icon_status'] = {
+                            'pass': '✅✅ (same)',
+                            'fail': '❌❌ (same)',
+                            'n/a': '⚠️⚠️ (same)',
+                            'skipped': '‼️‼️ (same)'
+                        }[state_1]
+                    else:
+                        comparison['status'] = 'Different'
+                        state_1_str = state_1.capitalize() if state_1 != 'n/a' else 'N/A'
+                        state_2_str = state_2.capitalize() if state_2 != 'n/a' else 'N/A'
+                        comparison['display_status'] = f'{state_1_str} vs {state_2_str}'
+                        icon_1 = {'pass': '✅', 'fail': '❌', 'n/a': '⚠️', 'skipped': '‼️', 'missing': '❓'}[state_1]
+                        icon_2 = {'pass': '✅', 'fail': '❌', 'n/a': '⚠️', 'skipped': '‼️', 'missing': '❓'}[state_2]
+                        comparison['icon_status'] = f'{icon_1}{icon_2}'
+
+                    results.append(comparison)
+                
+                return results
+            except AttributeError as e:
+                return []
+
+        bgpaspath_results = get_comparison_data('bgpaspath_test', bgpaspathTest, bgpaspathTestResult)
+        traceroute_results = get_comparison_data('traceroute_test', tracerouteTest, tracerouteTestResult)
+        txrxtransceiver_results = get_comparison_data('txrxtransceiver_test', txrxtransceiverTest, txrxtransceiverTestResult)
+        itraceroute_results = get_comparison_data('itraceroute_test', itracerouteTest, itracerouteTestResult)
+        
         return render_template(
             'compare_byresult.html',
             test_run_1=test_run_1,
             test_run_2=test_run_2,
+            test_run_1_start_time_formatted=test_run_1_start_time_formatted,
+            test_run_2_start_time_formatted=test_run_2_start_time_formatted,
             bgpaspath_results=bgpaspath_results,
             traceroute_results=traceroute_results,
             txrxtransceiver_results=txrxtransceiver_results,
@@ -984,6 +1012,8 @@ def create_app():
             'compare_byrawoutput.html',
             test_run_1=test_run_1,
             test_run_2=test_run_2,
+            test_run_1_start_time_formatted=test_run_1_start_time_formatted,
+            test_run_2_start_time_formatted=test_run_2_start_time_formatted,
             bgpaspath_results=bgpaspath_results,
             traceroute_results=traceroute_results,
             txrxtransceiver_results=txrxtransceiver_results,
