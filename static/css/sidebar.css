@@ -30,7 +30,7 @@ body {
     left: 0;
     width: 260px;
     height: 100vh;
-    background: #151a2e;
+    background: #6200ea;
     transition: all 0.4s ease;
 }
 
@@ -136,7 +136,7 @@ body {
 }
 
 .sidebar-nav .sb-nav-item:is(:hover, .open)>.sb-nav-link:not(.sb-dropdown-title) {
-    color: #151a2e;
+    color: #6200ea;
     background: #eef2ff;
 }
 
@@ -153,7 +153,7 @@ body {
     position: absolute;
     bottom: 30px;
     width: 100%;
-    background: #151a2e;
+    background: #6200ea;
 }
 
 /* Dropdown Stlyings */
@@ -193,7 +193,7 @@ body {
     height: auto !important;
     overflow-y: unset;
     pointer-events: none;
-    background: #151a2e;
+    background: #6200ea;
     padding-right: 10px;
     border-radius: 0 10px 10px 0;
     transition: 0s;
@@ -247,7 +247,7 @@ body {
         left: 20px;
         top: 20px;
         border: none;
-        color: #151a2e;
+        color: #6200ea;
         background: none;
         cursor: pointer;
     }
