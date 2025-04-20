@@ -515,6 +515,10 @@ def create_app():
         query = db.session.query(TestRun).filter(TestRun.hidden == False)
         if user_id is not None:
             query = query.filter(TestRun.created_by_id == user_id)
+        else:
+            # Exclude results by user_id 2 (user2 if you have followed the install guide) as this user is only used for testing new features.
+            # (user_id 1 is the admin)
+            query = query.filter(TestRun.created_by_id != 2)
         query = query.order_by(TestRun.start_time.desc())
         test_runs = query.all()
 
