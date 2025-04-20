@@ -21,6 +21,7 @@
     <table class="table table-striped" id="bgp-table">
         <thead>
             <tr>
+                <th>BGP Test ID</th>
                 <th>Tested from Device</th>
                 <th>Test Description</th>
                 <th>Prefix Tested</th>
@@ -31,6 +32,7 @@
         <tbody>
             {% for test_instance, result, device, bgp_test in bgp_results %}
             <tr class="summary-row" data-toggle-id="bgp-{{ test_instance.id }}">
+                <td>{{ bgp_test.id }}</td>
                 <td>{{ device.siteinfo or device.hostname }}</td>
                 <td>{{ bgp_test.description }}</td>
                 <td>{{ bgp_test.testipv4prefix }}</td>
@@ -75,6 +77,7 @@
     <table class="table table-striped" id="traceroute-table">
         <thead>
             <tr>
+                <th>Test ID</th>
                 <th>Tested from Device</th>
                 <th>Test Description</th>
                 <th>Source IP</th>
@@ -85,6 +88,7 @@
         <tbody>
             {% for test_instance, result, device, traceroute_test in traceroute_results %}
             <tr class="summary-row" data-toggle-id="traceroute-{{ test_instance.id }}">
+                <td>{{ traceroute_test.id }}</td>
                 <td>{{ device.siteinfo or device.hostname }}</td>
                 <td>{{ traceroute_test.description }}</td>
                 <td>{{ device.lanip }}</td>
@@ -129,6 +133,7 @@
     <table class="table table-striped" id="txrxtransceiver-table">
         <thead>
             <tr>
+                <th>Test ID</th>
                 <th>Tested Device</th>
                 <th>Device Interface</th>
                 <th>Test Description</th>
@@ -138,6 +143,7 @@
         <tbody>
             {% for test_instance, result, device, txrxtransceiver_test in txrxtransceiver_results %}
             <tr class="summary-row" data-toggle-id="txrxtransceiver-{{ test_instance.id }}">
+                <td>{{ txrxtransceiver_test.id }}</td>
                 <td>{{ device.siteinfo or device.hostname }}</td>
                 <td>{{ txrxtransceiver_test.deviceinterface }}</td>
                 <td>{{ txrxtransceiver_test.description }}</td>
@@ -204,6 +210,7 @@
     <table class="table table-striped" id="itraceroute-table">
         <thead>
             <tr>
+                <th>Test ID</th>
                 <th>Tested from Device</th>
                 <th>Test Description</th>
                 <th>Source IP</th>
@@ -214,6 +221,7 @@
         <tbody>
             {% for test_instance, result, device, itraceroute_test in itraceroute_results %}
             <tr class="summary-row" data-toggle-id="itraceroute-{{ test_instance.id }}">
+                <td>{{ itraceroute_test.id }}</td>
                 <td>{{ device.siteinfo or device.hostname }}</td>
                 <td>{{ itraceroute_test.description }}</td>
                 <td>{{ itraceroute_test.srcip }}</td>
