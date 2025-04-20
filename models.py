@@ -157,7 +157,7 @@ class TestInstance(db.Model):
         "test_run.id", name='fk_test_instance_test_run'), nullable=False)
     device_id = db.Column(db.Integer, db.ForeignKey(
         "device.id", name='fk_test_instance_device'), nullable=False)
-    # e.g., "bgp_as_path", "traceroute_test"
+    # e.g., "bgpaspath", "traceroute_test"
     test_type = db.Column(db.String(50), nullable=False)
     # "pending", "running", "completed"
     status = db.Column(db.String(20), default="pending")
