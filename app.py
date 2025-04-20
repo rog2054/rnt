@@ -602,8 +602,23 @@ def create_app():
         total_counts_dict = {row.test_run_id: row.total_tests for row in total_counts}
 
         # Attach total_tests to each TestRun object
+        # Format start_time and end_time for each test run
         for test_run in test_runs:
             test_run.total_tests = total_counts_dict.get(test_run.id, 0)
+
+            if test_run.start_time:
+                day = test_run.start_time.day
+                suffix = 'th' if 10 <= day % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+                test_run.formatted_start_time = test_run.start_time.strftime(f'{day}{suffix} %B %Y %H:%M')
+            else:
+                test_run.formatted_start_time = 'N/A'
+            
+            if test_run.end_time:
+                day = test_run.end_time.day
+                suffix = 'th' if 10 <= day % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+                test_run.formatted_end_time = test_run.end_time.strftime(f'{day}{suffix} %B %Y %H:%M')
+            else:
+                test_run.formatted_end_time = 'N/A'
 
         return render_template(
             'list_test_results.html',
