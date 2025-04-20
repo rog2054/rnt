@@ -229,3 +229,99 @@ th.sortable:hover {
     background-color: #3700b3;
     /* Darker purple on click */
 }
+
+/* CSS for Compare Test Runs Picker */
+/* Container for the form */
+.ctrp-container {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 1rem;
+}
+
+/* Form styling */
+.ctrp-compare-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Form group (label + select) */
+.ctrp-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ctrp-form-group label {
+    font-family: 'Roboto', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #333;
+}
+
+/* Select dropdown */
+.ctrpform-select {
+    padding: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1rem;
+    background-color: white;
+    transition: border-color 0.2s;
+}
+
+.ctrpform-select:focus {
+    border-color: #6200ea;
+    /* Material Design purple */
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(98, 0, 234, 0.2);
+}
+
+/* Error messages */
+.ctrperrors {
+    list-style: none;
+    padding: 0;
+    margin: 0.25rem 0 0;
+    color: #d32f2f;
+    /* Material Design red */
+    font-size: 0.875rem;
+}
+
+/* Buttons */
+.ctrpbtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.75rem 1.5rem;
+    background-color: #6200ea;
+    color: white;
+    text-decoration: none;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.ctrpbtn:hover {
+    background-color: #7c4dff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.ctrpbtn:focus {
+    outline: 2px solid #bb86fc;
+    outline-offset: 2px;
+}
+
+.ctrpbtn:active {
+    background-color: #3700b3;
+}
+
+/* Button group */
+.ctrpform-actions {
+    display: flex;
+    gap: 1rem;
+}

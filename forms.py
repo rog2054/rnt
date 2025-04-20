@@ -1,9 +1,10 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, SubmitField, BooleanField, PasswordField
 from wtforms.validators import DataRequired, IPAddress, Regexp, ValidationError, Length
-from models import DeviceCredential, Device
+from models import DeviceCredential, Device, TestRun
 import ipaddress
-
+from extensions import db
+from utils import format_datetime_with_ordinal
 
 def validate_ipv4_prefix(form, field):
     try:
@@ -162,3 +163,39 @@ class TestRunForm(FlaskForm):
     description = StringField("Test Run Description", validators=[
                               DataRequired(message="Description is required")])
     submit = SubmitField("Run Tests")
+
+
+class CompareTestRunsForm(FlaskForm):
+    test_run_1 = SelectField(
+        'Test Run A',
+        validators=[DataRequired()],
+        coerce=int,  # Convert selected value to integer (TestRun.id)
+        choices=[]   # Populated dynamically in the route
+    )
+    test_run_2 = SelectField(
+        'Test Run B',
+        validators=[DataRequired()],
+        coerce=int,
+        choices=[]
+    )
+    compare_type_x = SubmitField('Compare by Results (Pass/Fail)')
+    compare_type_y = SubmitField('Compare CLI Output (exact)')
+
+    def __init__(self, *args, **kwargs):
+        super(CompareTestRunsForm, self).__init__(*args, **kwargs)
+        # Populate choices with TestRun records (hidden=False)
+        test_runs = db.session.query(TestRun).filter(TestRun.hidden == False).order_by(TestRun.start_time.desc()).all()
+        self.test_run_1.choices = [
+            (tr.id, f"ID: {tr.id}, {format_datetime_with_ordinal(tr.start_time)}, {tr.description}")
+            for tr in test_runs
+        ]
+        self.test_run_2.choices = self.test_run_1.choices  # Same choices for both
+
+    def validate(self, extra_validators=None):
+        if not super(CompareTestRunsForm, self).validate(extra_validators):
+            return False
+        # Optional: Prevent selecting the same TestRun
+        if self.test_run_1.data == self.test_run_2.data:
+            self.test_run_2.errors.append("Please select different TestRuns for comparison.")
+            return False
+        return True

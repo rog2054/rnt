@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% block title %}Compare Test Results{% endblock %}
+{% block head %}
+
+{% endblock %}
+{% block content %}
+<div class="ctrp-container">
+    <h1>Compare Test Results</h1>
+    <p>Select two Test Runs to compare and choose a comparison type.</p>
+
+    <form method="POST" class="ctrp-compare-form">
+        {{ form.hidden_tag() }}
+
+        <div class="ctrp-form-group">
+            <label for="{{ form.test_run_1.id }}">{{ form.test_run_1.label }}</label>
+            {{ form.test_run_1(class="form-select") }}
+            {% if form.test_run_1.errors %}
+            <ul class="ctrp-errors">
+                {% for error in form.test_run_1.errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+
+        <div class="ctrp-form-group">
+            <label for="{{ form.test_run_2.id }}">{{ form.test_run_2.label }}</label>
+            {{ form.test_run_2(class="form-select") }}
+            {% if form.test_run_2.errors %}
+            <ul class="ctrp-errors">
+                {% for error in form.test_run_2.errors %}
+                <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+
+        <div class="ctrp-form-actions">
+            {{ form.compare_type_x(class="btn btn-primary") }}
+            {{ form.compare_type_y(class="btn btn-primary") }}
+        </div>
+    </form>
+</div>
+{% endblock %}

@@ -9,7 +9,7 @@ import queue
 from queue import Queue
 from extensions import db, cipher
 from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
-from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm
+from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
@@ -761,6 +761,54 @@ def create_app():
                             run_description=run_description,
                             run_log=run_log,
                             totals=totals)
+
+    @app.route('/compare_results/picker', methods=['GET', 'POST'])
+    @login_required
+    def compare_test_runs_picker():
+        """
+        Render a form to select two TestRuns for comparison and handle submission.
+        """
+        form = CompareTestRunsForm()
+        if form.validate_on_submit():
+            test_run_1_id = form.test_run_1.data
+            test_run_2_id = form.test_run_2.data
+            if form.compare_type_x.data:
+                # Redirect to "compare by pass/fail result" Type X comparison route
+                return redirect(url_for('compare_test_runs_byresult', run_id_1=test_run_1_id, run_id_2=test_run_2_id))
+            elif form.compare_type_y.data:
+                # Redirect to "compare by raw cli output" Type Y comparison route
+                return redirect(url_for('compare_test_runs_byrawoutput', run_id_1=test_run_1_id, run_id_2=test_run_2_id))
+        return render_template('compare_test_runs_picker.html', form=form)
+
+    @app.route('/compare_results/byresult', methods=['GET'])
+    @login_required
+    def compare_test_runs_byresult():
+        """
+        Compare two TestRuns by pass/fail result.
+        """
+        run_id_1 = request.args.get('run_id_1', type=int)
+        run_id_2 = request.args.get('run_id_2', type=int)
+        if not (run_id_1 and run_id_2):
+            return render_template('error.html', message="Missing TestRun IDs"), 400
+        # Placeholder: Fetch TestRun details for display
+        test_run_1 = TestRun.query.get_or_404(run_id_1)
+        test_run_2 = TestRun.query.get_or_404(run_id_2)
+        return render_template('run_tests.html', test_run_1=test_run_1, test_run_2=test_run_2) # placeholder
+        
+    @app.route('/compare_results/byrawoutput', methods=['GET'])
+    @login_required
+    def compare_test_runs_byrawoutput():
+        """
+        Compare two TestRuns by raw CLI output.
+        """
+        run_id_1 = request.args.get('run_id_1', type=int)
+        run_id_2 = request.args.get('run_id_2', type=int)
+        if not (run_id_1 and run_id_2):
+            return render_template('error.html', message="Missing TestRun IDs"), 400
+        # Placeholder: Fetch TestRun details for display
+        test_run_1 = TestRun.query.get_or_404(run_id_1)
+        test_run_2 = TestRun.query.get_or_404(run_id_2)
+        return render_template('run_tests.html', test_run_1=test_run_1, test_run_2=test_run_2) # placeholder
 
     # Add other routes here if needed
     
