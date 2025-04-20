@@ -16,6 +16,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from sqlalchemy import func
+from utils import format_datetime_with_ordinal
 
 
 # Globals
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 # Define global extensions
 socketio = SocketIO(async_mode='threading')
 login_manager = LoginManager()
+
 
 def create_app():
     app = Flask(__name__)
@@ -780,6 +782,15 @@ def create_app():
                 return redirect(url_for('compare_test_runs_byrawoutput', run_id_1=test_run_1_id, run_id_2=test_run_2_id))
         return render_template('compare_test_runs_picker.html', form=form)
 
+    # Mapping of test_type to TestInstance field names to allow determination of the field names within a common function for all 4 test types.
+    # Used within the compare_results/byresult and compare_results/byrawoutput routes
+    TEST_TYPE_FIELD_MAP = {
+        'bgpaspath_test': 'bgpaspath_test_id',
+        'traceroute_test': 'traceroute_test_id',
+        'txrxtransceiver_test': 'txrxtransceiver_test_id',
+        'itraceroute_test': 'itraceroute_test_id'
+    }
+
     @app.route('/compare_results/byresult', methods=['GET'])
     @login_required
     def compare_test_runs_byresult():
@@ -790,11 +801,97 @@ def create_app():
         run_id_2 = request.args.get('run_id_2', type=int)
         if not (run_id_1 and run_id_2):
             return render_template('error.html', message="Missing TestRun IDs"), 400
-        # Placeholder: Fetch TestRun details for display
+
         test_run_1 = TestRun.query.get_or_404(run_id_1)
         test_run_2 = TestRun.query.get_or_404(run_id_2)
-        return render_template('run_tests.html', test_run_1=test_run_1, test_run_2=test_run_2) # placeholder
         
+        # Format start times
+        test_run_1_start_time_formatted = format_datetime_with_ordinal(test_run_1.start_time)
+        test_run_2_start_time_formatted = format_datetime_with_ordinal(test_run_2.start_time)
+
+        # Helper function to fetch comparison data for a test type
+        def get_comparison_data(test_type, test_model, result_model):
+            # Query TestInstances for both TestRuns, joining with test and result
+            instances_1 = db.session.query(
+                TestInstance,
+                test_model,
+                result_model,
+                Device
+            ).join(
+                test_model,
+                getattr(TestInstance, f"{test_type}_test_id") == test_model.id
+            ).outerjoin(
+                result_model,
+                TestInstance.id == result_model.test_instance_id
+            ).join(
+                Device,
+                TestInstance.device_id == Device.id
+            ).filter(
+                TestInstance.test_run_id == run_id_1,
+                TestInstance.test_type == test_type
+            ).all()
+
+            instances_2 = db.session.query(
+                TestInstance,
+                test_model,
+                result_model,
+                Device
+            ).join(
+                test_model,
+                getattr(TestInstance, f"{test_type}_test_id") == test_model.id
+            ).outerjoin(
+                result_model,
+                TestInstance.id == result_model.test_instance_id
+            ).join(
+                Device,
+                TestInstance.device_id == Device.id
+            ).filter(
+                TestInstance.test_run_id == run_id_2,
+                TestInstance.test_type == test_type
+            ).all()
+
+            # Organize by test ID for comparison
+            results = []
+            test_ids = set([i[1].id for i in instances_1] + [i[1].id for i in instances_2])
+            for test_id in test_ids:
+                inst_1 = next((i for i in instances_1 if i[1].id == test_id), None)
+                inst_2 = next((i for i in instances_2 if i[1].id == test_id), None)
+
+                comparison = {
+                    'test_id': test_id,
+                    'description': inst_1[1].description if inst_1 else inst_2[1].description,
+                    'device_hostname': inst_1[3].hostname if inst_1 else inst_2[3].hostname,
+                    'passed_1': inst_1[2].passed if inst_1 and inst_1[2] else None,
+                    'passed_2': inst_2[2].passed if inst_2 and inst_2[2] else None,
+                    'active_1': inst_1[0].device_active_at_run if inst_1 else False,
+                    'active_2': inst_2[0].device_active_at_run if inst_2 else False,
+                    'rawoutput_1': inst_1[2].rawoutput if inst_1 and inst_1[2] else None,
+                    'rawoutput_2': inst_2[2].rawoutput if inst_2 and inst_2[2] else None
+                }
+                # Determine if results are same/different
+                if comparison['passed_1'] is None or comparison['passed_2'] is None:
+                    comparison['status'] = 'N/A'
+                else:
+                    comparison['status'] = 'Same' if comparison['passed_1'] == comparison['passed_2'] else 'Different'
+                results.append(comparison)
+            return results
+
+        # Fetch comparison data for each test type
+        bgpaspath_results = get_comparison_data('bgpaspath', bgpaspathTest, bgpaspathTestResult)
+        traceroute_results = get_comparison_data('traceroute', tracerouteTest, tracerouteTestResult)
+        txrxtransceiver_results = get_comparison_data('txrxtransceiver', txrxtransceiverTest, txrxtransceiverTestResult)
+        itraceroute_results = get_comparison_data('itraceroute', itracerouteTest, itracerouteTestResult)
+
+        return render_template(
+            'compare_byresult.html',
+            test_run_1=test_run_1,
+            test_run_2=test_run_2,
+            bgpaspath_results=bgpaspath_results,
+            traceroute_results=traceroute_results,
+            txrxtransceiver_results=txrxtransceiver_results,
+            itraceroute_results=itraceroute_results
+        )
+
     @app.route('/compare_results/byrawoutput', methods=['GET'])
     @login_required
     def compare_test_runs_byrawoutput():
@@ -805,10 +902,93 @@ def create_app():
         run_id_2 = request.args.get('run_id_2', type=int)
         if not (run_id_1 and run_id_2):
             return render_template('error.html', message="Missing TestRun IDs"), 400
-        # Placeholder: Fetch TestRun details for display
+
         test_run_1 = TestRun.query.get_or_404(run_id_1)
         test_run_2 = TestRun.query.get_or_404(run_id_2)
-        return render_template('run_tests.html', test_run_1=test_run_1, test_run_2=test_run_2) # placeholder
+        
+        # Format start times
+        test_run_1_start_time_formatted = format_datetime_with_ordinal(test_run_1.start_time)
+        test_run_2_start_time_formatted = format_datetime_with_ordinal(test_run_2.start_time)
+
+        # Reuse the same helper function, but compare rawoutput instead
+        def get_comparison_data(test_type, test_model, result_model):
+            instances_1 = db.session.query(
+                TestInstance,
+                test_model,
+                result_model,
+                Device
+            ).join(
+                test_model,
+                getattr(TestInstance, f"{test_type}_test_id") == test_model.id
+            ).outerjoin(
+                result_model,
+                TestInstance.id == result_model.test_instance_id
+            ).join(
+                Device,
+                TestInstance.device_id == Device.id
+            ).filter(
+                TestInstance.test_run_id == run_id_1,
+                TestInstance.test_type == test_type
+            ).all()
+
+            instances_2 = db.session.query(
+                TestInstance,
+                test_model,
+                result_model,
+                Device
+            ).join(
+                test_model,
+                getattr(TestInstance, f"{test_type}_test_id") == test_model.id
+            ).outerjoin(
+                result_model,
+                TestInstance.id == result_model.test_instance_id
+            ).join(
+                Device,
+                TestInstance.device_id == Device.id
+            ).filter(
+                TestInstance.test_run_id == run_id_2,
+                TestInstance.test_type == test_type
+            ).all()
+
+            results = []
+            test_ids = set([i[1].id for i in instances_1] + [i[1].id for i in instances_2])
+            for test_id in test_ids:
+                inst_1 = next((i for i in instances_1 if i[1].id == test_id), None)
+                inst_2 = next((i for i in instances_2 if i[1].id == test_id), None)
+
+                comparison = {
+                    'test_id': test_id,
+                    'description': inst_1[1].description if inst_1 else inst_2[1].description,
+                    'device_hostname': inst_1[3].hostname if inst_1 else inst_2[3].hostname,
+                    'passed_1': inst_1[2].passed if inst_1 and inst_1[2] else None,
+                    'passed_2': inst_2[2].passed if inst_2 and inst_2[2] else None,
+                    'active_1': inst_1[0].device_active_at_run if inst_1 else False,
+                    'active_2': inst_2[0].device_active_at_run if inst_2 else False,
+                    'rawoutput_1': inst_1[2].rawoutput if inst_1 and inst_1[2] else None,
+                    'rawoutput_2': inst_2[2].rawoutput if inst_2 and inst_2[2] else None
+                }
+                # Determine if rawoutput is same/different
+                if comparison['rawoutput_1'] is None or comparison['rawoutput_2'] is None:
+                    comparison['status'] = 'N/A'
+                else:
+                    comparison['status'] = 'Same' if comparison['rawoutput_1'] == comparison['rawoutput_2'] else 'Different'
+                results.append(comparison)
+            return results
+
+        bgpaspath_results = get_comparison_data('bgpaspath', bgpaspathTest, bgpaspathTestResult)
+        traceroute_results = get_comparison_data('traceroute', tracerouteTest, tracerouteTestResult)
+        txrxtransceiver_results = get_comparison_data('txrxtransceiver', txrxtransceiverTest, txrxtransceiverTestResult)
+        itraceroute_results = get_comparison_data('itraceroute', itracerouteTest, itracerouteTestResult)
+
+        return render_template(
+            'compare_byrawoutput.html',
+            test_run_1=test_run_1,
+            test_run_2=test_run_2,
+            bgpaspath_results=bgpaspath_results,
+            traceroute_results=traceroute_results,
+            txrxtransceiver_results=txrxtransceiver_results,
+            itraceroute_results=itraceroute_results
+        )
 
     # Add other routes here if needed
     
