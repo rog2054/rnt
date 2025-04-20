@@ -938,8 +938,8 @@ def create_app():
         test_run_1_start_time_formatted = format_datetime_with_ordinal(test_run_1.start_time)
         test_run_2_start_time_formatted = format_datetime_with_ordinal(test_run_2.start_time)
 
-        # Reuse the same helper function, but compare rawoutput instead
         def get_comparison_data(test_type, test_model, result_model):
+            field_name = f"{test_type}_id"
             instances_1 = db.session.query(
                 TestInstance,
                 test_model,
@@ -947,7 +947,7 @@ def create_app():
                 Device
             ).join(
                 test_model,
-                getattr(TestInstance, f"{test_type}_test_id") == test_model.id
+                getattr(TestInstance, field_name) == test_model.id
             ).outerjoin(
                 result_model,
                 TestInstance.id == result_model.test_instance_id
@@ -966,7 +966,7 @@ def create_app():
                 Device
             ).join(
                 test_model,
-                getattr(TestInstance, f"{test_type}_test_id") == test_model.id
+                getattr(TestInstance, field_name) == test_model.id
             ).outerjoin(
                 result_model,
                 TestInstance.id == result_model.test_instance_id
@@ -980,33 +980,71 @@ def create_app():
 
             results = []
             test_ids = set([i[1].id for i in instances_1] + [i[1].id for i in instances_2])
+            
             for test_id in test_ids:
                 inst_1 = next((i for i in instances_1 if i[1].id == test_id), None)
                 inst_2 = next((i for i in instances_2 if i[1].id == test_id), None)
 
                 comparison = {
                     'test_id': test_id,
-                    'description': inst_1[1].description if inst_1 else inst_2[1].description,
+                    'description': inst_1[1].description or 'No description' if inst_1 else inst_2[1].description or 'No description',
                     'device_hostname': inst_1[3].hostname if inst_1 else inst_2[3].hostname,
                     'passed_1': inst_1[2].passed if inst_1 and inst_1[2] else None,
                     'passed_2': inst_2[2].passed if inst_2 and inst_2[2] else None,
                     'active_1': inst_1[0].device_active_at_run if inst_1 else False,
                     'active_2': inst_2[0].device_active_at_run if inst_2 else False,
                     'rawoutput_1': inst_1[2].rawoutput if inst_1 and inst_1[2] else None,
-                    'rawoutput_2': inst_2[2].rawoutput if inst_2 and inst_2[2] else None
+                    'rawoutput_2': inst_2[2].rawoutput if inst_2 and inst_2[2] else None,
+                    'status': 'N/A'
                 }
-                # Determine if rawoutput is same/different
+
+                # Determine status and icon_status
+                state_1 = None
+                state_2 = None
+                if not comparison['active_1']:
+                    state_1 = 'skipped'
+                elif comparison['passed_1'] is None:
+                    state_1 = 'no_result'
+                elif comparison['passed_1']:
+                    state_1 = 'pass'
+                else:
+                    state_1 = 'fail'
+
+                if not comparison['active_2']:
+                    state_2 = 'skipped'
+                elif comparison['passed_2'] is None:
+                    state_2 = 'no_result'
+                elif comparison['passed_2']:
+                    state_2 = 'pass'
+                else:
+                    state_2 = 'fail'
+
                 if comparison['rawoutput_1'] is None or comparison['rawoutput_2'] is None:
                     comparison['status'] = 'N/A'
+                    comparison['icon_status'] = '⚠️⚠️'
                 else:
                     comparison['status'] = 'Same' if comparison['rawoutput_1'] == comparison['rawoutput_2'] else 'Different'
+                    if state_1 == state_2 == 'skipped':
+                        comparison['icon_status'] = '‼️‼️'
+                    elif state_1 == state_2 and state_1 in ['pass', 'fail', 'no_result']:
+                        comparison['icon_status'] = {
+                            'pass': '✅✅',
+                            'fail': '❌❌',
+                            'no_result': '⚠️⚠️'
+                        }[state_1]
+                    else:
+                        comparison['icon_status'] = f"{state_1} {state_2}".replace('pass', '✅').replace('fail', '❌').replace('no_result', '⚠️').replace('skipped', '‼️')
+
+                if comparison['status'] == 'Same':
+                    comparison['icon_status'] += ' (exactly the same)'
+
                 results.append(comparison)
             return results
 
-        bgpaspath_results = get_comparison_data('bgpaspath', bgpaspathTest, bgpaspathTestResult)
-        traceroute_results = get_comparison_data('traceroute', tracerouteTest, tracerouteTestResult)
-        txrxtransceiver_results = get_comparison_data('txrxtransceiver', txrxtransceiverTest, txrxtransceiverTestResult)
-        itraceroute_results = get_comparison_data('itraceroute', itracerouteTest, itracerouteTestResult)
+        bgpaspath_results = get_comparison_data('bgpaspath_test', bgpaspathTest, bgpaspathTestResult)
+        traceroute_results = get_comparison_data('traceroute_test', tracerouteTest, tracerouteTestResult)
+        txrxtransceiver_results = get_comparison_data('txrxtransceiver_test', txrxtransceiverTest, txrxtransceiverTestResult)
+        itraceroute_results = get_comparison_data('itraceroute_test', itracerouteTest, itracerouteTestResult)
 
         return render_template(
             'compare_byrawoutput.html',

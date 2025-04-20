@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-
 {% block content %}
-<div class="container">
+
+<div class="cbr-container">
     <!-- TestRun Summary -->
     <h1>Compare Test Runs by Raw CLI Output</h1>
-    <div class="testrun-summary">
+    <div class="cbr-testrun-summary">
         <h2>Test Run Comparison</h2>
-        <table class="table table-bordered">
+        <table class="cbr-table cbr-table-bordered">
             <thead>
                 <tr>
                     <th>Test Run ID</th>
@@ -17,257 +17,383 @@
             <tbody>
                 <tr>
                     <td>{{ test_run_1.id }}</td>
-                    <td>{{ test_run_1.description }}</td>
+                    <td>{{ test_run_1.description or 'N/A' }}</td>
                     <td>{{ test_run_1_start_time_formatted }}</td>
                 </tr>
                 <tr>
                     <td>{{ test_run_2.id }}</td>
-                    <td>{{ test_run_2.description }}</td>
+                    <td>{{ test_run_2.description or 'N/A' }}</td>
                     <td>{{ test_run_2_start_time_formatted }}</td>
                 </tr>
             </tbody>
         </table>
     </div>
 
-    <!-- Hide Same Results Toggle -->
-    <div class="form-group">
+    <!-- Show Same Results Toggle -->
+    <div class="cbr-form-group">
         <label>
-            <input type="checkbox" id="hide-same-results"> Hide Same Results
+            <input type="checkbox" id="cbr-show-same-results" onclick="toggleSameResults()"> Show Identical
+            Results
         </label>
+    </div>
+    <div id="cbr-no-differences" class="cbr-no-differences">
+        No differences found between the selected test runs.
     </div>
 
     <!-- BGP Tests Table -->
-    {% if bgpaspath_results|length > 0 %}
-    <h2>BGP AS Path Tests</h2>
-    <table class="table table-striped compare-table" id="bgpaspath-table">
-        <thead>
-            <tr>
-                <th>Test ID</th>
-                <th>Device</th>
-                <th>Description</th>
-                <th>Raw Output</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for result in bgpaspath_results %}
-            <tr class="summary-row {% if result.status == 'Same' %}same-result{% endif %}"
-                data-toggle-id="bgpaspath-{{ result.test_id }}">
-                <td>{{ result.test_id }}</td>
-                <td>{{ result.device_hostname }}</td>
-                <td>{{ result.description or 'No description' }}</td>
-                <td>{{ result.status }}</td>
-            </tr>
-            <tr class="details-row" id="bgpaspath-{{ result.test_id }}" style="display: none;">
-                <td colspan="4">
-                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
-                    {% if result.passed_1 is not none %}
-                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
-                    <strong>Raw Output:</strong><br>
-                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
-                    {% elif not result.active_1 %}
-                    Skipped (Device Inactive)<br>
-                    {% else %}
-                    No Result<br>
-                    {% endif %}
-                    <hr>
-                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
-                    {% if result.passed_2 is not none %}
-                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
-                    <strong>Raw Output:</strong><br>
-                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
-                    {% elif not result.active_2 %}
-                    Skipped (Device Inactive)<br>
-                    {% else %}
-                    No Result<br>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% endif %}
+    <div class="cbr-test-type" id="cbr-bgp-section">
+        <h3>BGP AS Path Tests</h3>
+        {% if bgpaspath_results %}
+        <table class="cbr-table cbr-table-bordered cbr-table-striped">
+            <thead>
+                <tr>
+                    <th>Test ID</th>
+                    <th>Device</th>
+                    <th>Description</th>
+                    <th>Raw Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in bgpaspath_results %}
+                <tr class="cbr-summary-row" data-toggle-id="bgpaspath-{{ result.test_id }}"
+                    data-status="{{ result.status }}">
+                    <td>{{ result.test_id }}</td>
+                    <td>{{ result.device_hostname }}</td>
+                    <td>{{ result.description }}</td>
+                    <td>
+                        {% if '‼️' in result.icon_status %}
+                        {{ result.icon_status | replace('‼️', '<span class="cbr-icon-skipped">!!</span>') | safe }}
+                        {% else %}
+                        {{ result.icon_status }}
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr class="cbr-details-row" id="bgpaspath-{{ result.test_id }}">
+                    <td colspan="4">
+                        <table class="cbr-output-table">
+                            <tr>
+                                <td>
+                                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
+                                    {% if result.passed_1 is not none %}
+                                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
+                                    <strong>Raw Output:</strong><br>
+                                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
+                                    {% elif not result.active_1 %}
+                                    Skipped (Device Inactive)<br>
+                                    {% else %}
+                                    No Result<br>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
+                                    {% if result.passed_2 is not none %}
+                                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
+                                    <strong>Raw Output:</strong><br>
+                                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
+                                    {% elif not result.active_2 %}
+                                    Skipped (Device Inactive)<br>
+                                    {% else %}
+                                    No Result<br>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No results for BGP AS Path Tests.</p>
+        {% endif %}
+    </div>
 
     <!-- Traceroute Tests Table -->
-    {% if traceroute_results|length > 0 %}
-    <h2>Traceroute Tests</h2>
-    <table class="table table-striped compare-table" id="traceroute-table">
-        <thead>
-            <tr>
-                <th>Test ID</th>
-                <th>Device</th>
-                <th>Description</th>
-                <th>Raw Output</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for result in traceroute_results %}
-            <tr class="summary-row {% if result.status == 'Same' %}same-result{% endif %}"
-                data-toggle-id="traceroute-{{ result.test_id }}">
-                <td>{{ result.test_id }}</td>
-                <td>{{ result.device_hostname }}</td>
-                <td>{{ result.description or 'No description' }}</td>
-                <td>{{ result.status }}</td>
-            </tr>
-            <tr class="details-row" id="traceroute-{{ result.test_id }}" style="display: none;">
-                <td colspan="4">
-                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
-                    {% if result.passed_1 is not none %}
-                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
-                    <strong>Raw Output:</strong><br>
-                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
-                    {% elif not result.active_1 %}
-                    Skipped (Device Inactive)<br>
-                    {% else %}
-                    No Result<br>
-                    {% endif %}
-                    <hr>
-                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
-                    {% if result.passed_2 is not none %}
-                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
-                    <strong>Raw Output:</strong><br>
-                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
-                    {% elif not result.active_2 %}
-                    Skipped (Device Inactive)<br>
-                    {% else %}
-                    No Result<br>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% endif %}
+    <div class="cbr-test-type" id="cbr-traceroute-section">
+        <h3>Traceroute Tests</h3>
+        {% if traceroute_results %}
+        <table class="cbr-table cbr-table-bordered cbr-table-striped">
+            <thead>
+                <tr>
+                    <th>Test ID</th>
+                    <th>Device</th>
+                    <th>Description</th>
+                    <th>Raw Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in traceroute_results %}
+                <tr class="cbr-summary-row" data-toggle-id="traceroute-{{ result.test_id }}"
+                    data-status="{{ result.status }}">
+                    <td>{{ result.test_id }}</td>
+                    <td>{{ result.device_hostname }}</td>
+                    <td>{{ result.description }}</td>
+                    <td>
+                        {% if '‼️' in result.icon_status %}
+                        {{ result.icon_status | replace('‼️', '<span class="cbr-icon-skipped">!!</span>') | safe }}
+                        {% else %}
+                        {{ result.icon_status }}
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr class="cbr-details-row" id="traceroute-{{ result.test_id }}">
+                    <td colspan="4">
+                        <table class="cbr-output-table">
+                            <tr>
+                                <td>
+                                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
+                                    {% if result.passed_1 is not none %}
+                                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
+                                    <strong>Raw Output:</strong><br>
+                                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
+                                    {% elif not result.active_1 %}
+                                    Skipped (Device Inactive)<br>
+                                    {% else %}
+                                    No Result<br>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
+                                    {% if result.passed_2 is not none %}
+                                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
+                                    <strong>Raw Output:</strong><br>
+                                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
+                                    {% elif not result.active_2 %}
+                                    Skipped (Device Inactive)<br>
+                                    {% else %}
+                                    No Result<br>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No results for Traceroute Tests.</p>
+        {% endif %}
+    </div>
 
     <!-- TxRx Transceiver Tests Table -->
-    {% if txrxtransceiver_results|length > 0 %}
-    <h2>TxRx Transceiver Tests</h2>
-    <table class="table table-striped compare-table" id="txrxtransceiver-table">
-        <thead>
-            <tr>
-                <th>Test ID</th>
-                <th>Device</th>
-                <th>Description</th>
-                <th>Raw Output</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for result in txrxtransceiver_results %}
-            <tr class="summary-row {% if result.status == 'Same' %}same-result{% endif %}"
-                data-toggle-id="txrxtransceiver-{{ result.test_id }}">
-                <td>{{ result.test_id }}</td>
-                <td>{{ result.device_hostname }}</td>
-                <td>{{ result.description or 'No description' }}</td>
-                <td>{{ result.status }}</td>
-            </tr>
-            <tr class="details-row" id="txrxtransceiver-{{ result.test_id }}" style="display: none;">
-                <td colspan="4">
-                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
-                    {% if result.passed_1 is not none %}
-                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
-                    <strong>Raw Output:</strong><br>
-                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
-                    {% elif not result.active_1 %}
-                    Skipped (Device Inactive)<br>
-                    {% else %}
-                    No Result<br>
-                    {% endif %}
-                    <hr>
-                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
-                    {% if result.passed_2 is not none %}
-                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
-                    <strong>Raw Output:</strong><br>
-                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
-                    {% elif not result.active_2 %}
-                    Skipped (Device Inactive)<br>
-                    {% else %}
-                    No Result<br>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% endif %}
+    <div class="cbr-test-type" id="cbr-txrxtransceiver-section">
+        <h3>TxRx Transceiver Tests</h3>
+        {% if txrxtransceiver_results %}
+        <table class="cbr-table cbr-table-bordered cbr-table-striped">
+            <thead>
+                <tr>
+                    <th>Test ID</th>
+                    <th>Device</th>
+                    <th>Description</th>
+                    <th>Raw Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in txrxtransceiver_results %}
+                <tr class="cbr-summary-row" data-toggle-id="txrxtransceiver-{{ result.test_id }}"
+                    data-status="{{ result.status }}">
+                    <td>{{ result.test_id }}</td>
+                    <td>{{ result.device_hostname }}</td>
+                    <td>{{ result.description }}</td>
+                    <td>
+                        {% if '‼️' in result.icon_status %}
+                        {{ result.icon_status | replace('‼️', '<span class="cbr-icon-skipped">!!</span>') | safe }}
+                        {% else %}
+                        {{ result.icon_status }}
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr class="cbr-details-row" id="txrxtransceiver-{{ result.test_id }}">
+                    <td colspan="4">
+                        <table class="cbr-output-table">
+                            <tr>
+                                <td>
+                                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
+                                    {% if result.passed_1 is not none %}
+                                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
+                                    <strong>Raw Output:</strong><br>
+                                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
+                                    {% elif not result.active_1 %}
+                                    Skipped (Device Inactive)<br>
+                                    {% else %}
+                                    No Result<br>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
+                                    {% if result.passed_2 is not none %}
+                                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
+                                    <strong>Raw Output:</strong><br>
+                                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
+                                    {% elif not result.active_2 %}
+                                    Skipped (Device Inactive)<br>
+                                    {% else %}
+                                    No Result<br>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No results for TxRx Transceiver Tests.</p>
+        {% endif %}
+    </div>
 
     <!-- iTraceroute Tests Table -->
-    {% if itraceroute_results|length > 0 %}
-    <h2>iTraceroute Tests</h2>
-    <table class="table table-striped compare-table" id="itraceroute-table">
-        <thead>
-            <tr>
-                <th>Test ID</th>
-                <th>Device</th>
-                <th>Description</th>
-                <th>Raw Output</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for result in itraceroute_results %}
-            <tr class="summary-row {% if result.status == 'Same' %}same-result{% endif %}"
-                data-toggle-id="itraceroute-{{ result.test_id }}">
-                <td>{{ result.test_id }}</td>
-                <td>{{ result.device_hostname }}</td>
-                <td>{{ result.description or 'No description' }}</td>
-                <td>{{ result.status }}</td>
-            </tr>
-            <tr class="details-row" id="itraceroute-{{ result.test_id }}" style="display: none;">
-                <td colspan="4">
-                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
-                    {% if result.passed_1 is not none %}
-                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
-                    <strong>Raw Output:</strong><br>
-                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
-                    {% elif not result.active_1 %}
-                    Skipped (Device Inactive)<br>
-                    {% else %}
-                    No Result<br>
-                    {% endif %}
-                    <hr>
-                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
-                    {% if result.passed_2 is not none %}
-                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
-                    <strong>Raw Output:</strong><br>
-                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
-                    {% elif not result.active_2 %}
-                    Skipped (Device Inactive)<br>
-                    {% else %}
-                    No Result<br>
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-    {% endif %}
+    <div class="cbr-test-type" id="cbr-itraceroute-section">
+        <h3>iTraceroute Tests</h3>
+        {% if itraceroute_results %}
+        <table class="cbr-table cbr-table-bordered cbr-table-striped">
+            <thead>
+                <tr>
+                    <th>Test ID</th>
+                    <th>Device</th>
+                    <th>Description</th>
+                    <th>Raw Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in itraceroute_results %}
+                <tr class="cbr-summary-row" data-toggle-id="itraceroute-{{ result.test_id }}"
+                    data-status="{{ result.status }}">
+                    <td>{{ result.test_id }}</td>
+                    <td>{{ result.device_hostname }}</td>
+                    <td>{{ result.description }}</td>
+                    <td>
+                        {% if '‼️' in result.icon_status %}
+                        {{ result.icon_status | replace('‼️', '<span class="cbr-icon-skipped">!!</span>') | safe }}
+                        {% else %}
+                        {{ result.icon_status }}
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr class="cbr-details-row" id="itraceroute-{{ result.test_id }}">
+                    <td colspan="4">
+                        <table class="cbr-output-table">
+                            <tr>
+                                <td>
+                                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
+                                    {% if result.passed_1 is not none %}
+                                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
+                                    <strong>Raw Output:</strong><br>
+                                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
+                                    {% elif not result.active_1 %}
+                                    Skipped (Device Inactive)<br>
+                                    {% else %}
+                                    No Result<br>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
+                                    {% if result.passed_2 is not none %}
+                                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
+                                    <strong>Raw Output:</strong><br>
+                                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
+                                    {% elif not result.active_2 %}
+                                    Skipped (Device Inactive)<br>
+                                    {% else %}
+                                    No Result<br>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No results for iTraceroute Tests.</p>
+        {% endif %}
+    </div>
 
     <!-- Back Button -->
-    <a href="{{ url_for('compare_test_runs_picker') }}" class="btn btn-primary">Back to Picker</a>
+    <div class="cbr-button-container">
+        <a href="{{ url_for('compare_test_runs_picker') }}" class="btn btn-primary">Back to Results Comparison
+            Picker</a>
+    </div>
 </div>
 
-<!-- JavaScript for toggling details and hiding same results -->
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Toggle details on row click
-        document.querySelectorAll('.summary-row').forEach(row => {
-            row.addEventListener('click', function () {
-                const toggleId = this.getAttribute('data-toggle-id');
-                const detailsRow = document.getElementById(toggleId);
-                detailsRow.style.display = detailsRow.style.display === 'none' ? 'table-row' : 'none';
-            });
-        });
+    function toggleSameResults() {
+        const showSame = document.getElementById('cbr-show-same-results').checked;
+        const testTypes = [
+            'cbr-bgp-section',
+            'cbr-traceroute-section',
+            'cbr-txrxtransceiver-section',
+            'cbr-itraceroute-section'
+        ];
 
-        // Hide Same Results toggle
-        const hideSameCheckbox = document.getElementById('hide-same-results');
-        hideSameCheckbox.addEventListener('change', function () {
-            const sameRows = document.querySelectorAll('.same-result');
-            sameRows.forEach(row => {
-                row.style.display = this.checked ? 'none' : 'table-row';
-                // Also hide the corresponding details row
-                const toggleId = row.getAttribute('data-toggle-id');
-                const detailsRow = document.getElementById(toggleId);
-                detailsRow.style.display = this.checked ? 'none' : 'none'; // Details always hidden unless toggled
+        testTypes.forEach(sectionId => {
+            const section = document.getElementById(sectionId);
+            if (!section) return;
+
+            const rows = section.querySelectorAll('.cbr-summary-row');
+            let allHidden = true;
+
+            rows.forEach(row => {
+                const detailsRow = document.getElementById(row.dataset.toggleId);
+                if (!showSame && row.dataset.status === 'Same') {
+                    row.style.display = 'none';
+                    if (detailsRow) detailsRow.classList.remove('cbr-visible');
+                } else {
+                    row.style.display = '';
+                    if (detailsRow && !detailsRow.classList.contains('cbr-visible')) {
+                        detailsRow.classList.remove('cbr-visible');
+                    }
+                    allHidden = false;
+                }
             });
+
+            if (!showSame && allHidden && rows.length > 0) {
+                section.classList.add('cbr-hidden');
+            } else {
+                section.classList.remove('cbr-hidden');
+            }
+        });
+        updateNoDifferencesMessage();
+    }
+
+    function updateNoDifferencesMessage() {
+        const testTypes = [
+            'cbr-bgp-section',
+            'cbr-traceroute-section',
+            'cbr-txrxtransceiver-section',
+            'cbr-itraceroute-section'
+        ];
+        const allHidden = testTypes.every(sectionId => {
+            const section = document.getElementById(sectionId);
+            return !section || section.classList.contains('cbr-hidden');
+        });
+        const noDiffMessage = document.getElementById('cbr-no-differences');
+        if (allHidden) {
+            noDiffMessage.style.display = 'block';
+        } else {
+            noDiffMessage.style.display = 'none';
+        }
+    }
+
+    document.querySelectorAll('.cbr-summary-row').forEach(row => {
+        row.addEventListener('click', () => {
+            const testId = row.dataset.toggleId;
+            const detailsRow = document.getElementById(testId);
+            if (detailsRow) {
+                const isVisible = detailsRow.classList.contains('cbr-visible');
+                console.log(`Toggling details for testId: ${testId}, isVisible: ${isVisible}`);
+                detailsRow.classList.toggle('cbr-visible');
+                console.log(`New visibility: ${detailsRow.classList.contains('cbr-visible')}`);
+            } else {
+                console.error(`Details row not found for testId: ${testId}`);
+            }
         });
     });
+
+    // Apply default state on page load
+    document.addEventListener('DOMContentLoaded', toggleSameResults);
 </script>
 {% endblock %}
