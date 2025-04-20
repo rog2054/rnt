@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <!-- TestRun Summary -->
+    <h1>Compare Test Runs by Raw CLI Output</h1>
+    <div class="testrun-summary">
+        <h2>Test Run Comparison</h2>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Test Run ID</th>
+                    <th>Description</th>
+                    <th>Start Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ test_run_1.id }}</td>
+                    <td>{{ test_run_1.description }}</td>
+                    <td>{{ test_run_1_start_time_formatted }}</td>
+                </tr>
+                <tr>
+                    <td>{{ test_run_2.id }}</td>
+                    <td>{{ test_run_2.description }}</td>
+                    <td>{{ test_run_2_start_time_formatted }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Hide Same Results Toggle -->
+    <div class="form-group">
+        <label>
+            <input type="checkbox" id="hide-same-results"> Hide Same Results
+        </label>
+    </div>
+
+    <!-- BGP Tests Table -->
+    {% if bgpaspath_results|length > 0 %}
+    <h2>BGP AS Path Tests</h2>
+    <table class="table table-striped compare-table" id="bgpaspath-table">
+        <thead>
+            <tr>
+                <th>Test ID</th>
+                <th>Device</th>
+                <th>Description</th>
+                <th>Raw Output</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in bgpaspath_results %}
+            <tr class="summary-row {% if result.status == 'Same' %}same-result{% endif %}"
+                data-toggle-id="bgpaspath-{{ result.test_id }}">
+                <td>{{ result.test_id }}</td>
+                <td>{{ result.device_hostname }}</td>
+                <td>{{ result.description or 'No description' }}</td>
+                <td>{{ result.status }}</td>
+            </tr>
+            <tr class="details-row" id="bgpaspath-{{ result.test_id }}" style="display: none;">
+                <td colspan="4">
+                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
+                    {% if result.passed_1 is not none %}
+                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
+                    {% elif not result.active_1 %}
+                    Skipped (Device Inactive)<br>
+                    {% else %}
+                    No Result<br>
+                    {% endif %}
+                    <hr>
+                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
+                    {% if result.passed_2 is not none %}
+                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
+                    {% elif not result.active_2 %}
+                    Skipped (Device Inactive)<br>
+                    {% else %}
+                    No Result<br>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Traceroute Tests Table -->
+    {% if traceroute_results|length > 0 %}
+    <h2>Traceroute Tests</h2>
+    <table class="table table-striped compare-table" id="traceroute-table">
+        <thead>
+            <tr>
+                <th>Test ID</th>
+                <th>Device</th>
+                <th>Description</th>
+                <th>Raw Output</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in traceroute_results %}
+            <tr class="summary-row {% if result.status == 'Same' %}same-result{% endif %}"
+                data-toggle-id="traceroute-{{ result.test_id }}">
+                <td>{{ result.test_id }}</td>
+                <td>{{ result.device_hostname }}</td>
+                <td>{{ result.description or 'No description' }}</td>
+                <td>{{ result.status }}</td>
+            </tr>
+            <tr class="details-row" id="traceroute-{{ result.test_id }}" style="display: none;">
+                <td colspan="4">
+                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
+                    {% if result.passed_1 is not none %}
+                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
+                    {% elif not result.active_1 %}
+                    Skipped (Device Inactive)<br>
+                    {% else %}
+                    No Result<br>
+                    {% endif %}
+                    <hr>
+                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
+                    {% if result.passed_2 is not none %}
+                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
+                    {% elif not result.active_2 %}
+                    Skipped (Device Inactive)<br>
+                    {% else %}
+                    No Result<br>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- TxRx Transceiver Tests Table -->
+    {% if txrxtransceiver_results|length > 0 %}
+    <h2>TxRx Transceiver Tests</h2>
+    <table class="table table-striped compare-table" id="txrxtransceiver-table">
+        <thead>
+            <tr>
+                <th>Test ID</th>
+                <th>Device</th>
+                <th>Description</th>
+                <th>Raw Output</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in txrxtransceiver_results %}
+            <tr class="summary-row {% if result.status == 'Same' %}same-result{% endif %}"
+                data-toggle-id="txrxtransceiver-{{ result.test_id }}">
+                <td>{{ result.test_id }}</td>
+                <td>{{ result.device_hostname }}</td>
+                <td>{{ result.description or 'No description' }}</td>
+                <td>{{ result.status }}</td>
+            </tr>
+            <tr class="details-row" id="txrxtransceiver-{{ result.test_id }}" style="display: none;">
+                <td colspan="4">
+                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
+                    {% if result.passed_1 is not none %}
+                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
+                    {% elif not result.active_1 %}
+                    Skipped (Device Inactive)<br>
+                    {% else %}
+                    No Result<br>
+                    {% endif %}
+                    <hr>
+                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
+                    {% if result.passed_2 is not none %}
+                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
+                    {% elif not result.active_2 %}
+                    Skipped (Device Inactive)<br>
+                    {% else %}
+                    No Result<br>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- iTraceroute Tests Table -->
+    {% if itraceroute_results|length > 0 %}
+    <h2>iTraceroute Tests</h2>
+    <table class="table table-striped compare-table" id="itraceroute-table">
+        <thead>
+            <tr>
+                <th>Test ID</th>
+                <th>Device</th>
+                <th>Description</th>
+                <th>Raw Output</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for result in itraceroute_results %}
+            <tr class="summary-row {% if result.status == 'Same' %}same-result{% endif %}"
+                data-toggle-id="itraceroute-{{ result.test_id }}">
+                <td>{{ result.test_id }}</td>
+                <td>{{ result.device_hostname }}</td>
+                <td>{{ result.description or 'No description' }}</td>
+                <td>{{ result.status }}</td>
+            </tr>
+            <tr class="details-row" id="itraceroute-{{ result.test_id }}" style="display: none;">
+                <td colspan="4">
+                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
+                    {% if result.passed_1 is not none %}
+                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
+                    {% elif not result.active_1 %}
+                    Skipped (Device Inactive)<br>
+                    {% else %}
+                    No Result<br>
+                    {% endif %}
+                    <hr>
+                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
+                    {% if result.passed_2 is not none %}
+                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
+                    {% elif not result.active_2 %}
+                    Skipped (Device Inactive)<br>
+                    {% else %}
+                    No Result<br>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <!-- Back Button -->
+    <a href="{{ url_for('compare_test_runs_picker') }}" class="btn btn-primary">Back to Picker</a>
+</div>
+
+<!-- JavaScript for toggling details and hiding same results -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Toggle details on row click
+        document.querySelectorAll('.summary-row').forEach(row => {
+            row.addEventListener('click', function () {
+                const toggleId = this.getAttribute('data-toggle-id');
+                const detailsRow = document.getElementById(toggleId);
+                detailsRow.style.display = detailsRow.style.display === 'none' ? 'table-row' : 'none';
+            });
+        });
+
+        // Hide Same Results toggle
+        const hideSameCheckbox = document.getElementById('hide-same-results');
+        hideSameCheckbox.addEventListener('change', function () {
+            const sameRows = document.querySelectorAll('.same-result');
+            sameRows.forEach(row => {
+                row.style.display = this.checked ? 'none' : 'table-row';
+                // Also hide the corresponding details row
+                const toggleId = row.getAttribute('data-toggle-id');
+                const detailsRow = document.getElementById(toggleId);
+                detailsRow.style.display = this.checked ? 'none' : 'none'; // Details always hidden unless toggled
+            });
+        });
+    });
+</script>
+{% endblock %}

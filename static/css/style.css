@@ -325,3 +325,108 @@ th.sortable:hover {
     display: flex;
     gap: 1rem;
 }
+
+/* CSS for Compare By pages */
+/* Existing styles (from previous responses) */
+
+.cbr-container {
+    max-width: 800px;
+    /* Slightly wider for tables */
+    margin: 2rem auto;
+    padding: 1rem;
+}
+
+.cbr-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.75rem 1.5rem;
+    background-color: #6200ea;
+    color: white;
+    text-decoration: none;
+    border: none;
+    border-radius: 4px;
+    font-family: 'Roboto', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.cbr-btn:hover {
+    background-color: #7c4dff;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.cbr-form-group {
+    margin-bottom: 1rem;
+}
+
+/* New styles for comparison tables */
+.cbr-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Roboto', sans-serif;
+}
+
+.cbr-table-striped tbody tr:nth-of-type(odd) {
+    background-color: #f9f9f9;
+}
+
+.cbr-table th,
+.cbr-table td {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.cbr-table th {
+    background-color: #6200ea;
+    color: white;
+    font-weight: 500;
+}
+
+.cbr-summary-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.cbr-summary-row:hover {
+    background-color: #e8f0fe;
+}
+
+.cbr-details-row pre {
+    background-color: #f4f4f4;
+    padding: 1rem;
+    border-radius: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    font-size: 0.875rem;
+}
+
+.cbr-pass::before {
+    content: '✅';
+}
+
+.cbr-fail::before {
+    content: '❌';
+}
+
+.text-muted::before {
+    content: '⏸️';
+}
+
+.cbr-text-warning::before {
+    content: '⚠️';
+}
+
+/* Toggle checkbox */
+#cbr-hide-same-results {
+    margin-right: 0.5rem;
+}
+
+/* TestRun summary table */
+.cbr-testrun-summary table {
+    margin-bottom: 2rem;
+}
