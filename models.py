@@ -13,7 +13,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(120), nullable=False)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_user_created_by_id'), nullable=True)
     created_by = db.relationship('User', remote_side=[id], backref='created_users')
-
+    theme = db.Column(db.String(20), nullable=True, default='default')  # default theme
+    
     def __repr__(self):
         return f'<User {self.username}>'
     
