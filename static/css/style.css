@@ -1,3 +1,5 @@
+@import url('themes.css');
+
 :root {
     --sidebar-width: 260px;
     --sidebar-collapsed-width: 85px;
@@ -27,51 +29,56 @@ body:not(:has(.sidebar)) .content {
 
 .delete-credential i {
     cursor: pointer;
-    color: #000;
-    /* Default color */
+    color: var(--action-color);
+    /* color: #000; */
 }
 
 .delete-credential .material-symbols-rounded {
-    color: #6c757d;
-    /* Bootstrap’s default gray for text-muted, or your custom gray */
+    color: var(--faded-action-color);
+    /* color: #6c757d; */
 }
 
 .delete-credential:hover .material-symbols-rounded {
-    color: red;
-    /* No need for !important if text-muted is removed */
+    color: var(--caution-color);
+    /* color: red; */
 }
 
 .delete-device i {
     cursor: pointer;
-    color: #000;
-    /* Default color */
+    color: var(--action-color);
+    /* color: #000; */
 }
 
 .delete-device .material-symbols-rounded {
-    color: #6c757d;
+    color: var(--faded-action-color);
+    /* color: #6c757d; */
 }
 
 .delete-device:hover .material-symbols-rounded {
-    color: red;
+    color: var(--caution-color);
+    /* color: red; */
 }
 
 .delete-test i {
     cursor: pointer;
-    color: #000;
-    /* Default color */
+    color: var(--action-color);
+    /* color: #000; */
 }
 
 .delete-test .material-symbols-rounded {
-    color: #6c757d;
+    color: var(--faded-action-color);
+    /* color: #6c757d; */
 }
 
 .delete-test:hover .material-symbols-rounded {
-    color: red;
+    color: var(--caution-color);
+    /* color: red; */
 }
 
 .delete-locked {
     cursor: not-allowed;
-    color: #6c757d;
+    color: var(--faded-action-color);
+    /* color: #6c757d; */
 }
 
 #status-log {
@@ -106,11 +113,13 @@ body:not(:has(.sidebar)) .content {
 }
 
 .pass {
-    color: green;
+    color: var(--pass);
+    /* color: green; */
 }
 
 .fail {
-    color: red;
+    color: var(--fail);
+    /* color: red; */
 }
 
 pre {
@@ -123,7 +132,8 @@ pre {
 }
 
 .summary-row:hover {
-    background-color: #f5f5f5;
+    background-color: var(--contrast-color);
+    /* background-color: #f5f5f5; */
 }
 
 th.sortable {
@@ -131,18 +141,21 @@ th.sortable {
 }
 
 th.sortable:hover {
-    background-color: #e9ecef;
+    background-color: var(--contrast-color);
+    /* background-color: #e9ecef; */
 }
 
 /* success/fail stylised unicode */
 .perfect {
     font-size: 2rem;
-    color: red
+    color: var(--primary-color);
+    /* color: red */
 }
 
 .incomplete {
     font-size: 1.5rem;
-    color: grey;
+    color: var(--faded-action-color);
+    /* color: grey; */
 }
 
 /* topbar nav used on test results page */
@@ -150,7 +163,8 @@ th.sortable:hover {
     display: flex;
     justify-content: space-around;
     padding: 10px;
-    background-color: #f8f9fa;
+    background-color: var(--contrast-color);
+    /* background-color: #f8f9fa; */
     margin-bottom: 20px;
     border-radius: 5px;
 }
@@ -163,12 +177,15 @@ th.sortable:hover {
 }
 
 .topbar a:hover {
-    background-color: #e9ecef;
+    background-color: var(--contrast-color);
+    /* background-color: #e9ecef; */
 }
 
 .topbar a.active {
-    background-color: #007bff;
-    color: white;
+    background-color: var(--primary-color);
+    color: var(--contrast-color);
+    /* background-color: #007bff; */
+    /* color: white; */
 }
 
 /* Style for the details button */
@@ -178,9 +195,10 @@ th.sortable:hover {
     gap: 8px;
     /* Space between icon and text */
     padding: 8px 16px;
-    background-color: #6200ea;
-    /* Material Design purple (or choose your color) */
-    color: white;
+    background-color: var(--primary-color);
+    /* background-color: #6200ea; */
+    color: var(--contrast-color);
+    /* color: white; */
     text-decoration: none;
     /* Remove underline */
     border-radius: 4px;
@@ -194,7 +212,8 @@ th.sortable:hover {
 
 /* Hover effect */
 .details-button:hover {
-    background-color: #7c4dff;
+    background-color: var(--gradient-low);
+    /* background-color: #7c4dff; */
     /* Lighter purple on hover */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
     /* Elevated shadow */
@@ -209,13 +228,14 @@ th.sortable:hover {
 
 /* Focus and active states for accessibility */
 .details-button:focus {
-    outline: 2px solid #bb86fc;
-    /* Material Design focus ring */
+    outline: 2px solid var(--gradient-low);
+    /* outline: 2px solid #bb86fc; */
     outline-offset: 2px;
 }
 
 .details-button:active {
-    background-color: #3700b3;
+    background-color: var(--action-color);
+    /* background-color: #3700b3; */
     /* Darker purple on click */
 }
 
@@ -250,15 +270,18 @@ th.sortable:hover {
 /* Select dropdown */
 .ctrpform-select {
     padding: 0.75rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--gradient-high);
+    /* border: 1px solid #ccc; */
     border-radius: 4px;
     font-size: 1rem;
-    background-color: white;
+    background-color: var(--contrast-color);
+    /* background-color: white; */
     transition: border-color 0.2s;
 }
 
 .ctrpform-select:focus {
-    border-color: #6200ea;
+    border-color: var(--primary-color);
+    /* border-color: #6200ea; */
     /* Material Design purple */
     outline: none;
     box-shadow: 0 0 0 2px rgba(98, 0, 234, 0.2);
@@ -269,8 +292,8 @@ th.sortable:hover {
     list-style: none;
     padding: 0;
     margin: 0.25rem 0 0;
-    color: #d32f2f;
-    /* Material Design red */
+    color: var(--caution-color);
+    /* color: #d32f2f; */
     font-size: 0.875rem;
 }
 
@@ -280,8 +303,10 @@ th.sortable:hover {
     align-items: center;
     gap: 8px;
     padding: 0.75rem 1.5rem;
-    background-color: #6200ea;
-    color: white;
+    background-color: var(--primary-color);
+    /* background-color: #6200ea; */
+    color: var(--contrast-color);
+    /* color: white; */
     text-decoration: none;
     border: none;
     border-radius: 4px;
@@ -293,17 +318,20 @@ th.sortable:hover {
 }
 
 .ctrpbtn:hover {
-    background-color: #7c4dff;
+    background-color: var(--gradient-low);
+    /* background-color: #7c4dff; */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .ctrpbtn:focus {
-    outline: 2px solid #bb86fc;
+    outline: 2px solid var(--gradient-low);
+    /* outline: 2px solid #bb86fc; */
     outline-offset: 2px;
 }
 
 .ctrpbtn:active {
-    background-color: #3700b3;
+    background-color: var(--action-color);
+    /* background-color: #3700b3; */
 }
 
 /* Button group */
@@ -330,14 +358,17 @@ th.sortable:hover {
 
 .cbr-table th,
 .cbr-table td {
-    border: 1px solid #ddd;
+    border: 1px solid var(--gradient-high);
+    /* border: 1px solid #ddd; */
     padding: 8px;
     text-align: left;
 }
 
 .cbr-table th {
-    background-color: #6200ea;
-    color: white;
+    background-color: var(--primary-color);
+    /* background-color: #6200ea; */
+    color: var(--contrast-color);
+    /* color: white; */
     font-weight: 500;
 }
 
@@ -393,13 +424,15 @@ th.sortable:hover {
     vertical-align: top;
     padding: 10px;
     width: 50%;
-    border: 1px solid #ddd;
+    border: 1px solid var(--gradient-high);
+    /* border: 1px solid #ddd; */
 }
 
 .cbr-output-table pre {
     margin: 0;
     white-space: pre-wrap;
-    background-color: #f4f4f4;
+    background-color: var(--gradient-high);
+    /* background-color: #f4f4f4; */
     padding: 1rem;
     border-radius: 4px;
     max-height: 550px;
@@ -428,14 +461,16 @@ th.sortable:hover {
 }
 
 .btn.btn-primary {
-    background-color: #6200ea;
+    background-color: var(--primary-color);
+    /* background-color: #6200ea; */
     border: none;
     padding: 0.75rem 1.5rem;
     font-weight: 500;
 }
 
 .btn.btn-primary:hover {
-    background-color: #7c4dff;
+    background-color: var(--gradient-low);
+    /* background-color: #7c4dff; */
 }
 
 .cbr-hidden {

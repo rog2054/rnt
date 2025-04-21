@@ -4,11 +4,11 @@
     --gradient-low: #cdb4ff;
 
     --primary-color: #6200ea;
-    --inverse-color: #eef2ff;
+    --contrast-color: #eef2ff;
 
-    --pointer-color: black;
-    --faded-color: #6c757d;
-    --caution-color: red;
+    --action-color: black;
+    --faded-action-color: #6c757d;
+    --caution-color: #d32f2f;
 
     --pass: green;
     --fail: red;
@@ -16,20 +16,63 @@
     /* fallback */
 }
 
-.theme-light {
-    --primary-color: #ffffff;
-    --secondary-color: #f0f0f0;
-    --text-color: #000;
+
+.theme-default {
+    --gradient-high: #f1f3ff;
+    --gradient-low: #cdb4ff;
+
+    --primary-color: #6200ea;
+    --contrast-color: #eef2ff;
+
+    --pointer-color: black;
+    --faded-color: #6c757d;
+    --caution-color: #d32f2f;
+
+    --pass: green;
+    --fail: red;
 }
 
-.theme-dark {
-    --primary-color: #1e1e1e;
-    --secondary-color: #333;
-    --text-color: #fff;
+.theme-grey {
+    --gradient-high: #f1f3ff;
+    --gradient-low: #dadada;
+
+    --primary-color: #444444;
+    --contrast-color: #dddddd;
+
+    --pointer-color: black;
+    --faded-color: #6c757d;
+    --caution-color: #d32f2f;
+
+    --pass: green;
+    --fail: red;
 }
 
 .theme-blue {
-    --primary-color: #001f3f;
-    --secondary-color: #0074D9;
-    --text-color: #fff;
+    --gradient-high: #e2e2e4;
+    --gradient-low: #c0bfc9;
+
+    --primary-color: #186ceb;
+    --contrast-color: #e7e7ee;
+
+    --pointer-color: black;
+    --faded-color: #6c757d;
+    --caution-color: #d32f2f;
+
+    --pass: green;
+    --fail: red;
+}
+
+.theme-orange {
+    --gradient-high: #ffee05;
+    --gradient-low: #f18406;
+
+    --primary-color: #f05011;
+    --contrast-color: #f6ff7b;
+
+    --pointer-color: black;
+    --faded-color: #6c757d;
+    --caution-color: #d32f2f;
+
+    --pass: green;
+    --fail: red;
 }

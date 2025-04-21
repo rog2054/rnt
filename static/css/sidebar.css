@@ -1,6 +1,6 @@
 /* Import Google Fonts - Poppins */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-
+@import url('themes.css');
 /* Sidebar styles with sb- prefix to avoid conflicts with frameworks like Bootstrap */
 
 * {
@@ -12,7 +12,8 @@
 
 body {
     min-height: 100vh;
-    background: linear-gradient(#f1f3ff, #cbd4ff);
+    background: linear-gradient(var(--gradient-high), var(--gradient-low));
+    /* background: linear-gradient(#f1f3ff, #cbd4ff); */
 }
 
 /* Material Symbols */
@@ -30,7 +31,8 @@ body {
     left: 0;
     width: 260px;
     height: 100vh;
-    background: #6200ea;
+    background: var(--primary-color);
+    /* background: #6200ea; */
     transition: all 0.4s ease;
 }
 
@@ -52,7 +54,8 @@ body {
     display: block;
     object-fit: contain;
     border-radius: 50%;
-    background-color: #eef2ff;
+    background-color: var(--contrast-color);
+    /* background-color: #eef2ff; */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -67,12 +70,14 @@ body {
     align-items: center;
     justify-content: center;
     border-radius: 8px;
-    background: #eef2ff;
+    background: var(--contrast-color);
+    /* background: #eef2ff; */
     transition: 0.4s ease;
 }
 
 .sidebar-header .sidebar-toggler:hover {
-    background: #d9e1fd;
+    background: var(--contrast-color);
+    /* background: #d9e1fd; */
 }
 
 .sidebar.collapsed .sidebar-toggler {
@@ -107,7 +112,8 @@ body {
 }
 
 .sidebar-nav .primary-nav:hover {
-    scrollbar-color: #eef2ff transparent;
+    scrollbar-color: var(--contrast-color) transparent;
+    /* scrollbar-color: #eef2ff transparent; */
 }
 
 .sidebar.collapsed .sidebar-nav .primary-nav {
@@ -116,7 +122,8 @@ body {
 }
 
 .sidebar-nav .sb-nav-item .sb-nav-link {
-    color: #fff;
+    color: var(--contrast-color);
+    /* color: #fff; */
     display: flex;
     gap: 12px;
     white-space: nowrap;
@@ -136,8 +143,10 @@ body {
 }
 
 .sidebar-nav .sb-nav-item:is(:hover, .open)>.sb-nav-link:not(.sb-dropdown-title) {
-    color: #6200ea;
-    background: #eef2ff;
+    color: var(--primary-color);
+    background: var(--contrast-color);
+    /* color: #6200ea; */
+    /* background: #eef2ff; */
 }
 
 .sidebar-nav .sb-nav-link .sb-nav-label :where(.sb-nav-label, .sb-dropdown-icon) {
@@ -153,7 +162,8 @@ body {
     position: absolute;
     bottom: 30px;
     width: 100%;
-    background: #6200ea;
+    background: var(--primary-color);
+    /* background: #6200ea; */
 }
 
 /* Dropdown Stlyings */
@@ -193,7 +203,8 @@ body {
     height: auto !important;
     overflow-y: unset;
     pointer-events: none;
-    background: #6200ea;
+    background: var(--primary-color);
+    /* background: #6200ea; */
     padding-right: 10px;
     border-radius: 0 10px 10px 0;
     transition: 0s;
@@ -228,7 +239,8 @@ body {
 
 .sb-dropdown-menu:has(.sb-dropdown-link) .sb-nav-item .sb-dropdown-title {
     font-weight: 500;
-    border-bottom-color: #eef2ff;
+    border-bottom-color: var(--contrast-color);
+    /* border-bottom-color: #eef2ff; */
 
 }
 
@@ -247,7 +259,8 @@ body {
         left: 20px;
         top: 20px;
         border: none;
-        color: #6200ea;
+        color: var(--primary-color);
+        /* color: #6200ea; */
         background: none;
         cursor: pointer;
     }
