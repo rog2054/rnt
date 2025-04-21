@@ -124,14 +124,14 @@
                         <a class="sb-nav-link sb-dropdown-title">Settings</a>
                     </li>
                     <li class="sb-nav-item">
-                        <a href="#" class="sb-nav-link sb-dropdown-link">Change Your Password</a>
+                        <a href="#" class="sb-nav-link sb-dropdown-link">Edit User</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('create_user') }}" class="sb-nav-link sb-dropdown-link">Add User</a>
                     </li>
                     <li class="sb-nav-item">
                         <a href="{{ url_for('credentials') }}" class="sb-nav-link sb-dropdown-link">Device
                             Credentials</a>
-                    </li>
-                    <li class="sb-nav-item">
-                        <a href="{{ url_for('create_user') }}" class="sb-nav-link sb-dropdown-link">Add User</a>
                     </li>
                 </ul>
             </li>
