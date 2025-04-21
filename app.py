@@ -858,13 +858,13 @@ def create_app():
 
                     # Derive states based on device_active_at_run and passed
                     state_1 = 'skipped' if inst_1 and not inst_1[0].device_active_at_run else \
-                                'pass' if inst_1 and inst_1[2] and inst_1[2].passed is True else \
-                                'fail' if inst_1 and inst_1[2] and inst_1[2].passed is False else \
-                                'n/a' if inst_1 and inst_1[2] and inst_1[2].passed is None else 'missing'
+                            'pass' if inst_1 and inst_1[2] and inst_1[2].passed is True else \
+                            'fail' if inst_1 and inst_1[2] and inst_1[2].passed is False else \
+                            'n/a' if inst_1 and inst_1[2] and inst_1[2].passed is None else 'missing'
                     state_2 = 'skipped' if inst_2 and not inst_2[0].device_active_at_run else \
-                                'pass' if inst_2 and inst_2[2] and inst_2[2].passed is True else \
-                                'fail' if inst_2 and inst_2[2] and inst_2[2].passed is False else \
-                                'n/a' if inst_2 and inst_2[2] and inst_2[2].passed is None else 'missing'
+                            'pass' if inst_2 and inst_2[2] and inst_2[2].passed is True else \
+                            'fail' if inst_2 and inst_2[2] and inst_2[2].passed is False else \
+                            'n/a' if inst_2 and inst_2[2] and inst_2[2].passed is None else 'missing'
 
                     comparison = {
                         'test_id': test_id,
@@ -874,11 +874,17 @@ def create_app():
                         'state_2': state_2,
                         'active_1': inst_1[0].device_active_at_run if inst_1 else False,
                         'active_2': inst_2[0].device_active_at_run if inst_2 else False,
-                        'rawoutput_1': 'Skipped' if state_1 == 'skipped' else \
-                                        inst_1[2].rawoutput if inst_1 and inst_1[2] and state_1 not in ('n/a', 'missing') else \
+                        'rawoutput_1': inst_1[2].rawoutput if inst_1 and inst_1[2] and state_1 != 'missing' else None,
+                        'rawoutput_2': inst_2[2].rawoutput if inst_2 and inst_2[2] and state_2 != 'missing' else None,
+                        'display_text_1': 'Skipped' if state_1 == 'skipped' else \
+                                        f"Passed<br><pre>{inst_1[2].rawoutput}</pre>" if state_1 == 'pass' and inst_1 and inst_1[2] and inst_1[2].rawoutput else \
+                                        f"Failed<br><pre>{inst_1[2].rawoutput}</pre>" if state_1 == 'fail' and inst_1 and inst_1[2] and inst_1[2].rawoutput else \
+                                        f"Inconclusive<br><pre>{inst_1[2].rawoutput}</pre>" if state_1 == 'n/a' and inst_1 and inst_1[2] and inst_1[2].rawoutput else \
                                         'No Result' if state_1 == 'n/a' else 'Missing',
-                        'rawoutput_2': 'Skipped' if state_2 == 'skipped' else \
-                                        inst_2[2].rawoutput if inst_2 and inst_2[2] and state_2 not in ('n/a', 'missing') else \
+                        'display_text_2': 'Skipped' if state_2 == 'skipped' else \
+                                        f"Passed<br><pre>{inst_2[2].rawoutput}</pre>" if state_2 == 'pass' and inst_2 and inst_2[2] and inst_2[2].rawoutput else \
+                                        f"Failed<br><pre>{inst_2[2].rawoutput}</pre>" if state_2 == 'fail' and inst_2 and inst_2[2] and inst_2[2].rawoutput else \
+                                        f"Inconclusive<br><pre>{inst_2[2].rawoutput}</pre>" if state_2 == 'n/a' and inst_2 and inst_2[2] and inst_2[2].rawoutput else \
                                         'No Result' if state_2 == 'n/a' else 'Missing'
                     }
 
