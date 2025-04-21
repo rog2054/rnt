@@ -29,7 +29,7 @@
     {% block head %}{% endblock %}
 </head>
 
-<body>
+<body class="theme-{{ user.theme }}">
     <div class="d-flex">
         {% include 'sidebar.html' %}
         <div class="content flex-grow-1 p-5">
