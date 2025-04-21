@@ -23,9 +23,14 @@
             <td>{{ test.deviceinterface }}</td>
             <td>{{ test.description }} </td>
             <td>
+                {% if test.owner %}
                 <button class="delete-test" data-id="{{ test.id }}" style="background: none; border: none; padding: 0;">
                     <span class="material-symbols-rounded" title="Click to delete">delete</span>
                 </button>
+                {% else %}
+                <span class="material-symbols-rounded delete-locked"
+                    title="Created by {{ test.owner_name }}">lock</span>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}

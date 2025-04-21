@@ -377,16 +377,31 @@ def create_app():
     @login_required
     def delete_bgptest(test_id):
         test = bgpaspathTest.query.get_or_404(test_id)
-        test.hidden = True
-        db.session.commit()
-        return jsonify({'message': 'BGP AS-path Test removed successfully'})
+        if test.created_by_id == current_user.id:
+            test.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'BGP AS-path Test removed successfully'})
+        else:
+            return jsonify({'message': 'You did not create this test'})
 
     # Display all Traceroute Tests
     @app.route('/tests/traceroute', methods=['GET'])
     @login_required
     def showtests_traceroute():
         traceroutetests = tracerouteTest.query.filter_by(hidden=False).all()
-        return render_template('showtests_traceroute.html', traceroutetests=traceroutetests)
+        tests_with_owner = []
+        for test in traceroutetests:
+            test_data = {
+                'id': test.id,
+                'devicehostname': test.devicehostname,
+                'destinationip': test.destinationip,
+                'description': test.description,
+                'created_by': test.created_by,
+                'owner': test.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+                'owner_name': test.created_by.username if test.created_by else 'Unknown'
+            }
+            tests_with_owner.append(test_data)
+        return render_template('showtests_traceroute.html', traceroutetests=tests_with_owner)
 
     # Add Traceroute test
     @app.route('/tests/addtest_traceroute', methods=['GET', 'POST'])
@@ -423,16 +438,31 @@ def create_app():
     @login_required
     def delete_traceroutetest(test_id):
         test = tracerouteTest.query.get_or_404(test_id)
-        test.hidden = True
-        db.session.commit()
-        return jsonify({'message': 'Traceroute Test removed successfully'})
+        if test.created_by_id == current_user.id:
+            test.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'Traceroute Test removed successfully'})
+        else:
+            return jsonify({'message': 'You did not create this test'})
 
     # Display all TxRx SFP Transceiver Tests
     @app.route('/tests/txrxtransceiver', methods=['GET'])
     @login_required
     def showtests_txrxtransceiver():
         txrxtransceivertests = txrxtransceiverTest.query.filter_by(hidden=False).all()
-        return render_template('showtests_txrxtransceiver.html', txrxtransceivertests=txrxtransceivertests)
+        tests_with_owner = []
+        for test in txrxtransceivertests:
+            test_data = {
+                'id': test.id,
+                'devicehostname': test.devicehostname,
+                'deviceinterface': test.deviceinterface,
+                'description': test.description,
+                'created_by': test.created_by,
+                'owner': test.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+                'owner_name': test.created_by.username if test.created_by else 'Unknown'
+            }
+            tests_with_owner.append(test_data)
+        return render_template('showtests_txrxtransceiver.html', txrxtransceivertests=tests_with_owner)
 
     # Add TxRx SFP Transceiver test
     @app.route('/tests/addtest_txrxtransceiver', methods=['GET', 'POST'])
@@ -468,16 +498,35 @@ def create_app():
     @login_required
     def delete_txrxtransceivertest(test_id):
         test = txrxtransceiverTest.query.get_or_404(test_id)
-        test.hidden=True
-        db.session.commit()
-        return jsonify({'message': 'TxRx SFP Transceiver Test removed successfully'})
+        if test.created_by_id == current_user.id:
+            test.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'TxRx SFP Transceiver Test removed successfully'})
+        else:
+            return jsonify({'message': 'You did not create this test'})
+
 
     # Display all ACI itraceroute Tests
     @app.route('/tests/itraceroute', methods=['GET'])
     @login_required
     def showtests_itraceroute():
         itraceroutetests = itracerouteTest.query.filter_by(hidden=False).all()
-        return render_template('showtests_itraceroute.html', itraceroutetests=itraceroutetests)
+        tests_with_owner = []
+        for test in itraceroutetests:
+            test_data = {
+                'id': test.id,
+                'devicehostname': test.devicehostname,
+                'srcip': test.srcip,
+                'dstip': test.dstip,
+                'vrf': test.vrf,
+                'encapvlan': test.encapvlan,
+                'description': test.description,
+                'created_by': test.created_by,
+                'owner': test.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+                'owner_name': test.created_by.username if test.created_by else 'Unknown'
+            }
+            tests_with_owner.append(test_data)
+        return render_template('showtests_itraceroute.html', itraceroutetests=tests_with_owner)
 
     # Add ACI itraceroute test
     @app.route('/tests/addtest_itraceroute', methods=['GET', 'POST'])
@@ -516,9 +565,12 @@ def create_app():
     @login_required
     def delete_itraceroutetest(test_id):
         test = itracerouteTest.query.get_or_404(test_id)
-        test.hidden = True
-        db.session.commit()
-        return jsonify({'message': 'ACI itraceroute test removed successfully'})
+        if test.created_by_id == current_user.id:
+            test.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'ACI itraceroute test removed successfully'})
+        else:
+            return jsonify({'message': 'You did not create this test'})
 
     @app.route('/test_results', defaults={'user_id': None})
     @app.route('/test_results/<int:user_id>')
