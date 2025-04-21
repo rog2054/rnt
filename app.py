@@ -1341,7 +1341,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                                 )
                                 # example: itraceroute external src-ip 10.242.100.140 10.174.177.1 vrf PROD-INT:PROD-INT-VRF1 encap vlan 106 icmp
                                 logger.info (f"itraceroute_test rawoutput: {rawoutput} for run_id: {test_run_id}")
-                                passed = is_traceroute_destination_reached(rawoutput)                                
+                                passed = is_itraceroute_destination_reached(rawoutput)                                
                             else:
                                 log_msg = f"Device {device.hostname}: itraceroute test not possible as not an ACI device"
                                 passed = None
@@ -1444,7 +1444,7 @@ def count_hops(output):
     # Parse traceroute output to count hops (example)
     return len([line for line in output.splitlines() if line.strip().startswith(tuple(str(i) for i in range(1, 31)))])
 
-def is_traceroute_destination_reached(output):
+def is_itraceroute_destination_reached(output):
     """
     Parses ACI leaf switch itraceroute output and returns True if the destination IP is reached,
     False otherwise, or None if parsing fails.
