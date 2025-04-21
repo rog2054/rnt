@@ -1270,10 +1270,13 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             elif device.devicetype == "cisco_nxos":
                                 rawoutput = conn.send_command_timing(f"traceroute {traceroute_test.destinationip} source {device.lanip}")
                             numberofhops = count_hops(rawoutput)
-                            passed = numberofhops > 3
+                            passed = is_traceroute_destination_reached(rawoutput,traceroute_test.destinationip)
                             result = tracerouteTestResult(test_instance_id=test.id, rawoutput=rawoutput, numberofhops=numberofhops, passed=passed)
                             db.session.add(result)
-                            log_msg = f"Device {device.hostname}: Traceroute test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
+                            if passed is None:
+                                log_msg = f"Device {device.hostname}: Traceroute test ID {test.id} incomplete - error parsing traceroute"
+                            else:
+                                log_msg = f"Device {device.hostname}: Traceroute test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
                             with log_lock:
                                 log_lines.append(log_msg)
                             socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
@@ -1443,6 +1446,23 @@ def check_bgp_result(output, as_number, want_result):
 def count_hops(output):
     # Parse traceroute output to count hops (example)
     return len([line for line in output.splitlines() if line.strip().startswith(tuple(str(i) for i in range(1, 31)))])
+
+def is_traceroute_destination_reached(output, targetip):
+    """
+    Parse check for standard traceroute output.
+    Returns True if the destination IP is reached, False otherwise
+    A failure to parse returns None
+    """
+    try:
+        lines = output.strip().split('\n')
+        
+        # Look for the target IP in the last non-empty line
+        for line in reversed(lines):
+            if line.strip() and targetip in line:
+                return True
+        return False
+    except Exception:
+        return None
 
 def is_itraceroute_destination_reached(output):
     """
