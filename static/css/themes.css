@@ -1,0 +1,35 @@
+/* themes.css */
+:root {
+    --gradient-high: #f1f3ff;
+    --gradient-low: #cdb4ff;
+
+    --primary-color: #6200ea;
+    --inverse-color: #eef2ff;
+
+    --pointer-color: black;
+    --faded-color: #6c757d;
+    --caution-color: red;
+
+    --pass: green;
+    --fail: red;
+
+    /* fallback */
+}
+
+.theme-light {
+    --primary-color: #ffffff;
+    --secondary-color: #f0f0f0;
+    --text-color: #000;
+}
+
+.theme-dark {
+    --primary-color: #1e1e1e;
+    --secondary-color: #333;
+    --text-color: #fff;
+}
+
+.theme-blue {
+    --primary-color: #001f3f;
+    --secondary-color: #0074D9;
+    --text-color: #fff;
+}
