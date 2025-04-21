@@ -49,12 +49,10 @@ body:not(:has(.sidebar)) .content {
 
 .delete-device .material-symbols-rounded {
     color: #6c757d;
-    /* Bootstrap’s default gray for text-muted, or your custom gray */
 }
 
 .delete-device:hover .material-symbols-rounded {
     color: red;
-    /* No need for !important if text-muted is removed */
 }
 
 .delete-test i {
@@ -65,14 +63,16 @@ body:not(:has(.sidebar)) .content {
 
 .delete-test .material-symbols-rounded {
     color: #6c757d;
-    /* Bootstrap’s default gray for text-muted, or your custom gray */
 }
 
 .delete-test:hover .material-symbols-rounded {
     color: red;
-    /* No need for !important if text-muted is removed */
 }
 
+.delete-locked {
+    cursor: not-allowed;
+    color: #6c757d;
+}
 
 #status-log {
     padding: 0;

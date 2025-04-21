@@ -318,8 +318,27 @@ def create_app():
     @app.route('/tests/bgpaspath', methods=['GET'])
     @login_required
     def showtests_bgpaspath():
+         # Query all non-hidden bgpaspath tests
         bgpaspathtests = bgpaspathTest.query.filter_by(hidden=False).all()
-        return render_template('showtests_bgpaspath.html', bgpaspathtests=bgpaspathtests)
+        
+        # Create a list of dictionaries with test data and owner flag
+        tests_with_owner = []
+        for test in bgpaspathtests:
+            test_data = {
+                'id': test.id,
+                'devicehostname': test.devicehostname,
+                'testipv4prefix': test.testipv4prefix,
+                'checkasinpath': test.checkasinpath,
+                'checkaswantresult': test.checkaswantresult,
+                'description': test.description,
+                'created_by': test.created_by,
+                'owner': test.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+                'owner_name': test.created_by.username if test.created_by else 'Unknown'
+            }
+            tests_with_owner.append(test_data)
+        
+        # Pass the modified dataset to the template
+        return render_template('showtests_bgpaspath.html', bgpaspathtests=tests_with_owner)
 
     # Add AS-path test
     @app.route('/tests/addtest_bgpaspath', methods=['GET', 'POST'])
