@@ -890,15 +890,15 @@ def create_app():
                             'pass': '✅✅ (same)',
                             'fail': '❌❌ (same)',
                             'n/a': '⚠️⚠️ (same)',
-                            'skipped': '‼️‼️ (same)'
+                            'skipped': '⏸️⏸️ (same)'
                         }[state_1]
                     else:
                         comparison['status'] = 'Different'
                         state_1_str = state_1.capitalize() if state_1 != 'n/a' else 'N/A'
                         state_2_str = state_2.capitalize() if state_2 != 'n/a' else 'N/A'
                         comparison['display_status'] = f'{state_1_str} vs {state_2_str}'
-                        icon_1 = {'pass': '✅', 'fail': '❌', 'n/a': '⚠️', 'skipped': '‼️', 'missing': '❓'}[state_1]
-                        icon_2 = {'pass': '✅', 'fail': '❌', 'n/a': '⚠️', 'skipped': '‼️', 'missing': '❓'}[state_2]
+                        icon_1 = {'pass': '✅', 'fail': '❌', 'n/a': '⚠️', 'skipped': '⏸️', 'missing': '❓'}[state_1]
+                        icon_2 = {'pass': '✅', 'fail': '❌', 'n/a': '⚠️', 'skipped': '⏸️', 'missing': '❓'}[state_2]
                         comparison['icon_status'] = f'{icon_1}{icon_2}'
 
                     results.append(comparison)
@@ -1002,7 +1002,7 @@ def create_app():
                     'status': 'N/A'
                 }
 
-                # Determine status and icon_status
+                # Determine state for each test run
                 state_1 = None
                 state_2 = None
                 if not comparison['active_1']:
@@ -1023,28 +1023,30 @@ def create_app():
                 else:
                     state_2 = 'fail'
 
+                # Map states to icons
+                icon_map = {
+                    'pass': '✅',
+                    'fail': '❌',
+                    'skipped': '⏸️',
+                    'no_result': '⚠️'
+                }
+
+                # Set icon_status based on individual states
+                icon_1 = icon_map[state_1] if state_1 else '⚠️'  # Default to warning if no state
+                icon_2 = icon_map[state_2] if state_2 else '⚠️'  # Default to warning if no state
+                comparison['icon_status'] = f"{icon_1}{icon_2}"
+
+                # Determine status (Same/Different/N/A)
                 if comparison['rawoutput_1'] is None or comparison['rawoutput_2'] is None:
                     comparison['status'] = 'N/A'
-                    comparison['icon_status'] = '⚠️⚠️'
                 else:
                     comparison['status'] = 'Same' if comparison['rawoutput_1'] == comparison['rawoutput_2'] else 'Different'
-                    if state_1 == state_2 == 'skipped':
-                        comparison['icon_status'] = '‼️‼️'
-                    elif state_1 == state_2 and state_1 in ['pass', 'fail', 'no_result']:
-                        comparison['icon_status'] = {
-                            'pass': '✅✅',
-                            'fail': '❌❌',
-                            'no_result': '⚠️⚠️'
-                        }[state_1]
-                    else:
-                        comparison['icon_status'] = f"{state_1} {state_2}".replace('pass', '✅').replace('fail', '❌').replace('no_result', '⚠️').replace('skipped', '‼️')
-
-                if comparison['status'] == 'Same':
-                    comparison['icon_status'] += ' (exactly the same)'
+                    if comparison['status'] == 'Same':
+                        comparison['icon_status'] += ' (exactly the same)'
 
                 results.append(comparison)
             return results
-
+        
         bgpaspath_results = get_comparison_data('bgpaspath_test', bgpaspathTest, bgpaspathTestResult)
         traceroute_results = get_comparison_data('traceroute_test', tracerouteTest, tracerouteTestResult)
         txrxtransceiver_results = get_comparison_data('txrxtransceiver_test', txrxtransceiverTest, txrxtransceiverTestResult)
