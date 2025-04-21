@@ -301,3 +301,8 @@ body {
     position: static !important;
     /* Remove stacking context */
 }
+
+/* override bootstrap card behaviour so Run Log doesn't render in front of our sub-menus */
+.card {
+    position: static !important;
+}
