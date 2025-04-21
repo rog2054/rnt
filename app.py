@@ -65,6 +65,10 @@ def create_app():
     @app.context_processor
     def inject_version():
         return dict(version=app.config['VERSION'])
+    
+    @app.context_processor
+    def inject_user():
+        return dict(user=current_user)
 
     # Check for no users before each request
     @app.before_request
