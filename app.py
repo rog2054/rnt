@@ -144,6 +144,7 @@ def create_app():
                 else:
                     # default to admin as creator if not logged in, as that means the admin is creating the initial user account
                     new_user.created_by_id = 1
+                    new_user.theme = 'blue'
                 db.session.add(new_user)
                 db.session.commit()
                 if user_count == 0:
