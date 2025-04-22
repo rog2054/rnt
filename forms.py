@@ -214,7 +214,7 @@ class ChangePasswordForm(FlaskForm):
 
 class ThemeForm(FlaskForm):
     form_name = HiddenField('form_name', default='theme')
-    theme = SelectField('Select Theme', choices=[('grey', 'Grey'), ('blue', 'Blue'), ('orange', 'Orange'), ('green', 'Green')], validators=[DataRequired()])
+    theme = SelectField('Select Theme', choices=[('grey', 'Grey'), ('blue', 'Blue'), ('orange', 'Orange'), ('green', 'Green'), ('calmblue', 'Calm Blue')], validators=[DataRequired()])
     submit = SubmitField('Apply Theme')
     
     def __init__(self, current_theme=None, *args, **kwargs):

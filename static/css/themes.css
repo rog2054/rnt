@@ -76,3 +76,33 @@
     --pass: green;
     --fail: red;
 }
+
+.theme-green {
+    --gradient-high: #a7e6a5;
+    --gradient-low: #275535;
+
+    --primary-color: #164b1a;
+    --contrast-color: #ebf3eb;
+
+    --pointer-color: black;
+    --faded-color: #6c757d;
+    --caution-color: #d32f2f;
+
+    --pass: green;
+    --fail: red;
+}
+
+.theme-calmblue {
+    --gradient-high: #b1def1;
+    --gradient-low: #6e9fb4;
+
+    --primary-color: #102a3b;
+    --contrast-color: #e0dede;
+
+    --pointer-color: black;
+    --faded-color: #6c757d;
+    --caution-color: #d32f2f;
+
+    --pass: green;
+    --fail: red;
+}
