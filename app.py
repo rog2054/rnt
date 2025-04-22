@@ -9,7 +9,7 @@ import queue
 from queue import Queue
 from extensions import db, cipher
 from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
-from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm
+from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
@@ -1146,6 +1146,43 @@ def create_app():
             itraceroute_results=itraceroute_results
         )
 
+    @app.route('/usersettings', methods=['GET','POST'])
+    @login_required
+    def usersettings():
+        # Initialize forms
+        password_form = ChangePasswordForm()
+        theme_form = ThemeForm(current_theme=current_user.theme)
+
+        # Set dropdown to current theme for GET requests or after failed POST
+        if request.method == 'GET' or (request.method == 'POST' and not theme_form.validate()):
+            if current_user.theme in [choice[0] for choice in theme_form.theme.choices]:
+                theme_form.theme.data = current_user.theme
+                logging.debug(f"Set dropdown theme to: {current_user.theme}")
+            else:
+                logging.debug(f"Invalid current theme: {current_user.theme}, falling back to default")
+                theme_form.theme.data = 'default'
+
+        if request.method == 'POST':
+            logging.debug(f"POST request received with form data: {request.form}")
+            form_name = request.form.get('form_name')
+            logging.debug(f"Form name: {form_name}")
+
+            # Dispatch to the appropriate form handler
+            handlers = {
+                'userpassword': handle_password_form,
+                'theme': handle_theme_form,
+            }
+            handler = handlers.get(form_name)
+            if handler:
+                result = handler(password_form if form_name == 'userpassword' else theme_form)
+                if result:
+                    return result
+            else:
+                logging.debug(f"Unknown form_name: {form_name}")
+                flash('Invalid form submission.', 'danger')
+
+        return render_template('usersettings.html', password_form=password_form, theme_form=theme_form)
+
     # Add other routes here if needed
     
     # Add Socket.IO handler
@@ -1905,6 +1942,40 @@ def parse_nxos_transceiver_tx_rx(output):
     logger.info(f"Parsing complete, result: {result}")
     return result
 
+def handle_password_form(form):
+    """Handle password change form submission."""
+    logging.debug("Password form submitted")
+    if form.validate_on_submit():
+        if current_user.check_password(form.current_password.data):
+            if form.new_password.data == form.current_password.data:
+                flash('New password cannot be the same as the current password.', 'danger')
+            else:
+                current_user.set_password(form.new_password.data)
+                db.session.commit()
+                flash('Password changed successfully!', 'success')
+                return redirect(url_for('usersettings'))
+        else:
+            flash('Current password is incorrect.', 'danger')
+    else:
+        logging.debug(f"Password form errors: {form.errors}")
+        flash('Error updating password.', 'danger')
+    return None
+
+def handle_theme_form(form):
+    """Handle theme selection form submission."""
+    raw_theme = request.form.get('theme')
+    logging.debug(f"Theme form submitted with raw data: {raw_theme}, form data: {form.theme.data}")
+    if form.validate_on_submit():
+        logging.debug(f"Theme validated: {form.theme.data}")
+        current_user.theme = form.theme.data
+        logging.debug(f"Saving theme: {form.theme.data} for user: {current_user.username}")
+        db.session.commit()
+        flash('Theme updated successfully!', 'success')
+        return redirect(url_for('usersettings'))
+    else:
+        logging.debug(f"Theme form errors: {form.errors}")
+        flash(f"Error updating theme: {form.errors.get('theme', ['Unknown error'])[0]}", 'danger')
+    return None
 
 if __name__ == '__main__':
     # For local development only

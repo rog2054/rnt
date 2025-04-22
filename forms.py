@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SelectField, SubmitField, BooleanField, PasswordField
+from wtforms import StringField, SelectField, SubmitField, BooleanField, PasswordField, HiddenField
 from wtforms.validators import DataRequired, IPAddress, Regexp, ValidationError, Length, EqualTo
 from models import DeviceCredential, Device, TestRun
 import ipaddress
@@ -201,11 +201,26 @@ class CompareTestRunsForm(FlaskForm):
         return True
     
 class ChangePasswordForm(FlaskForm):
+    form_name = HiddenField('form_name',default='userpassword')
     current_password = PasswordField('Current Password', validators=[DataRequired(), Length(min=8)])
     new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])
     confirm_password = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('new_password', message='Passwords must match')])
     submit = SubmitField('Change Password')
+    
+    def __init__(self, *args, **kwargs):
+        super(ChangePasswordForm, self).__init__(*args, **kwargs)
+        self.csrf_token.id = 'password_csrf_token'
+        self.submit.id = 'password_submit'
 
 class ThemeForm(FlaskForm):
+    form_name = HiddenField('form_name', default='theme')
     theme = SelectField('Select Theme', choices=[('grey', 'Grey'), ('blue', 'Blue'), ('orange', 'Orange'), ('green', 'Green')], validators=[DataRequired()])
     submit = SubmitField('Apply Theme')
+    
+    def __init__(self, current_theme=None, *args, **kwargs):
+        super(ThemeForm, self).__init__(*args, **kwargs)
+        self.csrf_token.id = 'theme_csrf_token'
+        self.submit.id = 'theme_submit'
+        # Set default theme if provided (for GET requests)
+        if current_theme and current_theme in [choice[0] for choice in self.theme.choices]:
+            self.theme.default = current_theme
