@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField, SubmitField, BooleanField, PasswordField
-from wtforms.validators import DataRequired, IPAddress, Regexp, ValidationError, Length
+from wtforms.validators import DataRequired, IPAddress, Regexp, ValidationError, Length, EqualTo
 from models import DeviceCredential, Device, TestRun
 import ipaddress
 from extensions import db
@@ -199,3 +199,13 @@ class CompareTestRunsForm(FlaskForm):
             self.test_run_2.errors.append("Please select different TestRuns for comparison.")
             return False
         return True
+    
+class ChangePasswordForm(FlaskForm):
+    current_password = PasswordField('Current Password', validators=[DataRequired(), Length(min=8)])
+    new_password = PasswordField('New Password', validators=[DataRequired(), Length(min=8)])
+    confirm_password = PasswordField('Confirm New Password', validators=[DataRequired(), EqualTo('new_password', message='Passwords must match')])
+    submit = SubmitField('Change Password')
+
+class ThemeForm(FlaskForm):
+    theme = SelectField('Select Theme', choices=[('grey', 'Grey'), ('blue', 'Blue'), ('orange', 'Orange'), ('green', 'Green')], validators=[DataRequired()])
+    submit = SubmitField('Apply Theme')
