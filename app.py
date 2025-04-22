@@ -1540,9 +1540,11 @@ def is_traceroute_destination_reached(output, targetip):
     try:
         lines = output.strip().split('\n')
         
-        # Look for the target IP in the last non-empty line
+        # Process hop lines (lines starting with a number)
         for line in reversed(lines):
-            if line.strip() and targetip in line:
+            line = line.strip()
+            # Check if the line is a hop line (starts with a number)
+            if line and line[0].isdigit() and targetip in line:
                 return True
         return False
     except Exception:
