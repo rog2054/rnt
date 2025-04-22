@@ -186,16 +186,16 @@ def create_app():
             db.session.commit()
 
             test_instances = []
-            bgp_tests = bgpaspathTest.query.filter_by(hidden=False).all()
-            for test in bgp_tests:
+            itraceroute_tests = itracerouteTest.query.filter_by(hidden=False).all()
+            for test in itraceroute_tests:
                 instance = TestInstance(
                     test_run_id=test_run.id,
                     device_id=test.devicehostname_id,
-                    test_type="bgpaspath_test",
-                    bgpaspath_test_id=test.id
+                    test_type="itraceroute_test",
+                    itraceroute_test_id=test.id
                 )
                 test_instances.append(instance)
-
+                
             traceroute_tests = tracerouteTest.query.filter_by(hidden=False).all()
             for test in traceroute_tests:
                 instance = TestInstance(
@@ -206,6 +206,16 @@ def create_app():
                 )
                 test_instances.append(instance)
                 
+            bgp_tests = bgpaspathTest.query.filter_by(hidden=False).all()
+            for test in bgp_tests:
+                instance = TestInstance(
+                    test_run_id=test_run.id,
+                    device_id=test.devicehostname_id,
+                    test_type="bgpaspath_test",
+                    bgpaspath_test_id=test.id
+                )
+                test_instances.append(instance)
+                
             txrxtransceiver_tests = txrxtransceiverTest.query.filter_by(hidden=False).all()
             for test in txrxtransceiver_tests:
                 instance = TestInstance(
@@ -213,16 +223,6 @@ def create_app():
                     device_id=test.devicehostname_id,
                     test_type="txrxtransceiver_test",
                     txrxtransceiver_test_id=test.id
-                )
-                test_instances.append(instance)
-                
-            itraceroute_tests = itracerouteTest.query.filter_by(hidden=False).all()
-            for test in itraceroute_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="itraceroute_test",
-                    itraceroute_test_id=test.id
                 )
                 test_instances.append(instance)
 
