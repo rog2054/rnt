@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}FAQ{% endblock %}
+{% block content %}
+
+<h1>Frequently Asked Questions</h1>
+{% for faq in faqs %}
+<div class="faq-item" id="{{ faq.id }}">
+    <div class="faq-question">{{ faq.question }}</div>
+    <div class="faq-answer">
+        {% set parts = faq.answer.split('{image') %}
+        {% for i in range(parts|length) %}
+        {% set part = parts[i] %}
+        {{ part|safe }}
+        {% if i < parts|length - 1 %} {% set img_index=parts[i+1].split('}')[0]|int - 1 %} {% if img_index <
+            faq.images|length %} <img src="{{ url_for('static', filename='screenshots/' + faq.images[img_index]) }}"
+            alt="{{ faq.question }} image {{ img_index + 1 }}">
+            {% endif %}
+            {% endif %}
+            {% endfor %}
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+{% block scripts %}
+<script>
+    // Toggle FAQ answer visibility with dynamic max-height
+    document.querySelectorAll('.faq-question').forEach(question => {
+        question.addEventListener('click', () => {
+            const answer = question.nextElementSibling;
+            const isActive = answer.classList.contains('active');
+
+            // Collapse all other answers
+            document.querySelectorAll('.faq-answer').forEach(ans => {
+                ans.classList.remove('active');
+                ans.previousElementSibling.classList.remove('active');
+                ans.style.maxHeight = null;
+            });
+
+            // Toggle the clicked answer
+            if (!isActive) {
+                answer.classList.add('active');
+                question.classList.add('active');
+                // Add extra height to account for padding-bottom
+                const extraPadding = 30; // Match the CSS padding-bottom value
+                answer.style.maxHeight = (answer.scrollHeight + extraPadding) + 'px';
+            }
+        });
+    });
+
+    // Auto-expand FAQ based on URL hash
+    window.addEventListener('load', () => {
+        const hash = window.location.hash.substring(1);
+        if (hash) {
+            const faqItem = document.getElementById(hash);
+            if (faqItem) {
+                const question = faqItem.querySelector('.faq-question');
+                const answer = faqItem.querySelector('.faq-answer');
+                question.classList.add('active');
+                answer.classList.add('active');
+                // Add extra height for padding-bottom
+                const extraPadding = 30; // Match the CSS padding-bottom value
+                answer.style.maxHeight = (answer.scrollHeight + extraPadding) + 'px';
+                faqItem.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    });
+</script>
+{% endblock %}

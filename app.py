@@ -1183,6 +1183,35 @@ def create_app():
 
         return render_template('usersettings.html', password_form=password_form, theme_form=theme_form)
 
+    @app.route('/faq')
+    def faq():
+        # FAQ data with embedded image placeholders and image list
+        faq_data = [
+            {
+                'id': 'bgp-settings',
+                'question': 'What are the settings within a BGP test?',
+                'answer': 'BGP test settings include the target IP, AS number, and session type (eBGP/iBGP). See the configuration form below: {image1}. After configuring, set the timeout duration. An example timeout setting is shown here: {image2}. For advanced setups, you may need to adjust routing policies, as shown in this diagram: {image3}.',
+                'images': [
+                    'bgp_config_form.png',  # Maps to {image1}
+                    'timeout_setting.png',  # Maps to {image2}
+                    'routing_policy.png'   # Maps to {image3}
+                ]
+            },
+            {
+                'id': 'test-frequency',
+                'question': 'How often can I run a test?',
+                'answer': 'Tests can be scheduled to run at intervals of 5 minutes, 15 minutes, or hourly, depending on your subscription plan.',
+                'images': []  # No images
+            },
+            {
+                'id': 'troubleshooting',
+                'question': 'How do I troubleshoot a failed test?',
+                'answer': 'Check the test logs for errors, as shown here: {image1}. Verify network connectivity and ensure the target is reachable.',
+                'images': ['error_log_screenshot.png']  # Single image
+            }
+        ]
+        return render_template('faq.html', faqs=faq_data)
+
     # Add other routes here if needed
     
     # Add Socket.IO handler
