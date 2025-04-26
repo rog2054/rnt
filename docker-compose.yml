@@ -1,0 +1,10 @@
+services:
+  rntapp:
+    image: docker.io/roger00/rogers-network-tools:latest
+    container_name: rntapp
+    ports:
+      - "0.0.0.0:5000:5000"
+    volumes:
+      - ./instance:/app/instance:Z
+      # map the local sub-folder 'instance' to the folder '/app/instance' within the container
+      # you can take backups of the .db file within the sub-folder 'instance'
