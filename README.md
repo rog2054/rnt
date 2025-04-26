@@ -93,7 +93,6 @@ Subsequent visits to the home url will display the login page.
 Once logged in there is a menu option to create additional user logons.
 Users can change their own password (to something private) from within the app.
 
-![screenshot](/screenshots/login_page.png)
 
 ### Overview of the RNT stages
 
@@ -106,8 +105,6 @@ Users can change their own password (to something private) from within the app.
  - ACI iTraceroute test
 4. Run the tests
 5. View the results
-
-![screenshot](/screenshots/rnt-stages.png)
 
 
 ### More detailed documentation/guides are within the app itself
