@@ -1,4 +1,4 @@
-![RNT Logo](/static/icons/favicon-128x128.png)
+![RNT Logo](./static/icons/favicon-128x128.png)
 # RNT
 
 ## ❓ Purpose
@@ -14,8 +14,8 @@ It is certainly NOT intended to be 'yet another' monitoring tool ... although th
 Think of this as a way to quickly verify the things that your team might usually take 20 minutes to check manually. In our initial testing we ran over 100 individual tests in single test run under 30 seconds, and there is potential to increase the performance.
 
 Some suggested use cases are:
-1. Before & After a making a configuration change, to verify that nothing else has been accidentally broken as a side-effect.
-2. When a WAN circuit or network device fails, to show you the impact (ie where routing has changed).
+1. Run a RNT test suite Before & After making a configuration change to verify that nothing else has been accidentally impacted as a side-effect.
+2. Run RNT tests when a WAN circuit or network device fails to give you a quick idea of the impact so you can focus your efforts on any workarounds that might be needed to restore service/performance to the business (or pat yourselves on the back because everything failed over flawlessly, for once!).
 
 It is provided as a ready-built docker image 🐳 and can be run on either Windows or Linux.
 
@@ -25,15 +25,15 @@ Once installed you and your team can access it via a simple web interface.
 
 ## Features
 
-* Define once, run-many approach to configuration of RNT
+* Define once, run-many approach to reduce overall effort
 * Only requires read-only SSH access (using a read-only account is strongly recommended)
-* Any passwords stored in the RNT database are encrypted
+* Passwords stored in the RNT database are encrypted as standard
 * The RNT Database (app configuration and test results) is a single file which can be easily backed up by copy/paste - no SQL knowledge or tools are required
-* Multi-threaded concurrent SSH sessions
-* View a simple Pass/Fail AND the actual cli output that was taken during the test execution
+* Multi-threaded concurrent SSH sessions for awesome performance
+* View a simple Pass/Fail AND the actual cli output that was taken during the test execution - so your technical team can still give a technical opinion on what is happening on your network, just now they can do it faster!
 * Simple-mode comparison of previous test outcomes (by Pass/Fail results)
-* Exact-mode comparison of prevoius test outcomes (by actual cli output)
-* Easy web-interface, ideal for your network engineers who love a Cisco device but who are not programmers!
+* Exact-mode comparison of previous test outcomes (by Actual CLI output)
+* Easy web-interface, ideal for your network engineers who love a Cisco device but who are not programmers...
 
 ***
 
@@ -42,7 +42,7 @@ Once installed you and your team can access it via a simple web interface.
 ### Start in 3 steps ###
 1. Download the docker-compose.yml file from this repo.
 2. Run docker compose up, this will download the latest stable image from Docker Hub and run the image.
-3. Access at http://yourdockerhostip:5000
+3. Access at `http://yourdockerhostip:5000`
 
 *See below for [detailed install instructions](#detailedinstallsteps) for Windows or Linux*
 
@@ -86,6 +86,7 @@ From a web browser go to http://ipaddress:5000 from step 3 above, eg `http://10.
 
 #### First Run
 When you first run the app and go to the page, as no users exist within the app you will be prompted to create a username and password.
+
 Subsequent visits to the home url will display the login page.
 
 #### Adding Users
@@ -120,8 +121,8 @@ I may implement some of these improvements at some point however others are welc
 
 With that said here are some future improvements I can think of. These are listed in no particular order.
 
-- [ ] Add other types of test. The above 4 started off as 2 and then 1, so i'm sure more will be added as the need arises. If you have any ideas for different tests please drop me a note and we can maybe collaborate on adding that functionality (don't worry if you're not a coder, i also need things like cli output examples to add a new test)
-- [ ] Support for other vendors. This isn't currently a high-priority to me as our environment is mainly Cisco so this app obviously focuses on Cisco, however it has been written in a way to allow use with other vendors also (basically any that netmiko supports, which is a lot of the main vendors) so i'm not against working on this as a lower-priority addition if enough people will benefit from it.
+- [ ] Add other types of test. This project is evolving. It started off as a cli tool with just 1 type of test, and is now a multi-threaded web tool with 4 test types, so i'm sure more will be added as the need arises. If you have any ideas for different tests please drop me a note and we can maybe collaborate on adding that functionality (don't worry if you're not a coder, i also need things like cli output examples to add a new test)
+- [ ] Support for other vendors. This isn't currently a high-priority to me as our environment is mainly Cisco so this app obviously focuses on Cisco initially, however it has been written in a way to allow added tests for other vendors equipment also (basically any that netmiko supports which is a lot of the main vendors) so i'm not against working on this as a lower-priority addition if enough people will benefit from it.
 
 
 ## 🙏 Acknowledgements
@@ -131,8 +132,8 @@ With that said here are some future improvements I can think of. These are liste
 | [**NetMiko**](https://github.com/ktbyers/netmiko) | Multi-vendor library to simplify CLI connections to network devices |
 | [**Flask**](https://flask.palletsprojects.com/en/stable/) | Flask is a lightweight WSGI web application framework |
 | [**SQLite**](https://www.sqlite.org/) | A small, fast, self-contained, high-reliability, full-featured, SQL database engine |
-| [**Python**](https://www.python.org/) | A popular programming language suitable for a wide range of abilities and use cases|
-| [**Docker**](https://www.docker.com/) | An easy way to package code for use on different systems without dependency issues
+| [**Python**](https://www.python.org/) | A popular programming language suitable for a wide range of abilities and use cases |
+| [**Docker**](https://www.docker.com/) | An easy way to package code for use on different systems without dependency issues |
 
 ***
 
