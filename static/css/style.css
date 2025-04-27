@@ -540,7 +540,6 @@ th.sortable:hover {
 .faq-answer img {
     max-width: 100%;
     height: auto;
-    border: 1px solid #ddd;
     border-radius: 4px;
     margin: 10px 0;
     display: block;

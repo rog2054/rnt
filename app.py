@@ -1188,15 +1188,20 @@ def create_app():
         # FAQ data with embedded image placeholders and image list
         faq_data = [
             {
-                'id': 'bgp-settings',
-                'question': 'What are the settings within a BGP test?',
-                'answer': 'BGP test settings include the target IP, AS number, and session type (eBGP/iBGP). See the configuration form below: {image1}. After configuring, set the timeout duration. An example timeout setting is shown here: {image2}. For advanced setups, you may need to adjust routing policies, as shown in this diagram: {image3}.',
+                'id': 'test-bgp-aspath',
+                'question': 'What are the settings within a BGP AS-Path test?',
+                'answer': 'This test looks at the BGP AS-Path for the current BEST PATH route for a given prefix. For example in this scenario there are 2 possible paths Branch Site 1 could take to internet. For various reasons you may have a preference for whether the Purple or Orange path is typically used. One reason might be geogrphic ie if one path has a significantly lower latency, or maybe higher bandwidth capacity. <br /><br />There are two ways the test can be configured. Both of these will result in a PASS result if the as-path goes via the Purple path: {image1} 1) To check if a given AS number *is* in the bestpath, eg does go via Data Centre A set "AS should exist in the as-path?" to Yes (ticked) and enter the AS number for A (ie 65101) {image2}{image4} 2) Alternatively to check if the best path *is not* via a certain AS set the option to No (unticked) and specifying the AS number to avoid (ie 65102 for B) {image3}{image5}',
                 'images': [
-                    'bgp_config_form.png',  # Maps to {image1}
-                    'timeout_setting.png',  # Maps to {image2}
-                    'routing_policy.png'   # Maps to {image3}
+                    'screenshots/bgp as-path 2 paths.png',
+                    'screenshots/bgp as-path prefer path.png',
+                    'screenshots/bgp as-path avoid path.png',
+                    'screenshots/bgp via 65101.png',
+                    'screenshots/bgp not via 65102.png'
                 ]
             },
+        ]
+        
+        '''
             {
                 'id': 'test-frequency',
                 'question': 'How often can I run a test?',
@@ -1209,7 +1214,8 @@ def create_app():
                 'answer': 'Check the test logs for errors, as shown here: {image1}. Verify network connectivity and ensure the target is reachable.',
                 'images': ['error_log_screenshot.png']  # Single image
             }
-        ]
+            '''
+            
         return render_template('faq.html', faqs=faq_data)
 
     # Add other routes here if needed

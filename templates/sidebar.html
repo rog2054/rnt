@@ -111,6 +111,19 @@
 
         <!-- Secondary Bottom Nav -->
         <ul class="sb-nav-list secondary-nav">
+            <li class="sb-nav-item">
+                <a href="{{ url_for('faq') }}" class="sb-nav-link">
+                    <span class="material-symbols-rounded">menu_book</span>
+                    <span class="sb-nav-label">User Guide</span>
+                </a>
+                <ul class="sb-dropdown-menu">
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('faq') }}" class="sb-nav-link">
+                            <span class="sb-dropdown-title">User Guide</a>
+                        </a>
+                    </li>
+                </ul>
+            </li>
             <!-- Dropdown -->
             <li class="sb-nav-item sb-dropdown-container">
                 <a href="#" class="sb-nav-link sb-dropdown-toggle">

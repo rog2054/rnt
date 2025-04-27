@@ -9,11 +9,16 @@
     <div class="faq-answer">
         {% set parts = faq.answer.split('{image') %}
         {% for i in range(parts|length) %}
-        {% set part = parts[i] %}
-        {{ part|safe }}
-        {% if i < parts|length - 1 %} {% set img_index=parts[i+1].split('}')[0]|int - 1 %} {% if img_index <
-            faq.images|length %} <img src="{{ url_for('static', filename='screenshots/' + faq.images[img_index]) }}"
+        {% if i == 0 %}
+        {{ parts[i]|safe }}
+        {% else %}
+        {% set part = parts[i].split('}', 1) %}
+        {% set img_index = part[0]|int - 1 %}
+        {% if img_index < faq.images|length %} <img src="{{ url_for('static', filename='' + faq.images[img_index]) }}"
             alt="{{ faq.question }} image {{ img_index + 1 }}">
+            {% endif %}
+            {% if part|length > 1 %}
+            {{ part[1]|safe }}
             {% endif %}
             {% endif %}
             {% endfor %}
