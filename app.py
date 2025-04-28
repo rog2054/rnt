@@ -17,6 +17,7 @@ import re
 from datetime import datetime, timezone
 from sqlalchemy import func
 from utils import format_datetime_with_ordinal
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 
 # Globals
@@ -50,6 +51,7 @@ def create_app():
     db.init_app(app)
     migrate = Migrate(app, db)
     socketio.init_app(app)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
     login_manager.init_app(app)
     login_manager.login_view = 'login' # redirect unauth users to login route
 
@@ -89,17 +91,6 @@ def create_app():
             version = 'x'
         return f"<h1>Welcome, {current_user.username}!</h1><h2>Version: 0.{version}</h2><br /><a href='/devices'>Start</a>"
     
-    '''
-    @app.route('/')
-    def index():
-        # Read the version from the file
-        try:
-            with open('/app/version.txt', 'r') as f:
-                version = f.read().strip()
-        except FileNotFoundError:
-            version = 'unknown'
-        return render_template('index.html', version=version)
-    '''
     
     @app.route('/login', methods=['GET', 'POST'])
     def login():
