@@ -40,7 +40,7 @@
     document.addEventListener('DOMContentLoaded', function () {
         const currentRunId = {{ run_id | tojson | safe
     }};
-    const socket = io.connect('http://' + document.domain + ':' + location.port);
+    const socket = io();
     const deviceLogs = new Map();
     let runCompletedMessage = '';
     const deviceOrder = [];
