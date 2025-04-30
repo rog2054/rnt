@@ -16,7 +16,7 @@ import logging
 import re
 from datetime import datetime, timezone
 from sqlalchemy import func
-from utils import format_datetime_with_ordinal
+from utils import format_datetime_with_ordinal, set_netmiko_logger, get_netmiko_logger
 from werkzeug.middleware.proxy_fix import ProxyFix
 import os
 
@@ -60,18 +60,21 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Configure Netmiko logger to write to /instance/netmiko_debug.log
+    # Configure Netmiko logger
     netmiko_logger = logging.getLogger("netmiko")
     netmiko_logger.setLevel(logging.DEBUG)
     log_file_path = os.path.join(app.instance_path, 'netmiko_debug.log')
     os.makedirs(app.instance_path, exist_ok=True)
     netmiko_handler = logging.FileHandler(log_file_path)
     netmiko_handler.setLevel(logging.DEBUG)
-    netmiko_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    netmiko_handler.setFormatter(netmiko_formatter)
-    if not netmiko_logger.handlers:
-        netmiko_logger.addHandler(netmiko_handler)
+    netmiko_handler.setFormatter(
+        logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    )
+    netmiko_logger.handlers = []
+    netmiko_logger.addHandler(netmiko_handler)
     netmiko_logger.propagate = False
+    set_netmiko_logger(netmiko_logger)
+    netmiko_logger.debug("Netmiko logger initialized in app factory")
 
     with app.app_context():
         db.create_all()
@@ -1321,6 +1324,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
         logger.info(f"socketio.emit: stats_update with {stats}")
 
     with app.app_context():
+        netmiko_logger = get_netmiko_logger()
         from models import DeviceCredential # lazy import
         device = db.session.get(Device, device_id)
         cred = db.session.get(DeviceCredential, device.username_id)
@@ -1355,13 +1359,19 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
             "cisco_aci": "cisco_nxos",
         }
 
+        netmiko_logger.debug(f"Starting test {test.test_type} for device {device.hostname}")
+
         conn_params = {
             "device_type": DEVICE_TYPE_MAP.get(device.devicetype, "cisco_ios"),  # Fallback to cisco_nxos
             "host": device.mgmtip,
             "username": cred.username,
             "password": cred.get_password(),
+            "session_log": os.path.join(app.instance_path, 'netmiko_session.log'),  # Raw SSH log
+            "session_log_file_mode": "append",  # Append to avoid overwriting
+            "verbose": True,  # Enable verbose Netmiko logging
             "timeout": 10,
             "session_timeout": 60,
+            "global_delay_factor": 2,  # Handle slow devices
         }
 
         log_msg = f"Device {device.hostname}: Connecting to {device.mgmtip}"
@@ -1392,7 +1402,10 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                     try:
                         if test.test_type == "bgpaspath_test":
                             bgp_test = test.bgpaspath_test
-                            rawoutput = conn.send_command(f"show ip bgp {bgp_test.testipv4prefix} bestpath")
+                            command = (f"show ip bgp {bgp_test.testipv4prefix} bestpath")
+                            rawoutput = conn.send_command(command)
+                            netmiko_logger.debug(f"Sent: {command}")
+                            netmiko_logger.debug(f"Received: {rawoutput}")
                             pattern = r"Refresh Epoch (\d+)\n(.*)"
                             pattern2 = r"Network not in table"
                             match = re.search(pattern, rawoutput)
@@ -1519,8 +1532,10 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
 
                     except NetmikoTimeoutException as e:
                         handle_test_error(device, test, test_run_id, device_id, e, log_lock, log_lines, socketio, db)
+                        netmiko_logger.error(f"Netmiko TimeoutException: {e}")
                     except Exception as e:
                         handle_test_error(device, test, test_run_id, device_id, e, log_lock, log_lines, socketio, db)
+                        netmiko_logger.error(f"Netmiko Exception: {e}")
                     db.session.commit()
                     emit_stats_update()
 
@@ -1539,7 +1554,8 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
             skip_tests_for_device(device_id, test_run_id, "Authentication failed", log_lines, log_lock)
             emit_stats_update()
         except Exception as e:
-            log_msg = f"Device {device.hostname}: Error connecting - {str(e)}"
+            log_msg = f"Device {device.hostname}: Exception - {str(e)}"
+            netmiko_logger.error(f"Netmiko Exception: {e}")
             with log_lock:
                 log_lines.append(log_msg)
             socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
@@ -1571,6 +1587,11 @@ def skip_tests_for_device(device_id, test_run_id, reason, log_lines, log_lock):
                 elif test.test_type == "traceroute_test":
                     result = tracerouteTestResult(test_instance_id=test.id, rawoutput=reason, passed=None, numberofhops=None)
                     db.session.add(result)
+                elif test.test_type == "txrxtransceiver_test":
+                    result = txrxtransceiverTestResult(test_instance_id=test.id, rawoutput=reason, passed=None, sfpinfo=None, txrx=None)
+                    db.session.add(result)
+                elif test.test_type == "itraceroute_test":
+                    result = itracerouteTestResult(test_instance_id=test.id, rawoutput=reason, passed=None)
         db.session.commit()
 
         with log_lock:
