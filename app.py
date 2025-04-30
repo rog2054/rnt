@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from sqlalchemy import func
 from utils import format_datetime_with_ordinal
 from werkzeug.middleware.proxy_fix import ProxyFix
-
+import os
 
 # Globals
 pending_test_runs = []
@@ -28,6 +28,7 @@ processed_devices = set() # Used for tracking processed devices per run
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 
 # Define global extensions
 socketio = SocketIO(async_mode='threading')
@@ -59,6 +60,18 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    # Configure Netmiko logger to write to /instance/netmiko_debug.log
+    netmiko_logger = logging.getLogger("netmiko")
+    netmiko_logger.setLevel(logging.DEBUG)
+    log_file_path = os.path.join(app.instance_path, 'netmiko_debug.log')
+    os.makedirs(app.instance_path, exist_ok=True)
+    netmiko_handler = logging.FileHandler(log_file_path)
+    netmiko_handler.setLevel(logging.DEBUG)
+    netmiko_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    netmiko_handler.setFormatter(netmiko_formatter)
+    if not netmiko_logger.handlers:
+        netmiko_logger.addHandler(netmiko_handler)
+    netmiko_logger.propagate = False
 
     with app.app_context():
         db.create_all()
