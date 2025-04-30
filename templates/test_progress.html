@@ -32,7 +32,7 @@
 <div id="status-log" class="border p-3" style="height: 450px; overflow-y: auto;"></div>
 
 <div id="results-button" style="display:none;">
-    <a href="{{ url_for('test_results', run_id=test_run.id) }}" class="btn btn-primary mt-3">View Results</a>
+    <a href="{{ url_for('test_results', run_id=test_run.id) }}/pass" class="btn btn-primary mt-3">View Results</a>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
