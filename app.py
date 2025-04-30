@@ -1576,7 +1576,7 @@ TEST_TYPE_CONFIG = {
         "model": bgpaspathTestResult,
         "default_fields": {
             "rawoutput": lambda e: f"Error: {str(e)}",
-            "passed": False,
+            "passed": None,
             "output": None
         }
     },
@@ -1594,14 +1594,14 @@ TEST_TYPE_CONFIG = {
             "rawoutput": lambda e: f"Error: {str(e)}",
             "sfpinfo": None,
             "txrx": None,
-            "passed": False
+            "passed": None
         }
     },
     "itraceroute_test": {
         "model": itracerouteTestResult,
         "default_fields": {
             "rawoutput": lambda e: f"Error: {str(e)}",
-            "passed": False
+            "passed": None
         }
     }
 }
