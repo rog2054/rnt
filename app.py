@@ -1505,25 +1505,9 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                         test.status = "completed"
 
                     except NetmikoTimeoutException as e:
-                        log_msg = f"Device {device.hostname}: Timeout during test - {str(e)}"
-                        with log_lock:
-                            log_lines.append(log_msg)
-                        socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
-                        test.status = "failed"
-                        result = (bgpaspathTestResult if test.test_type == "bgpaspath_test" else tracerouteTestResult)(
-                            test_instance_id=test.id, rawoutput=f"Error: {str(e)}", passed=False if test.test_type == "bgpaspath_test" else None, numberofhops=None
-                        )
-                        db.session.add(result)
+                        handle_test_error(device, test, test_run_id, device_id, e, log_lock, log_lines, socketio, db)
                     except Exception as e:
-                        log_msg = f"Device {device.hostname}: Error during test - {str(e)}"
-                        with log_lock:
-                            log_lines.append(log_msg)
-                        socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
-                        test.status = "failed"
-                        result = (bgpaspathTestResult if test.test_type == "bgpaspath_test" else tracerouteTestResult)(
-                            test_instance_id=test.id, rawoutput=f"Error: {str(e)}", passed=False if test.test_type == "bgpaspath_test" else None, numberofhops=None
-                        )
-                        db.session.add(result)
+                        handle_test_error(device, test, test_run_id, device_id, e, log_lock, log_lines, socketio, db)
                     db.session.commit()
                     emit_stats_update()
 
@@ -1585,6 +1569,73 @@ def skip_tests_for_device(device_id, test_run_id, reason, log_lines, log_lock):
             'device_id': device_id
         })
         logger.info(f"socketio.emit: '{summary_msg}' for run_id: {test_run_id}")
+
+# Mapping of test types to their result models and default values
+TEST_TYPE_CONFIG = {
+    "bgpaspath_test": {
+        "model": bgpaspathTestResult,
+        "default_fields": {
+            "rawoutput": lambda e: f"Error: {str(e)}",
+            "passed": False,
+            "output": None
+        }
+    },
+    "traceroute_test": {
+        "model": tracerouteTestResult,
+        "default_fields": {
+            "rawoutput": lambda e: f"Error: {str(e)}",
+            "numberofhops": None,
+            "passed": None
+        }
+    },
+    "txrxtransceiver_test": {
+        "model": txrxtransceiverTestResult,
+        "default_fields": {
+            "rawoutput": lambda e: f"Error: {str(e)}",
+            "sfpinfo": None,
+            "txrx": None,
+            "passed": False
+        }
+    },
+    "itraceroute_test": {
+        "model": itracerouteTestResult,
+        "default_fields": {
+            "rawoutput": lambda e: f"Error: {str(e)}",
+            "passed": False
+        }
+    }
+}
+
+def handle_test_error(device, test, test_run_id, device_id, exception, log_lock, log_lines, socketio, db):
+    """Handle test execution errors consistently across test types."""
+    log_msg = f"Device {device.hostname}: {'Timeout' if isinstance(exception, NetmikoTimeoutException) else 'Error'} during test - {str(exception)}"
+    
+    with log_lock:
+        log_lines.append(log_msg)
+    
+    socketio.emit('status_update', {
+        'message': log_msg,
+        'run_id': test_run_id,
+        'level': 'child',
+        'device_id': device_id
+    })
+    
+    test.status = "failed"
+    
+    # Get test configuration
+    test_config = TEST_TYPE_CONFIG.get(test.test_type)
+    if not test_config:
+        raise ValueError(f"Unknown test type: {test.test_type}")
+    
+    # Prepare result fields
+    result_fields = {"test_instance_id": test.id}
+    for field, value in test_config["default_fields"].items():
+        result_fields[field] = value(exception) if callable(value) else value
+    
+    # Create and save result
+    result = test_config["model"](**result_fields)
+    db.session.add(result)
+    db.session.commit()
 
 def check_bgp_result(output, as_number, want_result):
     # Your logic to parse output and check if as_number appears as expected
