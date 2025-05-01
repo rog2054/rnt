@@ -1438,7 +1438,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                         elif test.test_type == "traceroute_test":
                             traceroute_test = test.traceroute_test
                             if device.devicetype == "cisco_ios":
-                                rawoutput = conn.send_command_timing(f"traceroute {traceroute_test.destinationip} source {device.lanip} numeric")
+                                rawoutput = conn.send_command_timing(f"traceroute {traceroute_test.destinationip} source {device.lanip} numeric timeout 1 probe 1 ttl 1 15")
                             elif device.devicetype == "cisco_nxos":
                                 rawoutput = conn.send_command_timing(f"traceroute {traceroute_test.destinationip} source {device.lanip}")
                             numberofhops = count_hops(rawoutput)
