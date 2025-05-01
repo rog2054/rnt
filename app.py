@@ -1359,8 +1359,6 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
             "cisco_aci": "cisco_nxos",
         }
 
-        netmiko_logger.debug(f"Starting test {test.test_type} for device {device.hostname}")
-
         conn_params = {
             "device_type": DEVICE_TYPE_MAP.get(device.devicetype, "cisco_ios"),  # Fallback to cisco_nxos
             "host": device.mgmtip,
@@ -1390,6 +1388,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
 
                 tests = TestInstance.query.filter_by(test_run_id=test_run_id, device_id=device_id).all()
                 for test in tests:
+                    netmiko_logger.debug(f"Starting test {test.test_type} for device {device.hostname}")
                     test.status = "running"
                     db.session.commit()
                     log_msg = f"Device {device.hostname}: Running {test.test_type} test ID {test.id}"
