@@ -151,7 +151,7 @@ def create_app():
                 else:
                     # default to admin as creator if not logged in, as that means the admin is creating the initial user account
                     new_user.created_by_id = 1
-                    new_user.theme = 'blue'
+                    new_user.theme = 'calmblue'
                 db.session.add(new_user)
                 db.session.commit()
                 if user_count == 0:
@@ -1224,6 +1224,46 @@ def create_app():
             '''
             
         return render_template('faq.html', faqs=faq_data)
+
+    @app.route('/update_description/<test_type>', methods=['POST'])
+    @login_required
+    def update_description(test_type):
+        # Map test types to their models
+        TEST_MODELS = {
+            'bgpaspath': bgpaspathTest,
+            'traceroute': tracerouteTest,
+            'txrxtransceiver': txrxtransceiverTest,
+            'itraceroute': itracerouteTest,
+        }
+        
+        # Validate test_type
+        if test_type not in TEST_MODELS:
+            return jsonify({'success': False, 'message': 'Invalid test type'}), 400
+
+        data = request.get_json()
+        test_id = data.get('test_id')
+        new_description = data.get('description')
+
+        # Get the model for the test type
+        model = TEST_MODELS[test_type]
+
+        # Find the test
+        test = model.query.get(test_id)
+        if not test:
+            return jsonify({'success': False, 'message': 'Test not found'}), 404
+
+        # Check if the user owns the test
+        if test.created_by_id != current_user.id:
+            return jsonify({'success': False, 'message': 'You do not have permission to edit this test'}), 403
+
+        # Update the description
+        test.description = new_description
+        try:
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': str(e)}), 500
 
     # Add other routes here if needed
     
