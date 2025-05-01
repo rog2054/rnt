@@ -81,6 +81,39 @@ body:not(:has(.sidebar)) .content {
     /* color: #6c757d; */
 }
 
+.description-input {
+    border: 1px solid #ccc;
+    padding: 2px;
+    width: 95%;
+    box-sizing: border-box;
+}
+
+.edit-description {
+    margin-right: 5px;
+    color: var(--faded-action-color);
+    font-size: 20px !important;
+    vertical-align: middle;
+}
+
+.edit-description:hover {
+    color: var(--primary-color);
+}
+
+.shape-circle {
+    border-radius: 50%;
+    /* Circular shape for True */
+}
+
+.shape-square {
+    border-radius: 0;
+    /* Square shape for False */
+}
+
+.badge {
+    border: 1px solid #333;
+    /* Subtle border for all themes */
+}
+
 #status-log {
     padding: 0;
     /* Remove padding from container, let children handle spacing */
