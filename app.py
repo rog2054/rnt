@@ -250,16 +250,32 @@ def create_app():
             db.session.commit()
             return jsonify({'message': 'User added'})
         credentials = DeviceCredential.query.filter_by(hidden=False).all()
-        return render_template('credentials.html', credentials=credentials, form=form)
+        
+        credentials_with_owner = []
+        for cred in credentials:
+            cred_data = {
+                'id' : cred.id,
+                'username' : cred.username,
+                'passwordexpiry' : cred.passwordexpiry,
+                'created_by' : cred.created_by_id,
+                'owner' : cred.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+                'owner_name' : cred.created_by.username if cred.created_by else 'Unknown'
+                }
+            credentials_with_owner.append(cred_data)
+        return render_template('credentials.html', credentials=credentials_with_owner, form=form)
 
     # Delete credential
     @app.route('/delete_credential/<int:credential_id>', methods=['POST'])
     @login_required
     def delete_credential(credential_id):
         credential = DeviceCredential.query.get_or_404(credential_id)
-        credential.hidden = True
-        db.session.commit()
-        return jsonify({'message': 'Credential deleted successfully'})
+        if credential.created_by_id == current_user.id:
+            credential.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'Credential deleted successfully'})
+        else:
+            return jsonify({'message': 'You did not create this credential'})
+    
 
     @app.route('/devices')
     @login_required
@@ -1182,6 +1198,85 @@ def create_app():
                 flash('Invalid form submission.', 'danger')
 
         return render_template('usersettings.html', password_form=password_form, theme_form=theme_form)
+
+    @app.route('/faq')
+    def faq():
+        # FAQ data with embedded image placeholders and image list
+        faq_data = [
+            {
+                'id': 'test-bgp-aspath',
+                'question': 'What are the settings within a BGP AS-Path test?',
+                'answer': 'This test looks at the BGP AS-Path for the current BEST PATH route for a given prefix. For example in this scenario there are 2 possible paths Branch Site 1 could take to internet. For various reasons you may have a preference for whether the Purple or Orange path is typically used. One reason might be geogrphic ie if one path has a significantly lower latency, or maybe higher bandwidth capacity. <br /><br />There are two ways the test can be configured. Both of these will result in a PASS result if the as-path goes via the Purple path: {image1} 1) To check if a given AS number *is* in the bestpath, eg does go via Data Centre A set "AS should exist in the as-path?" to Yes (ticked) and enter the AS number for A (ie 65101) {image2}{image4} 2) Alternatively to check if the best path *is not* via a certain AS set the option to No (unticked) and specifying the AS number to avoid (ie 65102 for B) {image3}{image5}',
+                'images': [
+                    'screenshots/bgp as-path 2 paths.png',
+                    'screenshots/bgp as-path prefer path.png',
+                    'screenshots/bgp as-path avoid path.png',
+                    'screenshots/bgp via 65101.png',
+                    'screenshots/bgp not via 65102.png'
+                ]
+            },
+        ]
+        
+        '''
+            {
+                'id': 'test-frequency',
+                'question': 'How often can I run a test?',
+                'answer': 'Tests can be scheduled to run at intervals of 5 minutes, 15 minutes, or hourly, depending on your subscription plan.',
+                'images': []  # No images
+            },
+            {
+                'id': 'troubleshooting',
+                'question': 'How do I troubleshoot a failed test?',
+                'answer': 'Check the test logs for errors, as shown here: {image1}. Verify network connectivity and ensure the target is reachable.',
+                'images': ['error_log_screenshot.png']  # Single image
+            }
+            '''
+            
+        return render_template('faq.html', faqs=faq_data)
+
+    @app.route('/update_description/<item_type>', methods=['POST'])
+    @login_required
+    def update_description(item_type):
+        # Map item types to their models
+        MODELS = {
+            'bgpaspath': bgpaspathTest,
+            'traceroute': tracerouteTest,
+            'txrxtransceiver': txrxtransceiverTest,
+            'itraceroute': itracerouteTest,
+            'device' : Device,
+        }
+        
+        # Validate item_type
+        if item_type not in MODELS:
+            return jsonify({'success': False, 'message': 'Invalid test type'}), 400
+
+        data = request.get_json()
+        test_id = data.get('test_id')
+        new_description = data.get('description')
+
+        # Get the model for the test type
+        model = MODELS[item_type]
+
+        # Find the item
+        test = model.query.get(test_id)
+        if not test:
+            return jsonify({'success': False, 'message': 'Not found'}), 404
+
+        # Check if the user owns the test
+        if test.created_by_id != current_user.id:
+            return jsonify({'success': False, 'message': 'You do not have permission to edit this'}), 403
+
+        # Update the description
+        if item_type=="device":
+            test.siteinfo = new_description
+        else:
+            test.description = new_description
+        try:
+            db.session.commit()
+            return jsonify({'success': True})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': str(e)}), 500
 
     # Add other routes here if needed
     
