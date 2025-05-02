@@ -133,6 +133,60 @@
                 });
             }
         });
+        // Edit description
+        $('.edit-description').click(function () {
+            const descriptionSpan = $(this).prev('.description-text'); // Changed from next() to prev()
+            const testId = descriptionSpan.data('id');
+            const currentDescription = descriptionSpan.text();
+
+            // Replace span with input field
+            const input = $('<input>', {
+                type: 'text',
+                class: 'description-input',
+                value: currentDescription
+            });
+            descriptionSpan.replaceWith(input);
+            input.focus();
+
+            // Save on blur or Enter key
+            input.on('blur', function () {
+                saveDescription(testId, input.val(), input, descriptionSpan);
+            });
+            input.on('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    saveDescription(testId, input.val(), input, descriptionSpan);
+                }
+            });
+        });
     });
+
+    function saveDescription(testId, newDescription, inputElement, originalSpan) {
+        fetch('/update_description/device', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            },
+            body: JSON.stringify({
+                test_id: testId,
+                description: newDescription
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    originalSpan.text(newDescription);
+                    inputElement.replaceWith(originalSpan);
+                } else {
+                    alert('Failed to update description: ' + data.message);
+                    inputElement.replaceWith(originalSpan);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the description.');
+                inputElement.replaceWith(originalSpan);
+            });
+    }
 </script>
 {% endblock %}
