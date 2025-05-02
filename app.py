@@ -272,7 +272,23 @@ def create_app():
     @login_required
     def device_list():
         devices = Device.query.filter_by(hidden=False).all()
-        return render_template('devices.html', devices=devices)
+        
+        devices_with_owner = []
+        for device in devices:
+            device_data = {
+            'id': device.id,
+            'hostname': device.hostname,
+            'mgmtip': device.mgmtip,
+            'siteinfo': device.siteinfo,
+            'devicetype': device.devicetype,
+            'username': device.username,
+            'created_by': device.created_by_id,
+            'owner': device.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+            'owner_name': device.created_by.username if device.created_by else 'Unknown'
+            }
+            devices_with_owner.append(device_data)
+            
+        return render_template('devices.html', devices=devices_with_owner)
 
     # Route to display the add device form
     @app.route('/devices/add', methods=['GET', 'POST'])
@@ -313,9 +329,13 @@ def create_app():
     @login_required
     def delete_device(device_id):
         device = Device.query.get_or_404(device_id)
-        device.hidden = True
-        db.session.commit()
-        return jsonify({'message': 'Device removed successfully'})
+        if device.created_by_id == current_user.id:
+            device.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'Device removed successfully'})
+        else:
+            return jsonify({'message': 'You did not create this device'})
+    
 
     @app.route('/toggle_device_active/<int:device_id>', methods=['POST'])
     @login_required
