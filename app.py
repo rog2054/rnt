@@ -257,16 +257,32 @@ def create_app():
             db.session.commit()
             return jsonify({'message': 'User added'})
         credentials = DeviceCredential.query.filter_by(hidden=False).all()
-        return render_template('credentials.html', credentials=credentials, form=form)
+        
+        credentials_with_owner = []
+        for cred in credentials:
+            cred_data = {
+                'id' : cred.id,
+                'username' : cred.username,
+                'passwordexpiry' : cred.passwordexpiry,
+                'created_by' : cred.created_by_id,
+                'owner' : cred.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+                'owner_name' : cred.created_by.username if cred.created_by else 'Unknown'
+                }
+            credentials_with_owner.append(cred_data)
+        return render_template('credentials.html', credentials=credentials_with_owner, form=form)
 
     # Delete credential
     @app.route('/delete_credential/<int:credential_id>', methods=['POST'])
     @login_required
     def delete_credential(credential_id):
         credential = DeviceCredential.query.get_or_404(credential_id)
-        credential.hidden = True
-        db.session.commit()
-        return jsonify({'message': 'Credential deleted successfully'})
+        if credential.created_by_id == current_user.id:
+            credential.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'Credential deleted successfully'})
+        else:
+            return jsonify({'message': 'You did not create this credential'})
+    
 
     @app.route('/devices')
     @login_required
@@ -1245,19 +1261,20 @@ def create_app():
             
         return render_template('faq.html', faqs=faq_data)
 
-    @app.route('/update_description/<test_type>', methods=['POST'])
+    @app.route('/update_description/<item_type>', methods=['POST'])
     @login_required
-    def update_description(test_type):
-        # Map test types to their models
-        TEST_MODELS = {
+    def update_description(item_type):
+        # Map item types to their models
+        MODELS = {
             'bgpaspath': bgpaspathTest,
             'traceroute': tracerouteTest,
             'txrxtransceiver': txrxtransceiverTest,
             'itraceroute': itracerouteTest,
+            'device' : Device,
         }
         
-        # Validate test_type
-        if test_type not in TEST_MODELS:
+        # Validate item_type
+        if item_type not in MODELS:
             return jsonify({'success': False, 'message': 'Invalid test type'}), 400
 
         data = request.get_json()
@@ -1265,19 +1282,22 @@ def create_app():
         new_description = data.get('description')
 
         # Get the model for the test type
-        model = TEST_MODELS[test_type]
+        model = MODELS[item_type]
 
-        # Find the test
+        # Find the item
         test = model.query.get(test_id)
         if not test:
-            return jsonify({'success': False, 'message': 'Test not found'}), 404
+            return jsonify({'success': False, 'message': 'Not found'}), 404
 
         # Check if the user owns the test
         if test.created_by_id != current_user.id:
-            return jsonify({'success': False, 'message': 'You do not have permission to edit this test'}), 403
+            return jsonify({'success': False, 'message': 'You do not have permission to edit this'}), 403
 
         # Update the description
-        test.description = new_description
+        if item_type=="device":
+            test.siteinfo = new_description
+        else:
+            test.description = new_description
         try:
             db.session.commit()
             return jsonify({'success': True})
