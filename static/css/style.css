@@ -586,3 +586,111 @@ th.sortable:hover {
 .faq-question.active::after {
     content: '−';
 }
+
+/* Test_progress css */
+/* Two-column layout for stats */
+.tp-stats-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1200px;
+    /* Adjust as needed */
+    margin: 0 auto;
+    gap: 20px;
+    /* Space between columns */
+}
+
+.tp-stats-column {
+    flex: 1;
+    /* Each column takes 50% of the available width */
+    min-width: 0;
+    /* Prevents overflow issues */
+    padding: 15px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Style for the existing stats (left column) */
+.tp-test-stats p {
+    margin: 10px 0;
+    line-height: 1.5;
+}
+
+.tp-test-stats strong {
+    display: block;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+/* Style for the new stats (right column) */
+.tp-counter-container {
+    text-align: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #ffffff, #e0e7ff);
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+}
+
+.tp-counter {
+    font-size: 4rem;
+    /* Slightly smaller than before to fit multiple tests */
+    font-weight: bold;
+    color: #1e3a8a;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    margin-bottom: 10px;
+    transition: transform 0.3s ease;
+}
+
+.tp-progress-bar {
+    width: 100%;
+    height: 20px;
+    background-color: #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    margin: 0 auto;
+}
+
+.tp-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #1e3a8a);
+    width: 0;
+    transition: width 0.5s ease-in-out;
+}
+
+.tp-progress-label {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.tp-label {
+    font-size: 1rem;
+    color: #4b5563;
+    margin-top: 8px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .tp-stats-container {
+        flex-direction: column;
+    }
+
+    .tp-stats-column {
+        width: 100%;
+    }
+
+    .tp-counter {
+        font-size: 3rem;
+    }
+
+    .tp-progress-bar {
+        height: 18px;
+    }
+}

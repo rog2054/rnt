@@ -1400,6 +1400,14 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                 stats[inst.test_type]["running"] += 1
             elif inst.status == "skipped":
                 stats[inst.test_type]["skipped"] += 1
+                
+        # Calculate items remaining and percentage complete for each test type
+        for test_type, data in stats.items():
+            # Items remaining = total - skipped - completed (running items are still "remaining")
+            data["items_remaining"] = data["total"] - data["skipped"] - data["completed"]
+            # Percentage complete = (completed / total) * 100, avoid division by zero
+            data["percentage_complete"] = round(((data["completed"] + data["skipped"]) / data["total"]) * 100) if data["total"] > 0 else 0.0
+                
         socketio.emit('stats_update', {'stats': stats, 'run_id': test_run_id})
         logger.info(f"socketio.emit: stats_update with {stats}")
 
