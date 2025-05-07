@@ -6,7 +6,7 @@
 <div class="tp-stats-container">
     <!-- Left Column: Existing Stats -->
     <div class="tp-stats-column">
-        <h2>Test Scope</h2>
+        <h2>Scope</h2>
         <div class="tp-test-stats">
             <p><strong>BGP AS Path Tests:</strong><br>
                 Completed: <span id="bgpaspath_completed">{{ stats.bgpaspath_test.completed }}</span> /
@@ -37,13 +37,13 @@
 
     <!-- Right Column: New Stats (Percentage and Items Remaining) -->
     <div class="tp-stats-column">
-        <h2>Test Activity</h2>
+        <h2>Activity</h2>
         <div id="test-containers"></div>
     </div>
 </div>
 
 <br />
-<h2>Status Updates</h2>
+<h2>Log</h2>
 <div id="status-log" class="border p-3" style="height: 450px; overflow-y: auto;"></div>
 
 
@@ -126,6 +126,7 @@
         if (runCompletedMessage) {
             log.innerHTML += runCompletedMessage;
             document.getElementById('results-button').style.display = 'block';
+            document.getElementById('wait-button').style.display = 'none';
         }
         log.scrollTop = log.scrollHeight;
     });
@@ -163,27 +164,24 @@
         const container = document.createElement('div');
         container.className = 'counter-container';
         container.innerHTML = `
-                <div class="tp-label">&nbsp;</div>
+                <div class="tp-label"> </div>
                 <div class="tp-label">Test Queue</div>
-                <div class="tp-counter" id="counter-overall">${overallItemsRemaining}</div>
-                <!-- <div class="tp-progress-bar">
-                    <div class="tp-progress-fill" id="progress-overall"></div>
-                    <span class="tp-progress-label" id="progress-label-overall">${overallPercentageComplete}%</span>
-                </div>
-                -->
-                <div id="results-button" style="display:none;">
+                <div class="tp-counter" id="counter-overall">${runCompletedMessage ? 0 : overallItemsRemaining}</div>
+                <div id="wait-button" class="btn btn-secondary mt-3 tp-wait-button" style="display:${runCompletedMessage ? 'none' : 'block'};" disabled>Please wait</div>
+                <div id="results-button" style="display:${runCompletedMessage ? 'block' : 'none'};">
                     <a href="{{ url_for('test_results', run_id=test_run.id) }}/pass" class="btn btn-primary mt-3">View Results</a>
                 </div>
-                
             `;
         testContainers.appendChild(container);
 
-        // Update progress bar
+        // Update progress bar (if re-enabled)
         const progressFill = document.getElementById('progress-overall');
-        const counter = document.getElementById('counter-overall');
-        progressFill.style.width = `${overallPercentageComplete}%`;
+        if (progressFill) {
+            progressFill.style.width = `${overallPercentageComplete}%`;
+        }
 
         // Add scale animation to counter
+        const counter = document.getElementById('counter-overall');
         counter.style.transform = 'scale(1.1)';
         setTimeout(() => counter.style.transform = 'scale(1)', 200);
     });

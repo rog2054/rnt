@@ -676,6 +676,24 @@ th.sortable:hover {
     margin-top: 8px;
 }
 
+.tp-wait-button {
+    display: block;
+    animation: tp-flash 2s ease-in-out infinite;
+    opacity: 1;
+}
+
+@keyframes tp-flash {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .tp-stats-container {
