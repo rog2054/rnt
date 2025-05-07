@@ -8,24 +8,30 @@
 <table class="table">
     <thead>
         <tr>
-            <th>ID</th>
+            <th class="text-center">ID</th>
             <th>Hostname</th>
             <th>Site Info</th>
             <th>Mgmt IP</th>
             <!-- <th>SSH User</th> -->
-            <th>Status</th>
-            <th>Remove</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Remove</th>
         </tr>
     </thead>
     <tbody>
         {% for device in devices %}
         <tr>
-            <td>{{ device.id }}</td>
+            <td class="text-center">{{ device.id }}</td>
             <td>{{ device.hostname }}</td>
-            <td>{{ device.siteinfo }}</td>
+            <td>
+                <span class="description-text" data-id="{{ device.id }}">{{ device.siteinfo }}</span>
+                {% if device.owner %}
+                <span class="material-symbols-rounded edit-description" title="Edit description"
+                    style="cursor: pointer;">stylus</span>
+                {% endif %}
+            </td>
             <td>{{ device.mgmtip }}</td>
             <!-- <td>{{ device.username.username if device.username else "N/A" }}</td> -->
-            <td>
+            <td class="text-center">
                 <button class="toggle-active" data-id="{{ device.id }}" data-active="{{ device.active|lower }}"
                     style="background: none; border: none; padding: 0;">
                     {% if device.active %}
@@ -35,11 +41,16 @@
                     {% endif %}
                 </button>
             </td>
-            <td>
+            <td class="text-center">
+                {% if device.owner %}
                 <button class="delete-device" data-id="{{ device.id }}"
                     style="background: none; border: none; padding: 0;">
                     <span class="material-symbols-rounded" title="Click to delete">delete</span>
                 </button>
+                {% else %}
+                <span class="material-symbols-rounded delete-locked"
+                    title="Created by {{ device.owner_name }}">lock</span>
+                {% endif %}
             </td>
         </tr>
         {% endfor %}
@@ -122,6 +133,60 @@
                 });
             }
         });
+        // Edit description
+        $('.edit-description').click(function () {
+            const descriptionSpan = $(this).prev('.description-text'); // Changed from next() to prev()
+            const testId = descriptionSpan.data('id');
+            const currentDescription = descriptionSpan.text();
+
+            // Replace span with input field
+            const input = $('<input>', {
+                type: 'text',
+                class: 'description-input',
+                value: currentDescription
+            });
+            descriptionSpan.replaceWith(input);
+            input.focus();
+
+            // Save on blur or Enter key
+            input.on('blur', function () {
+                saveDescription(testId, input.val(), input, descriptionSpan);
+            });
+            input.on('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    saveDescription(testId, input.val(), input, descriptionSpan);
+                }
+            });
+        });
     });
+
+    function saveDescription(testId, newDescription, inputElement, originalSpan) {
+        fetch('/update_description/device', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            },
+            body: JSON.stringify({
+                test_id: testId,
+                description: newDescription
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    originalSpan.text(newDescription);
+                    inputElement.replaceWith(originalSpan);
+                } else {
+                    alert('Failed to update description: ' + data.message);
+                    inputElement.replaceWith(originalSpan);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the description.');
+                inputElement.replaceWith(originalSpan);
+            });
+    }
 </script>
 {% endblock %}

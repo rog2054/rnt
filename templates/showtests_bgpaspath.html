@@ -8,25 +8,36 @@
 <table class="table">
     <thead>
         <tr>
-            <th>ID</th>
+            <th class="text-center">ID</th>
             <th>Connect to device</th>
-            <th>Search AS-path for Prefix</th>
-            <th>Check as-path for ASN</th>
-            <th>Should ASN exist in AS-path?</th>
+            <th class="text-center">Search AS-path for Prefix</th>
+            <th class="text-center">Check as-path for ASN</th>
+            <th class="text-center">Should ASN exist in AS-path?</th>
             <th>Description of Test</th>
-            <th>Remove</th>
+            <th class="text-center">Remove</th>
         </tr>
     </thead>
     <tbody>
         {% for test in bgpaspathtests %}
         <tr>
-            <td>{{ test.id }}</td>
+            <td class="text-center">{{ test.id }}</td>
             <td>{{ test.devicehostname.hostname }}</td>
-            <td>{{ test.testipv4prefix }}</td>
-            <td>{{ test.checkasinpath }}</td>
-            <td>{{ test.checkaswantresult }} </td>
-            <td>{{ test.description }} </td>
+            <td class="text-center">{{ test.testipv4prefix }}</td>
+            <td class="text-center">{{ test.checkasinpath }}</td>
+            <td class="text-center">
+                <span class="badge {{ 'bg-success shape-circle' if test.checkaswantresult else 'bg-danger' }}"
+                    title="{{ 'ASN should exist' if test.checkaswantresult else 'ASN should not exist' }}">
+                    {{ 'Yes' if test.checkaswantresult else 'No' }}
+                </span>
+            </td>
             <td>
+                <span class="description-text" data-id="{{ test.id }}">{{ test.description }}</span>
+                {% if test.owner %}
+                <span class="material-symbols-rounded edit-description" title="Edit description"
+                    style="cursor: pointer;">stylus</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
                 {% if test.owner %}
                 <button class="delete-test" data-id="{{ test.id }}" style="background: none; border: none; padding: 0;">
                     <span class="material-symbols-rounded" title="Click to delete">delete</span>
@@ -65,8 +76,7 @@
             });
         });
 
-        // Delete device
-        // Delete device
+        // Delete test
         $('.delete-test').click(function () {
             const deviceId = $(this).data('id');
             if (confirm('Are you sure you want to remove this test?')) {
@@ -86,6 +96,61 @@
                 });
             }
         });
+
+        // Edit description
+        $('.edit-description').click(function () {
+            const descriptionSpan = $(this).prev('.description-text'); // Changed from next() to prev()
+            const testId = descriptionSpan.data('id');
+            const currentDescription = descriptionSpan.text();
+
+            // Replace span with input field
+            const input = $('<input>', {
+                type: 'text',
+                class: 'description-input',
+                value: currentDescription
+            });
+            descriptionSpan.replaceWith(input);
+            input.focus();
+
+            // Save on blur or Enter key
+            input.on('blur', function () {
+                saveDescription(testId, input.val(), input, descriptionSpan);
+            });
+            input.on('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    saveDescription(testId, input.val(), input, descriptionSpan);
+                }
+            });
+        });
     });
+
+    function saveDescription(testId, newDescription, inputElement, originalSpan) {
+        fetch('/update_description/bgpaspath', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            },
+            body: JSON.stringify({
+                test_id: testId,
+                description: newDescription
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    originalSpan.text(newDescription);
+                    inputElement.replaceWith(originalSpan);
+                } else {
+                    alert('Failed to update description: ' + data.message);
+                    inputElement.replaceWith(originalSpan);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the description.');
+                inputElement.replaceWith(originalSpan);
+            });
+    }
 </script>
 {% endblock %}

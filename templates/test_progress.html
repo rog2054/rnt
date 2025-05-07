@@ -3,47 +3,60 @@
 {% block content %}
 <h1>Test Run: {{ test_run.description }}</h1>
 <p>Started: {{ test_run.start_time.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-<h2>Progress</h2>
-<p>BGP AS Path Tests:
-    Completed: <span id="bgp_completed">{{ stats.bgpaspath_test.completed }}</span> /
-    Running: <span id="bgp_running">{{ stats.bgpaspath_test.running }}</span> /
-    Skipped: <span id="bgp_skipped">{{ stats.bgpaspath_test.skipped }}</span> /
-    Total: <span id="bgp_total">{{ stats.bgpaspath_test.total }}</span>
-</p>
-<p>Traceroute Tests:
-    Completed: <span id="traceroute_completed">{{ stats.traceroute_test.completed }}</span> /
-    Running: <span id="traceroute_running">{{ stats.traceroute_test.running }}</span> /
-    Skipped: <span id="traceroute_skipped">{{ stats.traceroute_test.skipped }}</span> /
-    Total: <span id="traceroute_total">{{ stats.traceroute_test.total }}</span>
-</p>
-<p>TxRx SFP Transceiver Tests:
-    Completed: <span id="txrxtransceiver_completed">{{ stats.txrxtransceiver_test.completed }}</span> /
-    Running: <span id="txrxtransceiver_running">{{ stats.txrxtransceiver_test.running }}</span> /
-    Skipped: <span id="txrxtransceiver_skipped">{{ stats.txrxtransceiver_test.skipped }}</span> /
-    Total: <span id="txrxtransceiver_total">{{ stats.txrxtransceiver_test.total }}</span>
-</p>
-<p>ACI itraceroute Tests:
-    Completed: <span id="itraceroute_completed">{{ stats.itraceroute_test.completed }}</span> /
-    Running: <span id="itraceroute_running">{{ stats.itraceroute_test.running }}</span> /
-    Skipped: <span id="itraceroute_skipped">{{ stats.itraceroute_test.skipped }}</span> /
-    Total: <span id="itraceroute_total">{{ stats.itraceroute_test.total }}</span>
-</p>
-<h2>Status Updates</h2>
+<div class="tp-stats-container">
+    <!-- Left Column: Existing Stats -->
+    <div class="tp-stats-column">
+        <h2>Scope</h2>
+        <div class="tp-test-stats">
+            <p><strong>BGP AS Path Tests:</strong><br>
+                Completed: <span id="bgpaspath_completed">{{ stats.bgpaspath_test.completed }}</span> /
+                Running: <span id="bgpaspath_running">{{ stats.bgpaspath_test.running }}</span> /
+                Skipped: <span id="bgpaspath_skipped">{{ stats.bgpaspath_test.skipped }}</span> /
+                Total: <span id="bgpaspath_total">{{ stats.bgpaspath_test.total }}</span>
+            </p>
+            <p><strong>Traceroute Tests:</strong><br>
+                Completed: <span id="traceroute_completed">{{ stats.traceroute_test.completed }}</span> /
+                Running: <span id="traceroute_running">{{ stats.traceroute_test.running }}</span> /
+                Skipped: <span id="traceroute_skipped">{{ stats.traceroute_test.skipped }}</span> /
+                Total: <span id="traceroute_total">{{ stats.traceroute_test.total }}</span>
+            </p>
+            <p><strong>TxRx SFP Transceiver Tests:</strong><br>
+                Completed: <span id="txrxtransceiver_completed">{{ stats.txrxtransceiver_test.completed }}</span> /
+                Running: <span id="txrxtransceiver_running">{{ stats.txrxtransceiver_test.running }}</span> /
+                Skipped: <span id="txrxtransceiver_skipped">{{ stats.txrxtransceiver_test.skipped }}</span> /
+                Total: <span id="txrxtransceiver_total">{{ stats.txrxtransceiver_test.total }}</span>
+            </p>
+            <p><strong>ACI itraceroute Tests:</strong><br>
+                Completed: <span id="itraceroute_completed">{{ stats.itraceroute_test.completed }}</span> /
+                Running: <span id="itraceroute_running">{{ stats.itraceroute_test.running }}</span> /
+                Skipped: <span id="itraceroute_skipped">{{ stats.itraceroute_test.skipped }}</span> /
+                Total: <span id="itraceroute_total">{{ stats.itraceroute_test.total }}</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Right Column: New Stats (Percentage and Items Remaining) -->
+    <div class="tp-stats-column">
+        <h2>Activity</h2>
+        <div id="test-containers"></div>
+    </div>
+</div>
+
+<br />
+<h2>Log</h2>
 <div id="status-log" class="border p-3" style="height: 450px; overflow-y: auto;"></div>
 
-<div id="results-button" style="display:none;">
-    <a href="{{ url_for('test_results', run_id=test_run.id) }}" class="btn btn-primary mt-3">View Results</a>
-</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.js"></script>
 <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function () {
         const currentRunId = {{ run_id | tojson | safe
     }};
-    const socket = io.connect('http://' + document.domain + ':' + location.port);
+    const socket = io();
     const deviceLogs = new Map();
     let runCompletedMessage = '';
     const deviceOrder = [];
+    const testContainers = document.getElementById('test-containers');
 
     socket.on('connect', function () {
         console.log('Connected to Socket.IO server');
@@ -113,6 +126,7 @@
         if (runCompletedMessage) {
             log.innerHTML += runCompletedMessage;
             document.getElementById('results-button').style.display = 'block';
+            document.getElementById('wait-button').style.display = 'none';
         }
         log.scrollTop = log.scrollHeight;
     });
@@ -179,6 +193,6 @@
         counter.style.transform = 'scale(1.1)';
         setTimeout(() => counter.style.transform = 'scale(1)', 200);
     });
-    }); // End of DOMContentLoaded
+    });
 </script>
 {% endblock %}

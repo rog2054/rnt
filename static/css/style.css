@@ -81,6 +81,39 @@ body:not(:has(.sidebar)) .content {
     /* color: #6c757d; */
 }
 
+.description-input {
+    border: 1px solid #ccc;
+    padding: 2px;
+    width: 95%;
+    box-sizing: border-box;
+}
+
+.edit-description {
+    margin-right: 5px;
+    color: var(--faded-action-color);
+    font-size: 20px !important;
+    vertical-align: middle;
+}
+
+.edit-description:hover {
+    color: var(--primary-color);
+}
+
+.shape-circle {
+    border-radius: 50%;
+    /* Circular shape for True */
+}
+
+.shape-square {
+    border-radius: 0;
+    /* Square shape for False */
+}
+
+.badge {
+    border: 1px solid #333;
+    /* Subtle border for all themes */
+}
+
 #status-log {
     padding: 0;
     /* Remove padding from container, let children handle spacing */
@@ -492,4 +525,190 @@ th.sortable:hover {
 .cbr-button-container {
     text-align: center;
     margin-top: 20px;
+}
+
+/* FAQ Page */
+
+.faq-item {
+    margin-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.faq-question {
+    cursor: pointer;
+    padding: 15px;
+    background-color: #f9f9f9;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.faq-question:hover {
+    background-color: #e0e0e0;
+}
+
+.faq-answer {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 15px;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+}
+
+.faq-answer.active {
+    padding: 15px 15px 30px 15px;
+}
+
+.faq-answer p {
+    margin: 0 0 10px;
+}
+
+.faq-answer p:last-child,
+.faq-answer img:last-child {
+    margin-bottom: 20px;
+    /* Extra space for the last text or image */
+}
+
+.faq-answer img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    margin: 10px 0;
+    display: block;
+}
+
+.faq-question::after {
+    content: '+';
+    font-size: 1.2em;
+}
+
+.faq-question.active::after {
+    content: '−';
+}
+
+/* Test_progress css */
+/* Two-column layout for stats */
+.tp-stats-container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 1200px;
+    /* Adjust as needed */
+    margin: 0 auto;
+    gap: 20px;
+    /* Space between columns */
+}
+
+.tp-stats-column {
+    flex: 1;
+    /* Each column takes 50% of the available width */
+    min-width: 0;
+    /* Prevents overflow issues */
+    padding: 15px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Style for the existing stats (left column) */
+.tp-test-stats p {
+    margin: 10px 0;
+    line-height: 1.5;
+}
+
+.tp-test-stats strong {
+    display: block;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+/* Style for the new stats (right column) */
+.tp-counter-container {
+    text-align: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #ffffff, #e0e7ff);
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 15px;
+}
+
+.tp-counter {
+    font-size: 4rem;
+    /* Slightly smaller than before to fit multiple tests */
+    font-weight: bold;
+    color: #1e3a8a;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    margin-bottom: 10px;
+    transition: transform 0.3s ease;
+}
+
+.tp-progress-bar {
+    width: 100%;
+    height: 20px;
+    background-color: #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    margin: 0 auto;
+}
+
+.tp-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #1e3a8a);
+    width: 0;
+    transition: width 0.5s ease-in-out;
+}
+
+.tp-progress-label {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.tp-label {
+    font-size: 1rem;
+    color: #4b5563;
+    margin-top: 8px;
+}
+
+.tp-wait-button {
+    display: block;
+    animation: tp-flash 2s ease-in-out infinite;
+    opacity: 1;
+}
+
+@keyframes tp-flash {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.3;
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .tp-stats-container {
+        flex-direction: column;
+    }
+
+    .tp-stats-column {
+        width: 100%;
+    }
+
+    .tp-counter {
+        font-size: 3rem;
+    }
+
+    .tp-progress-bar {
+        height: 18px;
+    }
 }

@@ -16,8 +16,9 @@ import logging
 import re
 from datetime import datetime, timezone
 from sqlalchemy import func
-from utils import format_datetime_with_ordinal
-
+from utils import format_datetime_with_ordinal, set_netmiko_logger, get_netmiko_logger
+from werkzeug.middleware.proxy_fix import ProxyFix
+import os
 
 # Globals
 pending_test_runs = []
@@ -27,6 +28,7 @@ processed_devices = set() # Used for tracking processed devices per run
 logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
 
 # Define global extensions
 socketio = SocketIO(async_mode='threading')
@@ -50,6 +52,7 @@ def create_app():
     db.init_app(app)
     migrate = Migrate(app, db)
     socketio.init_app(app)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
     login_manager.init_app(app)
     login_manager.login_view = 'login' # redirect unauth users to login route
 
@@ -57,6 +60,21 @@ def create_app():
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    # Configure Netmiko logger
+    netmiko_logger = logging.getLogger("netmiko")
+    netmiko_logger.setLevel(logging.DEBUG)
+    log_file_path = os.path.join(app.instance_path, 'netmiko_debug.log')
+    os.makedirs(app.instance_path, exist_ok=True)
+    netmiko_handler = logging.FileHandler(log_file_path)
+    netmiko_handler.setLevel(logging.DEBUG)
+    netmiko_handler.setFormatter(
+        logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    )
+    netmiko_logger.handlers = []
+    netmiko_logger.addHandler(netmiko_handler)
+    netmiko_logger.propagate = False
+    set_netmiko_logger(netmiko_logger)
+    netmiko_logger.debug("Netmiko logger initialized in app factory")
 
     with app.app_context():
         db.create_all()
@@ -89,17 +107,6 @@ def create_app():
             version = 'x'
         return f"<h1>Welcome, {current_user.username}!</h1><h2>Version: 0.{version}</h2><br /><a href='/devices'>Start</a>"
     
-    '''
-    @app.route('/')
-    def index():
-        # Read the version from the file
-        try:
-            with open('/app/version.txt', 'r') as f:
-                version = f.read().strip()
-        except FileNotFoundError:
-            version = 'unknown'
-        return render_template('index.html', version=version)
-    '''
     
     @app.route('/login', methods=['GET', 'POST'])
     def login():
@@ -144,7 +151,7 @@ def create_app():
                 else:
                     # default to admin as creator if not logged in, as that means the admin is creating the initial user account
                     new_user.created_by_id = 1
-                    new_user.theme = 'blue'
+                    new_user.theme = 'calmblue'
                 db.session.add(new_user)
                 db.session.commit()
                 if user_count == 0:
@@ -281,7 +288,23 @@ def create_app():
     @login_required
     def device_list():
         devices = Device.query.filter_by(hidden=False).all()
-        return render_template('devices.html', devices=devices)
+        
+        devices_with_owner = []
+        for device in devices:
+            device_data = {
+            'id': device.id,
+            'hostname': device.hostname,
+            'mgmtip': device.mgmtip,
+            'siteinfo': device.siteinfo,
+            'devicetype': device.devicetype,
+            'username': device.username,
+            'created_by': device.created_by_id,
+            'owner': device.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+            'owner_name': device.created_by.username if device.created_by else 'Unknown'
+            }
+            devices_with_owner.append(device_data)
+            
+        return render_template('devices.html', devices=devices_with_owner)
 
     # Route to display the add device form
     @app.route('/devices/add', methods=['GET', 'POST'])
@@ -322,9 +345,13 @@ def create_app():
     @login_required
     def delete_device(device_id):
         device = Device.query.get_or_404(device_id)
-        device.hidden = True
-        db.session.commit()
-        return jsonify({'message': 'Device removed successfully'})
+        if device.created_by_id == current_user.id:
+            device.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'Device removed successfully'})
+        else:
+            return jsonify({'message': 'You did not create this device'})
+    
 
     @app.route('/toggle_device_active/<int:device_id>', methods=['POST'])
     @login_required
@@ -1373,10 +1400,19 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                 stats[inst.test_type]["running"] += 1
             elif inst.status == "skipped":
                 stats[inst.test_type]["skipped"] += 1
+                
+        # Calculate items remaining and percentage complete for each test type
+        for test_type, data in stats.items():
+            # Items remaining = total - skipped - completed (running items are still "remaining")
+            data["items_remaining"] = data["total"] - data["skipped"] - data["completed"]
+            # Percentage complete = (completed / total) * 100, avoid division by zero
+            data["percentage_complete"] = round(((data["completed"] + data["skipped"]) / data["total"]) * 100) if data["total"] > 0 else 0.0
+                
         socketio.emit('stats_update', {'stats': stats, 'run_id': test_run_id})
         logger.info(f"socketio.emit: stats_update with {stats}")
 
     with app.app_context():
+        netmiko_logger = get_netmiko_logger()
         from models import DeviceCredential # lazy import
         device = db.session.get(Device, device_id)
         cred = db.session.get(DeviceCredential, device.username_id)
@@ -1416,8 +1452,12 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
             "host": device.mgmtip,
             "username": cred.username,
             "password": cred.get_password(),
+            "session_log": os.path.join(app.instance_path, 'netmiko_session.log'),  # Raw SSH log
+            "session_log_file_mode": "append",  # Append to avoid overwriting
+            "verbose": True,  # Enable verbose Netmiko logging
             "timeout": 10,
             "session_timeout": 60,
+            "global_delay_factor": 2,  # Handle slow devices
         }
 
         log_msg = f"Device {device.hostname}: Connecting to {device.mgmtip}"
@@ -1436,6 +1476,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
 
                 tests = TestInstance.query.filter_by(test_run_id=test_run_id, device_id=device_id).all()
                 for test in tests:
+                    netmiko_logger.debug(f"Starting test {test.test_type} for device {device.hostname}")
                     test.status = "running"
                     db.session.commit()
                     log_msg = f"Device {device.hostname}: Running {test.test_type} test ID {test.id}"
@@ -1448,7 +1489,10 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                     try:
                         if test.test_type == "bgpaspath_test":
                             bgp_test = test.bgpaspath_test
-                            rawoutput = conn.send_command(f"show ip bgp {bgp_test.testipv4prefix} bestpath")
+                            command = (f"show ip bgp {bgp_test.testipv4prefix} bestpath")
+                            rawoutput = conn.send_command(command)
+                            netmiko_logger.debug(f"Sent: {command}")
+                            netmiko_logger.debug(f"Received: {rawoutput}")
                             pattern = r"Refresh Epoch (\d+)\n(.*)"
                             pattern2 = r"Network not in table"
                             match = re.search(pattern, rawoutput)
@@ -1482,7 +1526,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                         elif test.test_type == "traceroute_test":
                             traceroute_test = test.traceroute_test
                             if device.devicetype == "cisco_ios":
-                                rawoutput = conn.send_command_timing(f"traceroute {traceroute_test.destinationip} source {device.lanip} numeric")
+                                rawoutput = conn.send_command_timing(f"traceroute {traceroute_test.destinationip} source {device.lanip} numeric timeout 1 probe 1 ttl 1 15")
                             elif device.devicetype == "cisco_nxos":
                                 rawoutput = conn.send_command_timing(f"traceroute {traceroute_test.destinationip} source {device.lanip}")
                             numberofhops = count_hops(rawoutput)
@@ -1574,25 +1618,11 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                         test.status = "completed"
 
                     except NetmikoTimeoutException as e:
-                        log_msg = f"Device {device.hostname}: Timeout during test - {str(e)}"
-                        with log_lock:
-                            log_lines.append(log_msg)
-                        socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
-                        test.status = "failed"
-                        result = (bgpaspathTestResult if test.test_type == "bgpaspath_test" else tracerouteTestResult)(
-                            test_instance_id=test.id, rawoutput=f"Error: {str(e)}", passed=False if test.test_type == "bgpaspath_test" else None, numberofhops=None
-                        )
-                        db.session.add(result)
+                        handle_test_error(device, test, test_run_id, device_id, e, log_lock, log_lines, socketio, db)
+                        netmiko_logger.error(f"Netmiko TimeoutException: {e}")
                     except Exception as e:
-                        log_msg = f"Device {device.hostname}: Error during test - {str(e)}"
-                        with log_lock:
-                            log_lines.append(log_msg)
-                        socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
-                        test.status = "failed"
-                        result = (bgpaspathTestResult if test.test_type == "bgpaspath_test" else tracerouteTestResult)(
-                            test_instance_id=test.id, rawoutput=f"Error: {str(e)}", passed=False if test.test_type == "bgpaspath_test" else None, numberofhops=None
-                        )
-                        db.session.add(result)
+                        handle_test_error(device, test, test_run_id, device_id, e, log_lock, log_lines, socketio, db)
+                        netmiko_logger.error(f"Netmiko Exception: {e}")
                     db.session.commit()
                     emit_stats_update()
 
@@ -1611,7 +1641,8 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
             skip_tests_for_device(device_id, test_run_id, "Authentication failed", log_lines, log_lock)
             emit_stats_update()
         except Exception as e:
-            log_msg = f"Device {device.hostname}: Error connecting - {str(e)}"
+            log_msg = f"Device {device.hostname}: Exception - {str(e)}"
+            netmiko_logger.error(f"Netmiko Exception: {e}")
             with log_lock:
                 log_lines.append(log_msg)
             socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
@@ -1643,6 +1674,11 @@ def skip_tests_for_device(device_id, test_run_id, reason, log_lines, log_lock):
                 elif test.test_type == "traceroute_test":
                     result = tracerouteTestResult(test_instance_id=test.id, rawoutput=reason, passed=None, numberofhops=None)
                     db.session.add(result)
+                elif test.test_type == "txrxtransceiver_test":
+                    result = txrxtransceiverTestResult(test_instance_id=test.id, rawoutput=reason, passed=None, sfpinfo=None, txrx=None)
+                    db.session.add(result)
+                elif test.test_type == "itraceroute_test":
+                    result = itracerouteTestResult(test_instance_id=test.id, rawoutput=reason, passed=None)
         db.session.commit()
 
         with log_lock:
@@ -1654,6 +1690,73 @@ def skip_tests_for_device(device_id, test_run_id, reason, log_lines, log_lock):
             'device_id': device_id
         })
         logger.info(f"socketio.emit: '{summary_msg}' for run_id: {test_run_id}")
+
+# Mapping of test types to their result models and default values
+TEST_TYPE_CONFIG = {
+    "bgpaspath_test": {
+        "model": bgpaspathTestResult,
+        "default_fields": {
+            "rawoutput": lambda e: f"Error: {str(e)}",
+            "passed": None,
+            "output": None
+        }
+    },
+    "traceroute_test": {
+        "model": tracerouteTestResult,
+        "default_fields": {
+            "rawoutput": lambda e: f"Error: {str(e)}",
+            "numberofhops": None,
+            "passed": None
+        }
+    },
+    "txrxtransceiver_test": {
+        "model": txrxtransceiverTestResult,
+        "default_fields": {
+            "rawoutput": lambda e: f"Error: {str(e)}",
+            "sfpinfo": None,
+            "txrx": None,
+            "passed": None
+        }
+    },
+    "itraceroute_test": {
+        "model": itracerouteTestResult,
+        "default_fields": {
+            "rawoutput": lambda e: f"Error: {str(e)}",
+            "passed": None
+        }
+    }
+}
+
+def handle_test_error(device, test, test_run_id, device_id, exception, log_lock, log_lines, socketio, db):
+    """Handle test execution errors consistently across test types."""
+    log_msg = f"Device {device.hostname}: {'Timeout' if isinstance(exception, NetmikoTimeoutException) else 'Error'} during test - {str(exception)}"
+    
+    with log_lock:
+        log_lines.append(log_msg)
+    
+    socketio.emit('status_update', {
+        'message': log_msg,
+        'run_id': test_run_id,
+        'level': 'child',
+        'device_id': device_id
+    })
+    
+    test.status = "failed"
+    
+    # Get test configuration
+    test_config = TEST_TYPE_CONFIG.get(test.test_type)
+    if not test_config:
+        raise ValueError(f"Unknown test type: {test.test_type}")
+    
+    # Prepare result fields
+    result_fields = {"test_instance_id": test.id}
+    for field, value in test_config["default_fields"].items():
+        result_fields[field] = value(exception) if callable(value) else value
+    
+    # Create and save result
+    result = test_config["model"](**result_fields)
+    db.session.add(result)
+    db.session.commit()
 
 def check_bgp_result(output, as_number, want_result):
     # Your logic to parse output and check if as_number appears as expected

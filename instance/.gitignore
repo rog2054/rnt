@@ -1,2 +1,3 @@
 config.db
 live-config.db
+netmiko_debug.log
