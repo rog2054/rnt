@@ -118,26 +118,66 @@
     });
 
     socket.on('stats_update', function (data) {
-        console.log('Received stats_update:', data);
-        if (data.run_id === currentRunId) {
-            const stats = data.stats;
-            document.getElementById('bgp_completed').textContent = stats.bgpaspath_test.completed;
-            document.getElementById('bgp_running').textContent = stats.bgpaspath_test.running;
-            document.getElementById('bgp_skipped').textContent = stats.bgpaspath_test.skipped;
-            document.getElementById('bgp_total').textContent = stats.bgpaspath_test.total;
-            document.getElementById('traceroute_completed').textContent = stats.traceroute_test.completed;
-            document.getElementById('traceroute_running').textContent = stats.traceroute_test.running;
-            document.getElementById('traceroute_skipped').textContent = stats.traceroute_test.skipped;
-            document.getElementById('traceroute_total').textContent = stats.traceroute_test.total;
-            document.getElementById('txrxtransceiver_completed').textContent = stats.txrxtransceiver_test.completed;
-            document.getElementById('txrxtransceiver_running').textContent = stats.txrxtransceiver_test.running;
-            document.getElementById('txrxtransceiver_skipped').textContent = stats.txrxtransceiver_test.skipped;
-            document.getElementById('txrxtransceiver_total').textContent = stats.txrxtransceiver_test.total;
-            document.getElementById('itraceroute_completed').textContent = stats.itraceroute_test.completed;
-            document.getElementById('itraceroute_running').textContent = stats.itraceroute_test.running;
-            document.getElementById('itraceroute_skipped').textContent = stats.itraceroute_test.skipped;
-            document.getElementById('itraceroute_total').textContent = stats.itraceroute_test.total;
+        const stats = data.stats;
+
+        // Update existing stats (left column)
+        for (const testType in stats) {
+            const testStats = stats[testType];
+            const prefix = testType.replace('_test', '');
+            document.getElementById(`${prefix}_completed`).textContent = testStats.completed;
+            document.getElementById(`${prefix}_running`).textContent = testStats.running;
+            document.getElementById(`${prefix}_skipped`).textContent = testStats.skipped;
+            document.getElementById(`${prefix}_total`).textContent = testStats.total;
         }
+
+        // Calculate overall stats
+        let overallTotal = 0;
+        let overallCompleted = 0;
+        let overallSkipped = 0;
+
+        for (const testType in stats) {
+            const testStats = stats[testType];
+            overallTotal += testStats.total;
+            overallCompleted += testStats.completed;
+            overallSkipped += testStats.skipped;
+        }
+
+        const overallItemsRemaining = overallTotal - overallCompleted - overallSkipped;
+        const overallPercentageComplete = overallTotal > 0 ? Math.round(((overallCompleted + overallSkipped) / overallTotal) * 100) : 0;
+
+        // Update overall stats (right column)
+        testContainers.innerHTML = ''; // Clear existing content
+        const container = document.createElement('div');
+        container.className = 'counter-container';
+        container.innerHTML = `
+                <div class="tp-label"> </div>
+                <div class="tp-label">Test Queue</div>
+                <div class="tp-counter" id="counter-overall">${runCompletedMessage ? 0 : overallItemsRemaining}</div>
+                <div id="wait-button" class="btn btn-secondary mt-3 tp-wait-button" style="display:${runCompletedMessage ? 'none' : 'block'};" disabled>Please wait</div>
+                <div id="results-button" style="display:${runCompletedMessage ? 'block' : 'none'};">
+                    <a href="{{ url_for('test_results', run_id=test_run.id) }}/pass" class="btn btn-primary mt-3">View Results</a>
+                </div>
+            `;
+        testContainers.appendChild(container);
+
+        // Force counter to 0 if tests are complete
+        if (runCompletedMessage) {
+            const counter = document.getElementById('counter-overall');
+            if (counter) {
+                counter.textContent = '0';
+            }
+        }
+
+        // Update progress bar (if re-enabled)
+        const progressFill = document.getElementById('progress-overall');
+        if (progressFill) {
+            progressFill.style.width = `${overallPercentageComplete}%`;
+        }
+
+        // Add scale animation to counter
+        const counter = document.getElementById('counter-overall');
+        counter.style.transform = 'scale(1.1)';
+        setTimeout(() => counter.style.transform = 'scale(1)', 200);
     });
     }); // End of DOMContentLoaded
 </script>
