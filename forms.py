@@ -115,6 +115,25 @@ class tracerouteTestForm(FlaskForm):
             .all()
         ]
 
+class pingTestForm(FlaskForm):
+    test_device_hostname = SelectField(
+        "Test from Device", choices=[], coerce=int)
+    test_destinationip = StringField("Ping destination IP", validators=[
+                                     DataRequired(), IPAddress()])
+    test_description = StringField("What is the purpose of doing this test")
+
+    submit = SubmitField("Save Test")
+
+    def __init__(self, *args, **kwargs):
+        super(tracerouteTestForm, self).__init__(*args, **kwargs)
+        self.test_device_hostname.choices = [
+        (device.id, device.hostname)
+        for device in Device.query
+            .filter(Device.devicetype.in_(["cisco_ios", "cisco_nxos"]))
+            .order_by(Device.hostname)
+            .all()
+        ]
+
 class txrxtransceiverTestForm(FlaskForm):
     test_device_hostname = SelectField(
         "Test from Device", choices=[], coerce=int)

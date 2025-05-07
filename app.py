@@ -8,8 +8,8 @@ import threading
 import queue
 from queue import Queue
 from extensions import db, cipher
-from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
-from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm
+from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, pingTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
+from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, pingTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
@@ -450,7 +450,7 @@ def create_app():
             }
             tests_with_owner.append(test_data)
         return render_template('showtests_traceroute.html', traceroutetests=tests_with_owner)
-
+    
     # Add Traceroute test
     @app.route('/tests/addtest_traceroute', methods=['GET', 'POST'])
     @login_required
@@ -472,7 +472,7 @@ def create_app():
                     return redirect(url_for('showtests_traceroute'))
                 except Exception as e:
                     db.session.rollback()  # In case of any error, rollback the session
-                    print("Error adding device:", str(e))
+                    print("Error adding traceroute test:", str(e))
                     return jsonify({'message': 'Database error: ' + str(e)}), 500
             # If form validation fails, return specific errors
             error_messages = {field: error for field,
@@ -490,6 +490,66 @@ def create_app():
             test.hidden = True
             db.session.commit()
             return jsonify({'message': 'Traceroute Test removed successfully'})
+        else:
+            return jsonify({'message': 'You did not create this test'})
+
+    # Display all Ping Tests
+    @app.route('/tests/ping', methods=['GET'])
+    @login_required
+    def showtests_ping():
+        pingtests = pingTest.query.filter_by(hidden=False).all()
+        tests_with_owner = []
+        for test in pingtests:
+            test_data = {
+                'id': test.id,
+                'devicehostname': test.devicehostname,
+                'destinationip': test.destinationip,
+                'description': test.description,
+                'created_by': test.created_by,
+                'owner': test.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+                'owner_name': test.created_by.username if test.created_by else 'Unknown'
+            }
+            tests_with_owner.append(test_data)
+        return render_template('showtests_ping.html', pingtests=tests_with_owner)
+
+    # Add Ping test
+    @app.route('/tests/addtest_ping', methods=['GET', 'POST'])
+    @login_required
+    def addtest_ping():
+        form = pingTestForm()
+        if request.method == 'POST':
+            if form.validate_on_submit():
+                try:
+                    # Create a new ping test using the form data
+                    new_test = pingTest(
+                        devicehostname_id=form.test_device_hostname.data,
+                        destinationip=form.test_destinationip.data,
+                        description=form.test_description.data,
+                        created_by_id=current_user.id
+                    )
+                    db.session.add(new_test)
+                    db.session.commit()
+                    return redirect(url_for('showtests_ping'))
+                except Exception as e:
+                    db.session.rollback()  # In case of any error, rollback the session
+                    print("Error adding ping test:", str(e))
+                    return jsonify({'message': 'Database error: ' + str(e)}), 500
+            # If form validation fails, return specific errors
+            error_messages = {field: error for field,
+                              error in form.errors.items()}
+            return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
+        # If GET request, render form
+        return render_template("addtest_ping.html", form=form)
+
+    # Delete Ping Test
+    @app.route('/tests/delete_pingtest/<int:test_id>', methods=['POST'])
+    @login_required
+    def delete_pingtest(test_id):
+        test = pingTest.query.get_or_404(test_id)
+        if test.created_by_id == current_user.id:
+            test.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'Ping Test removed successfully'})
         else:
             return jsonify({'message': 'You did not create this test'})
 
@@ -1268,6 +1328,7 @@ def create_app():
         MODELS = {
             'bgpaspath': bgpaspathTest,
             'traceroute': tracerouteTest,
+            'ping': pingTest,
             'txrxtransceiver': txrxtransceiverTest,
             'itraceroute': itracerouteTest,
             'device' : Device,
