@@ -127,6 +127,62 @@
     </table>
     {% endif %}
 
+    <!-- Ping Tests Table -->
+    {% if ping_results|length > 0 %}
+    <h2>Ping Tests</h2>
+    <table class="table table-striped" id="ping-table">
+        <thead>
+            <tr>
+                <th>Test ID</th>
+                <th>Tested from Device</th>
+                <th>Test Description</th>
+                <th>Source IP</th>
+                <th>Destination IP</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test_instance, result, device, ping_test in ping_results %}
+            <tr class="summary-row" data-toggle-id="ping-{{ test_instance.id }}">
+                <td>{{ ping_test.id }}</td>
+                <td>{{ device.siteinfo or device.hostname }}</td>
+                <td>{{ ping_test.description }}</td>
+                <td>{{ device.lanip }}</td>
+                <td>{{ ping_test.destinationip }}</td>
+                <td>
+                    {% if result and result.passed is not none %}
+                    {% if result.passed %}
+                    <span class="pass">✅</span>
+                    {% else %}
+                    <span class="fail">❌</span>
+                    {% endif %}
+                    {% elif not test_instance.device_active_at_run %}
+                    <span class="text-muted" title="Device inactive at run time">⏸️</span>
+                    {% else %}
+                    <span class="text-warning" title="Connection error">⚠️</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr class="details-row" id="ping-{{ test_instance.id }}" style="display: none;">
+                <td colspan="5">
+                    <strong>Device:</strong> {{ device.hostname }} ({{ device.mgmtip }})<br>
+                    <strong>Status:</strong>
+                    {% if result and result.passed is not none %}
+                    {{ "Passed" if result.passed else "Failed" }}
+                    {% elif not test_instance.device_active_at_run %}
+                    Skipped (Device Inactive at Run Time)
+                    {% else %}
+                    Skipped (Connection Error)
+                    {% endif %}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput if result else "No output" }}</pre>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
     <!-- TxRx SFP Transceiver Tests Table -->
     {% if txrxtransceiver_results|length > 0 %}
     <h2>TxRx SFP Transceiver Tests</h2>

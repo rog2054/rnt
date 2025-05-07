@@ -125,7 +125,7 @@ class pingTestForm(FlaskForm):
     submit = SubmitField("Save Test")
 
     def __init__(self, *args, **kwargs):
-        super(tracerouteTestForm, self).__init__(*args, **kwargs)
+        super(pingTestForm, self).__init__(*args, **kwargs)
         self.test_device_hostname.choices = [
         (device.id, device.hostname)
         for device in Device.query
