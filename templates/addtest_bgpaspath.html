@@ -79,7 +79,7 @@
         $('#deviceForm').submit(function (e) {
             e.preventDefault();
             $.ajax({
-                url: '/devices/add',
+                url: '/tests/addtest_bgpaspath',
                 type: 'POST',
                 data: $(this).serialize(),
                 headers: {
