@@ -203,6 +203,7 @@ def create_app():
                     itraceroute_test_id=test.id
                 )
                 test_instances.append(instance)
+                logger.debug(f"Added test {instance}")
                 
             traceroute_tests = tracerouteTest.query.filter_by(hidden=False).all()
             for test in traceroute_tests:
@@ -213,6 +214,7 @@ def create_app():
                     traceroute_test_id=test.id
                 )
                 test_instances.append(instance)
+                logger.debug(f"Added test {instance}")
                 
             ping_tests = pingTest.query.filter_by(hidden=False).all()
             for test in ping_tests:
@@ -223,6 +225,7 @@ def create_app():
                     traceroute_test_id=test.id
                 )
                 test_instances.append(instance)
+                logger.debug(f"Added test {instance}")
                 
             bgp_tests = bgpaspathTest.query.filter_by(hidden=False).all()
             for test in bgp_tests:
@@ -233,6 +236,7 @@ def create_app():
                     bgpaspath_test_id=test.id
                 )
                 test_instances.append(instance)
+                logger.debug(f"Added test {instance}")
                 
             txrxtransceiver_tests = txrxtransceiverTest.query.filter_by(hidden=False).all()
             for test in txrxtransceiver_tests:
@@ -243,6 +247,7 @@ def create_app():
                     txrxtransceiver_test_id=test.id
                 )
                 test_instances.append(instance)
+                logger.debug(f"Added test {instance}")
 
             db.session.bulk_save_objects(test_instances)
             db.session.commit()
@@ -1574,9 +1579,11 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                 tests = TestInstance.query.filter_by(test_run_id=test_run_id, device_id=device_id).all()
                 for test in tests:
                     netmiko_logger.debug(f"Starting test {test.test_type} for device {device.hostname}")
+                    logger.debug(f"Starting test {test.test_type} for device {device.hostname}")
                     test.status = "running"
                     db.session.commit()
                     log_msg = f"Device {device.hostname}: Running {test.test_type} test ID {test.id}"
+                    logger.debug(f"Device {device.hostname}: Running {test.test_type} test ID {test.id}")
                     with log_lock:
                         log_lines.append(log_msg)
                     socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
@@ -1639,6 +1646,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
 
                         elif test.test_type == "ping_test":
+                            logger.debug(f"test: {test}")
                             ping_test = test.ping_test
                             logger.debug(f"Starting ping_test: {ping_test}")
                             passed = None
