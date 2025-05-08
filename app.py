@@ -1642,7 +1642,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             ping_test = test.ping_test
                             passed = None
                             if device.devicetype == "cisco_ios":
-                                rawoutput = conn.send_command_timing(f"ping {ping_test.destionationip} source {device.lanip} repeat 100")
+                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} repeat 100")
                                 passed = True if "100/100" in rawoutput else False
                             elif device.devicetype == "cisco_nxos":
                                 rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} repeat 100")
@@ -1791,7 +1791,7 @@ def skip_tests_for_device(device_id, test_run_id, reason, log_lines, log_lock):
                     result = tracerouteTestResult(test_instance_id=test.id, rawoutput=reason, passed=None, numberofhops=None)
                     db.session.add(result)
                 elif test.test_type == "ping_test":
-                    result = pingTestResult(test_instance=test.id, rawoutput=reason, passed=None)
+                    result = pingTestResult(test_instance_id=test.id, rawoutput=reason, passed=None)
                     db.session.add(result)
                 elif test.test_type == "txrxtransceiver_test":
                     result = txrxtransceiverTestResult(test_instance_id=test.id, rawoutput=reason, passed=None, sfpinfo=None, txrx=None)
