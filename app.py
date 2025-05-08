@@ -1457,7 +1457,7 @@ def run_tests_in_background(test_run_id):
             logger.debug(f"Queued device ID: {device_id} for run ID: {test_run_id}")
 
         threads = []
-        for _ in range(min(1, len(unique_device_ids))): # set concurrency
+        for _ in range(min(4, len(unique_device_ids))): # set concurrency
             t = Thread(target=worker, args=(device_queue, log_lines, log_lock))
             t.start()
             threads.append(t)
