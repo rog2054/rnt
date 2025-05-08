@@ -203,7 +203,6 @@ def create_app():
                     itraceroute_test_id=test.id
                 )
                 test_instances.append(instance)
-                # logger.debug(f"Added test {instance}")
                 
             traceroute_tests = tracerouteTest.query.filter_by(hidden=False).all()
             for test in traceroute_tests:
@@ -213,12 +212,7 @@ def create_app():
                     test_type="traceroute_test",
                     traceroute_test_id=test.id
                 )
-                
                 test_instances.append(instance)
-                logger.debug(f"Added test with test_run_id={instance.test_run_id}, "
-                 f"device_id={instance.device_id}, "
-                 f"test_type={instance.test_type}, "
-                 f"traceroute_test_id={instance.traceroute_test_id}")
                 
             ping_tests = pingTest.query.filter_by(hidden=False).all()
             for test in ping_tests:
@@ -229,10 +223,6 @@ def create_app():
                     ping_test_id=test.id
                 )
                 test_instances.append(instance)
-                logger.debug(f"Added test with test_run_id={instance.test_run_id}, "
-                 f"device_id={instance.device_id}, "
-                 f"test_type={instance.test_type}, "
-                 f"ping_test_id={instance.ping_test_id}")
                 
             bgp_tests = bgpaspathTest.query.filter_by(hidden=False).all()
             for test in bgp_tests:
@@ -243,7 +233,6 @@ def create_app():
                     bgpaspath_test_id=test.id
                 )
                 test_instances.append(instance)
-                # logger.debug(f"Added test {instance}")
                 
             txrxtransceiver_tests = txrxtransceiverTest.query.filter_by(hidden=False).all()
             for test in txrxtransceiver_tests:
@@ -254,7 +243,6 @@ def create_app():
                     txrxtransceiver_test_id=test.id
                 )
                 test_instances.append(instance)
-                # logger.debug(f"Added test {instance}")
 
             db.session.bulk_save_objects(test_instances)
             db.session.commit()
@@ -1586,11 +1574,9 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                 tests = TestInstance.query.filter_by(test_run_id=test_run_id, device_id=device_id).all()
                 for test in tests:
                     netmiko_logger.debug(f"Starting test {test.test_type} for device {device.hostname}")
-                    logger.debug(f"Starting test {test.test_type} for device {device.hostname}")
                     test.status = "running"
                     db.session.commit()
                     log_msg = f"Device {device.hostname}: Running {test.test_type} test ID {test.id}"
-                    logger.debug(f"Device {device.hostname}: Running {test.test_type} test ID {test.id}")
                     with log_lock:
                         log_lines.append(log_msg)
                     socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
@@ -1653,17 +1639,15 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
 
                         elif test.test_type == "ping_test":
-                            logger.debug(f"test: {test}")
                             ping_test = test.ping_test
-                            logger.debug(f"Starting ping_test: {ping_test}")
                             passed = None
                             if device.devicetype == "cisco_ios":
                                 rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} repeat 100")
-                                logger.debug(f"Rawoutput: {rawoutput}")
                                 passed = True if "100/100" in rawoutput else False
                             elif device.devicetype == "cisco_nxos":
-                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} repeat 100")
-                                passed = True if "100/100" in rawoutput else False # separate line in case nxos format is different
+                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} count 100")
+                                logger.debug(f"ping_test nx_os rawoutput: {rawoutput}")
+                                passed = True if "100 packets transmitted, 100 packets received" in rawoutput else False
                             result = pingTestResult(test_instance_id=test.id, rawoutput=rawoutput, passed=passed)
                             db.session.add(result)
                             if passed is None:
