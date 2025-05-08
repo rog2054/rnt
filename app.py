@@ -743,6 +743,21 @@ def create_app():
             )
             .group_by(TestRun.id)
         )
+        
+        ping_counts = (
+            db.session.query(
+                TestRun.id.label('test_run_id'),
+                func.count(TestInstance.id).label('test_count')
+            )
+            .join(TestInstance, TestRun.id == TestInstance.test_run_id)
+            .join(pingTestResult, TestInstance.id == pingTestResult.test_instance_id)
+            .filter(
+                TestRun.hidden == False,
+                TestInstance.test_type == "ping_test",
+                TestInstance.device_active_at_run == True
+            )
+            .group_by(TestRun.id)
+        )
 
         txrxtransceiver_counts = (
             db.session.query(
@@ -778,6 +793,7 @@ def create_app():
         total_counts_subquery = (
             bgp_counts.union_all(
                 traceroute_counts,
+                ping_counts,
                 txrxtransceiver_counts,
                 itraceroute_counts
             )
