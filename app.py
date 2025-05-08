@@ -203,7 +203,7 @@ def create_app():
                     itraceroute_test_id=test.id
                 )
                 test_instances.append(instance)
-                logger.debug(f"Added test {instance}")
+                # logger.debug(f"Added test {instance}")
                 
             traceroute_tests = tracerouteTest.query.filter_by(hidden=False).all()
             for test in traceroute_tests:
@@ -213,8 +213,12 @@ def create_app():
                     test_type="traceroute_test",
                     traceroute_test_id=test.id
                 )
+                
                 test_instances.append(instance)
-                logger.debug(f"Added test {instance}")
+                logger.debug(f"Added test with test_run_id={instance.test_run_id}, "
+                 f"device_id={instance.device_id}, "
+                 f"test_type={instance.test_type}, "
+                 f"traceroute_test_id={instance.traceroute_test_id}")
                 
             ping_tests = pingTest.query.filter_by(hidden=False).all()
             for test in ping_tests:
@@ -222,10 +226,13 @@ def create_app():
                     test_run_id=test_run.id,
                     device_id=test.devicehostname_id,
                     test_type="ping_test",
-                    traceroute_test_id=test.id
+                    ping_test_id=test.id
                 )
                 test_instances.append(instance)
-                logger.debug(f"Added test {instance}")
+                logger.debug(f"Added test with test_run_id={instance.test_run_id}, "
+                 f"device_id={instance.device_id}, "
+                 f"test_type={instance.test_type}, "
+                 f"ping_test_id={instance.ping_test_id}")
                 
             bgp_tests = bgpaspathTest.query.filter_by(hidden=False).all()
             for test in bgp_tests:
@@ -236,7 +243,7 @@ def create_app():
                     bgpaspath_test_id=test.id
                 )
                 test_instances.append(instance)
-                logger.debug(f"Added test {instance}")
+                # logger.debug(f"Added test {instance}")
                 
             txrxtransceiver_tests = txrxtransceiverTest.query.filter_by(hidden=False).all()
             for test in txrxtransceiver_tests:
@@ -247,7 +254,7 @@ def create_app():
                     txrxtransceiver_test_id=test.id
                 )
                 test_instances.append(instance)
-                logger.debug(f"Added test {instance}")
+                # logger.debug(f"Added test {instance}")
 
             db.session.bulk_save_objects(test_instances)
             db.session.commit()
