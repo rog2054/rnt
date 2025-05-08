@@ -1457,7 +1457,7 @@ def run_tests_in_background(test_run_id):
             logger.debug(f"Queued device ID: {device_id} for run ID: {test_run_id}")
 
         threads = []
-        for _ in range(min(3, len(unique_device_ids))):
+        for _ in range(min(1, len(unique_device_ids))): # set concurrency
             t = Thread(target=worker, args=(device_queue, log_lines, log_lock))
             t.start()
             threads.append(t)
@@ -1640,9 +1640,11 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
 
                         elif test.test_type == "ping_test":
                             ping_test = test.ping_test
+                            logger.debug(f"Starting ping_test: {ping_test}")
                             passed = None
                             if device.devicetype == "cisco_ios":
                                 rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} repeat 100")
+                                logger.debug(f"Rawoutput: {rawoutput}")
                                 passed = True if "100/100" in rawoutput else False
                             elif device.devicetype == "cisco_nxos":
                                 rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} repeat 100")
