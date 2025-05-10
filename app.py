@@ -308,6 +308,7 @@ def create_app():
             'mgmtip': device.mgmtip,
             'siteinfo': device.siteinfo,
             'devicetype': device.devicetype,
+            'active': device.active,
             'username': device.username,
             'created_by': device.created_by_id,
             'owner': device.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
