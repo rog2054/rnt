@@ -8,8 +8,8 @@ import threading
 import queue
 from queue import Queue
 from extensions import db, cipher
-from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
-from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm
+from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, pingTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, pingTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
+from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, pingTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
@@ -169,6 +169,7 @@ def create_app():
         stats = {
             "bgpaspath_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "traceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
+            "ping_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "txrxtransceiver_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "itraceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             }
@@ -210,6 +211,16 @@ def create_app():
                     device_id=test.devicehostname_id,
                     test_type="traceroute_test",
                     traceroute_test_id=test.id
+                )
+                test_instances.append(instance)
+                
+            ping_tests = pingTest.query.filter_by(hidden=False).all()
+            for test in ping_tests:
+                instance = TestInstance(
+                    test_run_id=test_run.id,
+                    device_id=test.devicehostname_id,
+                    test_type="ping_test",
+                    ping_test_id=test.id
                 )
                 test_instances.append(instance)
                 
@@ -297,6 +308,7 @@ def create_app():
             'mgmtip': device.mgmtip,
             'siteinfo': device.siteinfo,
             'devicetype': device.devicetype,
+            'active': device.active,
             'username': device.username,
             'created_by': device.created_by_id,
             'owner': device.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
@@ -450,7 +462,7 @@ def create_app():
             }
             tests_with_owner.append(test_data)
         return render_template('showtests_traceroute.html', traceroutetests=tests_with_owner)
-
+    
     # Add Traceroute test
     @app.route('/tests/addtest_traceroute', methods=['GET', 'POST'])
     @login_required
@@ -472,7 +484,7 @@ def create_app():
                     return redirect(url_for('showtests_traceroute'))
                 except Exception as e:
                     db.session.rollback()  # In case of any error, rollback the session
-                    print("Error adding device:", str(e))
+                    print("Error adding traceroute test:", str(e))
                     return jsonify({'message': 'Database error: ' + str(e)}), 500
             # If form validation fails, return specific errors
             error_messages = {field: error for field,
@@ -490,6 +502,66 @@ def create_app():
             test.hidden = True
             db.session.commit()
             return jsonify({'message': 'Traceroute Test removed successfully'})
+        else:
+            return jsonify({'message': 'You did not create this test'})
+
+    # Display all Ping Tests
+    @app.route('/tests/ping', methods=['GET'])
+    @login_required
+    def showtests_ping():
+        pingtests = pingTest.query.filter_by(hidden=False).all()
+        tests_with_owner = []
+        for test in pingtests:
+            test_data = {
+                'id': test.id,
+                'devicehostname': test.devicehostname,
+                'destinationip': test.destinationip,
+                'description': test.description,
+                'created_by': test.created_by,
+                'owner': test.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+                'owner_name': test.created_by.username if test.created_by else 'Unknown'
+            }
+            tests_with_owner.append(test_data)
+        return render_template('showtests_ping.html', pingtests=tests_with_owner)
+
+    # Add Ping test
+    @app.route('/tests/addtest_ping', methods=['GET', 'POST'])
+    @login_required
+    def addtest_ping():
+        form = pingTestForm()
+        if request.method == 'POST':
+            if form.validate_on_submit():
+                try:
+                    # Create a new ping test using the form data
+                    new_test = pingTest(
+                        devicehostname_id=form.test_device_hostname.data,
+                        destinationip=form.test_destinationip.data,
+                        description=form.test_description.data,
+                        created_by_id=current_user.id
+                    )
+                    db.session.add(new_test)
+                    db.session.commit()
+                    return redirect(url_for('showtests_ping'))
+                except Exception as e:
+                    db.session.rollback()  # In case of any error, rollback the session
+                    print("Error adding ping test:", str(e))
+                    return jsonify({'message': 'Database error: ' + str(e)}), 500
+            # If form validation fails, return specific errors
+            error_messages = {field: error for field,
+                              error in form.errors.items()}
+            return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
+        # If GET request, render form
+        return render_template("addtest_ping.html", form=form)
+
+    # Delete Ping Test
+    @app.route('/tests/delete_pingtest/<int:test_id>', methods=['POST'])
+    @login_required
+    def delete_pingtest(test_id):
+        test = pingTest.query.get_or_404(test_id)
+        if test.created_by_id == current_user.id:
+            test.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'Ping Test removed successfully'})
         else:
             return jsonify({'message': 'You did not create this test'})
 
@@ -672,6 +744,21 @@ def create_app():
             )
             .group_by(TestRun.id)
         )
+        
+        ping_counts = (
+            db.session.query(
+                TestRun.id.label('test_run_id'),
+                func.count(TestInstance.id).label('test_count')
+            )
+            .join(TestInstance, TestRun.id == TestInstance.test_run_id)
+            .join(pingTestResult, TestInstance.id == pingTestResult.test_instance_id)
+            .filter(
+                TestRun.hidden == False,
+                TestInstance.test_type == "ping_test",
+                TestInstance.device_active_at_run == True
+            )
+            .group_by(TestRun.id)
+        )
 
         txrxtransceiver_counts = (
             db.session.query(
@@ -707,6 +794,7 @@ def create_app():
         total_counts_subquery = (
             bgp_counts.union_all(
                 traceroute_counts,
+                ping_counts,
                 txrxtransceiver_counts,
                 itraceroute_counts
             )
@@ -780,6 +868,12 @@ def create_app():
                                 .join(tracerouteTest, TestInstance.traceroute_test_id == tracerouteTest.id)
                                 .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "traceroute_test"))
             
+            ping_base_query = (db.session.query(TestInstance, pingTestResult, Device, pingTest)
+                                .join(pingTestResult, TestInstance.id == pingTestResult.test_instance_id)
+                                .join(Device, TestInstance.device_id == Device.id)
+                                .join(pingTest, TestInstance.ping_test_id == pingTest.id)
+                                .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "ping_test"))
+            
             txrxtransceiver_base_query = (db.session.query(TestInstance, txrxtransceiverTestResult, Device, txrxtransceiverTest)
                                 .join(txrxtransceiverTestResult, TestInstance.id == txrxtransceiverTestResult.test_instance_id)
                                 .join(Device, TestInstance.device_id == Device.id)
@@ -807,6 +901,13 @@ def create_app():
                 'skipped': sum(1 for ti, _, _, _ in traceroute_base_query.filter(TestInstance.device_active_at_run == False).all())
             }
             
+            ping_totals = {
+                'pass': sum(1 for _, r, _, _ in ping_base_query.filter(pingTestResult.passed == True).all()),
+                'fail': sum(1 for _, r, _, _ in ping_base_query.filter(pingTestResult.passed == False).all()),
+                'incomplete': sum(1 for ti, r, _, _ in ping_base_query.filter(pingTestResult.passed == None, TestInstance.device_active_at_run == True).all()),
+                'skipped': sum(1 for ti, _, _, _ in ping_base_query.filter(TestInstance.device_active_at_run == False).all())
+            }
+            
             txrxtransceiver_totals = {
                 'pass': sum(1 for _, r, _, _ in txrxtransceiver_base_query.filter(txrxtransceiverTestResult.passed == True).all()),
                 'fail': sum(1 for _, r, _, _ in txrxtransceiver_base_query.filter(txrxtransceiverTestResult.passed == False).all()),
@@ -822,15 +923,16 @@ def create_app():
             }
 
             totals = {
-                'pass': bgp_totals['pass'] + traceroute_totals['pass'] + txrxtransceiver_totals['pass'] + itraceroute_totals['pass'],
-                'fail': bgp_totals['fail'] + traceroute_totals['fail'] + txrxtransceiver_totals['fail'] + itraceroute_totals['fail'],
-                'incomplete': bgp_totals['incomplete'] + traceroute_totals['incomplete'] + txrxtransceiver_totals['incomplete'] + itraceroute_totals['incomplete'],
-                'skipped': bgp_totals['skipped'] + traceroute_totals['skipped'] + txrxtransceiver_totals['skipped'] + itraceroute_totals['skipped']
+                'pass': bgp_totals['pass'] + traceroute_totals['pass'] + ping_totals['pass'] + txrxtransceiver_totals['pass'] + itraceroute_totals['pass'],
+                'fail': bgp_totals['fail'] + traceroute_totals['fail'] + ping_totals['fail'] + txrxtransceiver_totals['fail'] + itraceroute_totals['fail'],
+                'incomplete': bgp_totals['incomplete'] + traceroute_totals['incomplete'] + ping_totals['incomplete'] + txrxtransceiver_totals['incomplete'] + itraceroute_totals['incomplete'],
+                'skipped': bgp_totals['skipped'] + traceroute_totals['skipped'] + ping_totals['skipped'] + txrxtransceiver_totals['skipped'] + itraceroute_totals['skipped']
             }
 
             # Filtered queries for display
             bgp_query = bgp_base_query
             traceroute_query = traceroute_base_query
+            ping_query = ping_base_query
             txrxtransceiver_query = txrxtransceiver_base_query
             itraceroute_query = itraceroute_base_query
 
@@ -838,26 +940,31 @@ def create_app():
             if filter_type == 'pass':
                 bgp_query = bgp_query.filter(bgpaspathTestResult.passed == True)
                 traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == True)
+                ping_query = ping_query.filter(pingTestResult.passed == True)
                 txrxtransceiver_query = txrxtransceiver_query.filter(txrxtransceiverTestResult.passed == True)
                 itraceroute_query = itraceroute_query.filter(itracerouteTestResult.passed == True)
             elif filter_type == 'fail':
                 bgp_query = bgp_query.filter(bgpaspathTestResult.passed == False)
                 traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == False)
+                ping_query = ping_query.filter(pingTestResult.passed == False)
                 txrxtransceiver_query = txrxtransceiver_query.filter(txrxtransceiverTestResult.passed == False)
                 itraceroute_query = itraceroute_query.filter(itracerouteTestResult.passed == False)
             elif filter_type == 'incomplete':
                 bgp_query = bgp_query.filter(bgpaspathTestResult.passed == None, TestInstance.device_active_at_run == True)
                 traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == None, TestInstance.device_active_at_run == True)
+                ping_query = ping_query.filter(pingTestResult.passed == None, TestInstance.device_active_at_run == True)
                 txrxtransceiver_query = txrxtransceiver_query.filter(txrxtransceiverTestResult.passed == None, TestInstance.device_active_at_run == True)
                 itraceroute_query = itraceroute_query.filter(itracerouteTestResult.passed == None, TestInstance.device_active_at_run == True)
             elif filter_type == 'skipped':
                 bgp_query = bgp_query.filter(TestInstance.device_active_at_run == False)
                 traceroute_query = traceroute_query.filter(TestInstance.device_active_at_run == False)
+                ping_query = ping_query.filter(TestInstance.device_active_at_run == False)
                 txrxtransceiver_query = txrxtransceiver_query.filter(TestInstance.device_active_at_run == False)
                 itraceroute_query = itraceroute_query.filter(TestInstance.device_active_at_run == False)
 
             bgp_results = bgp_query.all()
             traceroute_results = traceroute_query.all()
+            ping_results = ping_query.all()
             txrxtransceiver_results = txrxtransceiver_query.all()
             itraceroute_results = itraceroute_query.all()
 
@@ -879,6 +986,7 @@ def create_app():
                             filter_type=filter_type,
                             bgp_results=bgp_results,
                             traceroute_results=traceroute_results,
+                            ping_results=ping_results,
                             txrxtransceiver_results=txrxtransceiver_results,
                             itraceroute_results=itraceroute_results,
                             run_timestamp=run_timestamp,
@@ -1034,6 +1142,7 @@ def create_app():
 
         bgpaspath_results = get_comparison_data('bgpaspath_test', bgpaspathTest, bgpaspathTestResult)
         traceroute_results = get_comparison_data('traceroute_test', tracerouteTest, tracerouteTestResult)
+        ping_results = get_comparison_data('ping_test', pingTest, pingTestResult)
         txrxtransceiver_results = get_comparison_data('txrxtransceiver_test', txrxtransceiverTest, txrxtransceiverTestResult)
         itraceroute_results = get_comparison_data('itraceroute_test', itracerouteTest, itracerouteTestResult)
         
@@ -1045,6 +1154,7 @@ def create_app():
             test_run_2_start_time_formatted=test_run_2_start_time_formatted,
             bgpaspath_results=bgpaspath_results,
             traceroute_results=traceroute_results,
+            ping_results=ping_results,
             txrxtransceiver_results=txrxtransceiver_results,
             itraceroute_results=itraceroute_results
         )
@@ -1174,6 +1284,7 @@ def create_app():
         
         bgpaspath_results = get_comparison_data('bgpaspath_test', bgpaspathTest, bgpaspathTestResult)
         traceroute_results = get_comparison_data('traceroute_test', tracerouteTest, tracerouteTestResult)
+        ping_results = get_comparison_data('ping_test', pingTest, pingTestResult)
         txrxtransceiver_results = get_comparison_data('txrxtransceiver_test', txrxtransceiverTest, txrxtransceiverTestResult)
         itraceroute_results = get_comparison_data('itraceroute_test', itracerouteTest, itracerouteTestResult)
 
@@ -1185,6 +1296,7 @@ def create_app():
             test_run_2_start_time_formatted=test_run_2_start_time_formatted,
             bgpaspath_results=bgpaspath_results,
             traceroute_results=traceroute_results,
+            ping_results=ping_results,
             txrxtransceiver_results=txrxtransceiver_results,
             itraceroute_results=itraceroute_results
         )
@@ -1268,6 +1380,7 @@ def create_app():
         MODELS = {
             'bgpaspath': bgpaspathTest,
             'traceroute': tracerouteTest,
+            'ping': pingTest,
             'txrxtransceiver': txrxtransceiverTest,
             'itraceroute': itracerouteTest,
             'device' : Device,
@@ -1361,7 +1474,7 @@ def run_tests_in_background(test_run_id):
             logger.debug(f"Queued device ID: {device_id} for run ID: {test_run_id}")
 
         threads = []
-        for _ in range(min(3, len(unique_device_ids))):
+        for _ in range(min(4, len(unique_device_ids))): # set concurrency
             t = Thread(target=worker, args=(device_queue, log_lines, log_lock))
             t.start()
             threads.append(t)
@@ -1389,6 +1502,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
         stats = {
             "bgpaspath_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "traceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
+            "ping_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "txrxtransceiver_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "itraceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
         }
@@ -1448,7 +1562,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
         }
 
         conn_params = {
-            "device_type": DEVICE_TYPE_MAP.get(device.devicetype, "cisco_ios"),  # Fallback to cisco_nxos
+            "device_type": DEVICE_TYPE_MAP.get(device.devicetype, "cisco_ios"),  # Fallback to cisco_ios
             "host": device.mgmtip,
             "username": cred.username,
             "password": cred.get_password(),
@@ -1540,6 +1654,26 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             with log_lock:
                                 log_lines.append(log_msg)
                             socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
+
+                        elif test.test_type == "ping_test":
+                            ping_test = test.ping_test
+                            passed = None
+                            if device.devicetype == "cisco_ios":
+                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} repeat 100")
+                                passed = True if "100/100" in rawoutput else False
+                            elif device.devicetype == "cisco_nxos":
+                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} count 100")
+                                logger.debug(f"ping_test nx_os rawoutput: {rawoutput}")
+                                passed = True if "100 packets transmitted, 100 packets received" in rawoutput else False
+                            result = pingTestResult(test_instance_id=test.id, rawoutput=rawoutput, passed=passed)
+                            db.session.add(result)
+                            if passed is None:
+                                log_msg = f"Device {device.hostname}: Ping test ID {test.id} incomplete - error parsing ping"
+                            else:
+                                log_msg = f"Device {device.hostname}: Ping test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
+                            with log_lock:
+                                log_lines.append(log_msg)
+                            socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})  
 
                         elif test.test_type == "txrxtransceiver_test":
                             txrxtransceiver_test = test.txrxtransceiver_test
@@ -1674,6 +1808,9 @@ def skip_tests_for_device(device_id, test_run_id, reason, log_lines, log_lock):
                 elif test.test_type == "traceroute_test":
                     result = tracerouteTestResult(test_instance_id=test.id, rawoutput=reason, passed=None, numberofhops=None)
                     db.session.add(result)
+                elif test.test_type == "ping_test":
+                    result = pingTestResult(test_instance_id=test.id, rawoutput=reason, passed=None)
+                    db.session.add(result)
                 elif test.test_type == "txrxtransceiver_test":
                     result = txrxtransceiverTestResult(test_instance_id=test.id, rawoutput=reason, passed=None, sfpinfo=None, txrx=None)
                     db.session.add(result)
@@ -1706,6 +1843,13 @@ TEST_TYPE_CONFIG = {
         "default_fields": {
             "rawoutput": lambda e: f"Error: {str(e)}",
             "numberofhops": None,
+            "passed": None
+        }
+    },
+    "ping_test": {
+        "model": pingTestResult,
+        "default_fields": {
+            "rawoutput": lambda e: f"Error: {str(e)}",
             "passed": None
         }
     },

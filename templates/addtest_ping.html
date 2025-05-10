@@ -1,11 +1,14 @@
 {% extends 'base.html' %}
-{% block title %}BGP AS Path Tests{% endblock %}
+{% block title %}Ping Tests{% endblock %}
 {% block head %}
 <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
 {% endblock %}
 {% block content %}
-<h2>Add BGP AS Path Test</h2>
-<form id="bgpASpathTestForm" method="POST">
+<h2>Add Ping Test</h2>
+This test does 100 pings from the Device to the destination IP.<br />
+The LAN IP of the device will be used as the Ping Source address.<br />
+A pass is 100/100 success, any other ping result will be a Fail status.<br />
+<form id="pingTestForm" method="POST">
     {{ form.hidden_tag() }}
 
     <div class="mb-3">
@@ -21,35 +24,11 @@
     </div>
 
     <div class="mb-3">
-        {{ form.test_ipv4prefix.label(class="form-label") }}
-        {{ form.test_ipv4prefix(class="form-control w-25") }}
-        {% if form.test_ipv4prefix.errors %}
+        {{ form.test_destinationip.label(class="form-label") }}
+        {{ form.test_destinationip(class="form-control w-25") }}
+        {% if form.test_destinationip.errors %}
         <div class="text-danger">
-            {% for error in form.test_ipv4prefix.errors %}
-            {{ error }}<br>
-            {% endfor %}
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="mb-3">
-        {{ form.test_checkasinpath.label(class="form-label") }}
-        {{ form.test_checkasinpath(class="form-control w-25") }}
-        {% if form.test_checkasinpath.errors %}
-        <div class="text-danger">
-            {% for error in form.test_checkasinpath.errors %}
-            {{ error }}<br>
-            {% endfor %}
-        </div>
-        {% endif %}
-    </div>
-
-    <div class="mb-3 form-check">
-        {{ form.test_checkaswantresult(class="form-check-input") }}
-        {{ form.test_checkaswantresult.label(class="form-check-label") }}
-        {% if form.test_checkaswantresult.errors %}
-        <div class="text-danger">
-            {% for error in form.test_checkaswantresult.errors %}
+            {% for error in form.test_destinationip.errors %}
             {{ error }}<br>
             {% endfor %}
         </div>
@@ -79,7 +58,7 @@
         $('#deviceForm').submit(function (e) {
             e.preventDefault();
             $.ajax({
-                url: '/tests/addtest_bgpaspath',
+                url: '/tests/addtest_ping',
                 type: 'POST',
                 data: $(this).serialize(),
                 headers: {

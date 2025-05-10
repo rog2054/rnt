@@ -93,6 +93,12 @@ Subsequent visits to the home url will display the login page.
 Once logged in there is a menu option to create additional user logons.
 Users can change their own password (to something private) from within the app.
 
+After the 'admin' initial user, the next user you create is automatically a 'demo' user. Choose whatever username/password you like for this.
+The 'demo' user is intended to be used for demonstrating the utility. Most of its results are only visible when logged in as this 'demo' user (so it doesn't clutter the main test results for everyone else!).
+
+If you don't feel the need for this, just create a demo user and then don't use it :)
+
+Ensure your actual users start with user no 3.
 
 ### Overview of the RNT stages
 
@@ -101,6 +107,7 @@ Users can change their own password (to something private) from within the app.
 3. Add one of more tests in any of the Test Categories that you are interested in:
  - BGP AS-path test
  - Traceroute test
+ - Ping test
  - SFP TxRx transceiver test
  - ACI iTraceroute test
 4. Run the tests
@@ -118,8 +125,8 @@ I may implement some of these improvements at some point however others are welc
 
 With that said here are some future improvements I can think of. These are listed in no particular order.
 
-- [ ] Add other types of test. This project is evolving. It started off as a cli tool with just 1 type of test, and is now a multi-threaded web tool with 4 test types, so i'm sure more will be added as the need arises. If you have any ideas for different tests please drop me a note and we can maybe collaborate on adding that functionality (don't worry if you're not a coder, i also need things like cli output examples to add a new test)
-- [ ] Support for other vendors. This isn't currently a high-priority to me as our environment is mainly Cisco so this app obviously focuses on Cisco initially, however it has been written in a way to allow added tests for other vendors equipment also (basically any that netmiko supports which is a lot of the main vendors) so i'm not against working on this as a lower-priority addition if enough people will benefit from it.
+- [ ] Add other types of test. This project is evolving. It started off as a cli tool with just 1 type of test, and is now a multi-threaded web tool with <s>3</s> <s>4</s> 5 test types, so i'm sure more will be added as the need arises. If you have any ideas for different tests please drop me a note and we can maybe collaborate on adding that functionality (don't worry if you're not a coder, i also need things like cli output examples to add a new test)
+- [ ] Support for other vendors. This isn't currently a high-priority to me as our environment is mainly Cisco so this app obviously focuses on Cisco initially, however it has been written in a way to allow adding tests for other vendors equipment also (basically any that netmiko supports - which is a lot of the main vendors) so i'm not against working on this as a lower-priority addition if enough people will benefit from it.
 
 
 ## 🙏 Acknowledgements

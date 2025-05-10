@@ -13,7 +13,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(120), nullable=False)
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_user_created_by_id'), nullable=True)
     created_by = db.relationship('User', remote_side=[id], backref='created_users')
-    theme = db.Column(db.String(20), nullable=True, default='default')  # default theme
+    theme = db.Column(db.String(20), nullable=True, default='calmblue')  # set a default theme
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -103,6 +103,21 @@ class tracerouteTest(db.Model):
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="traceroute_test")
 
+class pingTest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    devicehostname_id = db.Column(
+        db.Integer,
+        db.ForeignKey('device.id', name='fk_ping_device_hostname'),
+        nullable=True
+    )
+    devicehostname = db.relationship('Device', backref='pingTests')
+    destinationip = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(200))
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_pingtest_created_by_id'), nullable=True)
+    created_by = db.relationship('User', backref='pingtests')
+    hidden = db.Column(db.Boolean, default=False)
+    instances = db.relationship("TestInstance", backref="ping_test")
+
 class txrxtransceiverTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     devicehostname_id = db.Column(
@@ -167,6 +182,7 @@ class TestInstance(db.Model):
         db.Integer, db.ForeignKey("bgpaspath_test.id", name='fk_test_instance_bgpaspath_test'), nullable=True)
     traceroute_test_id = db.Column(
         db.Integer, db.ForeignKey("traceroute_test.id", name='fk_test_instance_traceroute_test'), nullable=True)
+    ping_test_id = db.Column(db.Integer, db.ForeignKey("ping_test.id", name='fk_test_instance_ping_test'), nullable=True)
     txrxtransceiver_test_id = db.Column(db.Integer, db.ForeignKey("txrxtransceiver_test.id", name='fk_test_instance_txrxtransceiver_test'), nullable=True)
     itraceroute_test_id = db.Column(db.Integer, db.ForeignKey("itraceroute_test.id", name='fk_test_instance_itraceroute_test'), nullable=True)
     device_active_at_run = db.Column(db.Boolean, nullable=False, default=True)
@@ -191,10 +207,17 @@ class tracerouteTestResult(db.Model):
         "test_instance.id", name='fk_traceroute_result_test_instance'), nullable=False)
     rawoutput = db.Column(db.Text)  # Traceroute output
     numberofhops = db.Column(db.Integer)
-    # Not sure what determines a pass result for this test? Field for future use.
     passed = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
+class pingTestResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    test_instance_id = db.Column(db.Integer, db.ForeignKey(
+        "test_instance.id", name='fk_ping_result_test_instance'), nullable=False)
+    rawoutput = db.Column(db.Text)  # Ping output
+    passed = db.Column(db.Boolean)  # we will do 100 pings, a Pass is 100/100 in found in the output, if that value isn't found then the result is Fail
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    
 class txrxtransceiverTestResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     test_instance_id = db.Column(db.Integer, db.ForeignKey("test_instance.id", name='fk_txfxtransceiver_result_test_instance'), nullable=False)
