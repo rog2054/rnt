@@ -190,3 +190,4 @@ decrypt-password.py
 *.code-workspace
 codehere.cmd
 /instance/copydbtojagent1.cmd
+notes-to-add-tests.txt
