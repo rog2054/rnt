@@ -58,147 +58,169 @@
     document.addEventListener('DOMContentLoaded', function () {
         const currentRunId = {{ run_id | tojson | safe
     }};
-    const socket = io();
-    const deviceLogs = new Map();
-    let runCompletedMessage = '';
-    const deviceOrder = [];
-    const testContainers = document.getElementById('test-containers');
+    let socket;
 
-    socket.on('connect', function () {
-        console.log('Connected to Socket.IO server');
-        socket.emit('start_tests', { run_id: currentRunId });
-    });
+    // Fetch server configuration to determine WebSocket protocol
+    fetch('/config')
+        .then(response => response.json())
+        .then(config => {
+            const wsProtocol = config.use_ssl ? 'wss://' : 'ws://';
+            const wsUrl = `${wsProtocol}${window.location.host}`;
+            console.log(`Connecting to Socket.IO at ${wsUrl}`);
+            socket = io(wsUrl, {
+                transports: ['websocket', 'polling'], // Prefer WebSocket, fallback to polling
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 5000
+            });
+            initializeSocket();
+        })
+        .catch(error => {
+            console.error('Failed to fetch config, falling back to default:', error);
+            // Fallback to default io() behavior
+            socket = io({
+                transports: ['websocket', 'polling'],
+                reconnection: true,
+                reconnectionAttempts: 5,
+                reconnectionDelay: 5000
+            });
+            initializeSocket();
+        });
 
-    socket.on('connect_error', function (error) {
-        console.error('Socket.IO connection error:', error);
-    });
+    function initializeSocket() {
+        const deviceLogs = new Map();
+        let runCompletedMessage = '';
+        const deviceOrder = [];
+        const testContainers = document.getElementById('test-containers');
 
-    socket.on('status_update', function (data) {
-        console.log('Received status_update:', data);
-        if (data.run_id !== currentRunId) {
-            console.log('Message ignored, run_id mismatch:', data.run_id, '!=', currentRunId);
-            return;
-        }
+        socket.on('connect', function () {
+            console.log('Connected to Socket.IO server');
+            socket.emit('start_tests', { run_id: currentRunId });
+        });
 
-        const log = document.getElementById('status-log');
-        if (!log) {
-            console.error('Status log element not found');
-            return;
-        }
+        socket.on('connect_error', function (error) {
+            console.error('Socket.IO connection error:', error);
+        });
 
-        if (data.level === 'parent' && !data.device_id) {
-            runCompletedMessage = '<div class="parent">' + data.message + '</div>';
-        } else if (data.level === 'parent' && data.device_id) {
-            if (!deviceLogs.has(data.device_id)) {
-                deviceLogs.set(data.device_id, {
-                    parent: '<div class="parent">' + data.message + '</div>',
-                    children: ['<li class="child">...running</li>']
-                });
-                deviceOrder.push(data.device_id);
-            } else {
-                console.warn('Duplicate parent message ignored for device_id:', data.device_id, data.message);
+        socket.on('status_update', function (data) {
+            console.log('Received status_update:', data);
+            if (data.run_id !== currentRunId) {
+                console.log('Message ignored, run_id mismatch:', data.run_id, '!=', currentRunId);
+                return;
             }
-        } else if (data.level === 'child' && data.device_id) {
-            if (!deviceLogs.has(data.device_id)) {
-                deviceLogs.set(data.device_id, {
-                    parent: '<div class="parent">Device ' + data.device_id + ' (pending connection info)</div>',
-                    children: ['<li class="child">...running</li>']
-                });
-                deviceOrder.push(data.device_id);
-            }
-            const deviceLog = deviceLogs.get(data.device_id);
-            const newChildMessage = '<li class="child">' + data.message + '</li>';
 
-            // If the initial "...running" placeholder is still there, replace it
-            if (deviceLog.children.length === 1 && deviceLog.children[0] === '<li class="child">...running</li>') {
-                deviceLog.children = [newChildMessage];
-            } else if (!deviceLog.children.includes(newChildMessage)) {
-                // Add the new message and keep only the latest 2
-                deviceLog.children.push(newChildMessage);
-                if (deviceLog.children.length > 2) {
-                    deviceLog.children.shift(); // Remove the oldest message
+            const log = document.getElementById('status-log');
+            if (!log) {
+                console.error('Status log element not found');
+                return;
+            }
+
+            if (data.level === 'parent' && !data.device_id) {
+                runCompletedMessage = '<div class="parent">' + data.message + '</div>';
+            } else if (data.level === 'parent' && data.device_id) {
+                if (!deviceLogs.has(data.device_id)) {
+                    deviceLogs.set(data.device_id, {
+                        parent: '<div class="parent">' + data.message + '</div>',
+                        children: ['<li class="child">...running</li>']
+                    });
+                    deviceOrder.push(data.device_id);
+                } else {
+                    console.warn('Duplicate parent message ignored for device_id:', data.device_id, data.message);
+                }
+            } else if (data.level === 'child' && data.device_id) {
+                if (!deviceLogs.has(data.device_id)) {
+                    deviceLogs.set(data.device_id, {
+                        parent: '<div class="parent">Device ' + data.device_id + ' (pending connection info)</div>',
+                        children: ['<li class="child">...running</li>']
+                    });
+                    deviceOrder.push(data.device_id);
+                }
+                const deviceLog = deviceLogs.get(data.device_id);
+                const newChildMessage = '<li class="child">' + data.message + '</li>';
+
+                if (deviceLog.children.length === 1 && deviceLog.children[0] === '<li class="child">...running</li>') {
+                    deviceLog.children = [newChildMessage];
+                } else if (!deviceLog.children.includes(newChildMessage)) {
+                    deviceLog.children.push(newChildMessage);
+                    if (deviceLog.children.length > 2) {
+                        deviceLog.children.shift();
+                    }
                 }
             }
-        }
 
-        log.innerHTML = '';
-        deviceOrder.forEach(deviceId => {
-            const deviceLog = deviceLogs.get(deviceId);
-            log.innerHTML += deviceLog.parent;
-            if (deviceLog.children.length > 0) {
-                log.innerHTML += '<ul>' + deviceLog.children.join('') + '</ul>';
+            log.innerHTML = '';
+            deviceOrder.forEach(deviceId => {
+                const deviceLog = deviceLogs.get(deviceId);
+                log.innerHTML += deviceLog.parent;
+                if (deviceLog.children.length > 0) {
+                    log.innerHTML += '<ul>' + deviceLog.children.join('') + '</ul>';
+                }
+            });
+            if (runCompletedMessage) {
+                log.innerHTML += runCompletedMessage;
+                document.getElementById('results-button').style.display = 'block';
+                document.getElementById('wait-button').style.display = 'none';
             }
+            log.scrollTop = log.scrollHeight;
         });
-        if (runCompletedMessage) {
-            log.innerHTML += runCompletedMessage;
-            document.getElementById('results-button').style.display = 'block';
-            document.getElementById('wait-button').style.display = 'none';
-        }
-        log.scrollTop = log.scrollHeight;
-    });
 
-    socket.on('stats_update', function (data) {
-        const stats = data.stats;
+        socket.on('stats_update', function (data) {
+            const stats = data.stats;
 
-        // Update existing stats (left column)
-        for (const testType in stats) {
-            const testStats = stats[testType];
-            const prefix = testType.replace('_test', '');
-            document.getElementById(`${prefix}_completed`).textContent = testStats.completed;
-            document.getElementById(`${prefix}_running`).textContent = testStats.running;
-            document.getElementById(`${prefix}_skipped`).textContent = testStats.skipped;
-            document.getElementById(`${prefix}_total`).textContent = testStats.total;
-        }
-
-        // Calculate overall stats
-        let overallTotal = 0;
-        let overallCompleted = 0;
-        let overallSkipped = 0;
-
-        for (const testType in stats) {
-            const testStats = stats[testType];
-            overallTotal += testStats.total;
-            overallCompleted += testStats.completed;
-            overallSkipped += testStats.skipped;
-        }
-
-        const overallItemsRemaining = overallTotal - overallCompleted - overallSkipped;
-        const overallPercentageComplete = overallTotal > 0 ? Math.round(((overallCompleted + overallSkipped) / overallTotal) * 100) : 0;
-
-        // Update overall stats (right column)
-        testContainers.innerHTML = ''; // Clear existing content
-        const container = document.createElement('div');
-        container.className = 'counter-container';
-        container.innerHTML = `
-                <div class="tp-label"> </div>
-                <div class="tp-label">Test Queue</div>
-                <div class="tp-counter" id="counter-overall">${runCompletedMessage ? 0 : overallItemsRemaining}</div>
-                <div id="wait-button" class="btn btn-secondary mt-3 tp-wait-button" style="display:${runCompletedMessage ? 'none' : 'block'};" disabled>Please wait</div>
-                <div id="results-button" style="display:${runCompletedMessage ? 'block' : 'none'};">
-                    <a href="{{ url_for('test_results', run_id=test_run.id) }}/pass" class="btn btn-primary mt-3">View Results</a>
-                </div>
-            `;
-        testContainers.appendChild(container);
-
-        // Force counter to 0 if tests are complete
-        if (runCompletedMessage) {
-            const counter = document.getElementById('counter-overall');
-            if (counter) {
-                counter.textContent = '0';
+            for (const testType in stats) {
+                const testStats = stats[testType];
+                const prefix = testType.replace('_test', '');
+                document.getElementById(`${prefix}_completed`).textContent = testStats.completed;
+                document.getElementById(`${prefix}_running`).textContent = testStats.running;
+                document.getElementById(`${prefix}_skipped`).textContent = testStats.skipped;
+                document.getElementById(`${prefix}_total`).textContent = testStats.total;
             }
-        }
 
-        // Update progress bar (if re-enabled)
-        const progressFill = document.getElementById('progress-overall');
-        if (progressFill) {
-            progressFill.style.width = `${overallPercentageComplete}%`;
-        }
+            let overallTotal = 0;
+            let overallCompleted = 0;
+            let overallSkipped = 0;
 
-        // Add scale animation to counter
-        const counter = document.getElementById('counter-overall');
-        counter.style.transform = 'scale(1.1)';
-        setTimeout(() => counter.style.transform = 'scale(1)', 200);
-    });
+            for (const testType in stats) {
+                const testStats = stats[testType];
+                overallTotal += testStats.total;
+                overallCompleted += testStats.completed;
+                overallSkipped += testStats.skipped;
+            }
+
+            const overallItemsRemaining = overallTotal - overallCompleted - overallSkipped;
+            const overallPercentageComplete = overallTotal > 0 ? Math.round(((overallCompleted + overallSkipped) / overallTotal) * 100) : 0;
+
+            testContainers.innerHTML = '';
+            const container = document.createElement('div');
+            container.className = 'counter-container';
+            container.innerHTML = `
+                    <div class="tp-label"> </div>
+                    <div class="tp-label">Test Queue</div>
+                    <div class="tp-counter" id="counter-overall">${runCompletedMessage ? 0 : overallItemsRemaining}</div>
+                    <div id="wait-button" class="btn btn-secondary mt-3 tp-wait-button" style="display:${runCompletedMessage ? 'none' : 'block'};" disabled>Please wait</div>
+                    <div id="results-button" style="display:${runCompletedMessage ? 'block' : 'none'};">
+                        <a href="{{ url_for('test_results', run_id=test_run.id) }}/pass" class="btn btn-primary mt-3">View Results</a>
+                    </div>
+                `;
+            testContainers.appendChild(container);
+
+            if (runCompletedMessage) {
+                const counter = document.getElementById('counter-overall');
+                if (counter) {
+                    counter.textContent = '0';
+                }
+            }
+
+            const progressFill = document.getElementById('progress-overall');
+            if (progressFill) {
+                progressFill.style.width = `${overallPercentageComplete}%`;
+            }
+
+            const counter = document.getElementById('counter-overall');
+            counter.style.transform = 'scale(1.1)';
+            setTimeout(() => counter.style.transform = 'scale(1)', 200);
+        });
+    }
     });
 </script>
 {% endblock %}

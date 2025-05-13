@@ -21,6 +21,7 @@ ARG ENCRYPTION_KEY
 # Set it as an environment variable in the image
 ENV ENCRYPTION_KEY=$ENCRYPTION_KEY
 ENV USE_SSL=true
+ENV FLASK_DEBUG=true
 
 # Install dependencies from requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt

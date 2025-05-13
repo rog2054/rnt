@@ -19,6 +19,7 @@ from sqlalchemy import func
 from utils import format_datetime_with_ordinal, set_netmiko_logger, get_netmiko_logger
 from werkzeug.middleware.proxy_fix import ProxyFix
 import os
+import ssl
 
 # Globals
 pending_test_runs = []
@@ -128,6 +129,11 @@ def create_app():
     def logout():
         logout_user()
         return redirect(url_for('login'))
+
+    @app.route('/config')
+    def config():
+        use_ssl = os.getenv('USE_SSL', 'true').lower() == 'true'
+        return {'use_ssl': use_ssl}
 
     @app.route('/create_user', methods=['GET', 'POST'])
     def create_user():
@@ -2320,5 +2326,14 @@ def handle_theme_form(form):
     return None
 
 if __name__ == '__main__':
-    # For local development only
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    use_ssl = os.getenv('USE_SSL', 'true').lower() == 'true'
+    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
+    host = os.getenv('HOST', '0.0.0.0')
+    port = int(os.getenv('PORT', '5000'))
+
+    if use_ssl:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(certfile='certs/cert.pem', keyfile='certs/key.pem')
+        socketio.run(app, host=host, port=port, debug=debug_mode, ssl_context=context)
+    else:
+        socketio.run(app, host=host, port=port, debug=debug_mode)
