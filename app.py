@@ -20,6 +20,7 @@ from utils import format_datetime_with_ordinal, set_netmiko_logger, get_netmiko_
 from werkzeug.middleware.proxy_fix import ProxyFix
 import os
 import ssl
+from flask_cors import CORS
 
 # Globals
 pending_test_runs = []
@@ -32,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 # Define global extensions
-socketio = SocketIO(async_mode='threading')
+socketio = SocketIO(async_mode='threading', cors_allowed_origins="*")
 login_manager = LoginManager()
 
 
@@ -48,6 +49,9 @@ def create_app():
             app.config['VERSION'] = f.read().strip()
     except FileNotFoundError:
         app.config['VERSION'] = 'x'
+    
+    # Initialize CORS for Flask routes
+    CORS(app, resources={r"/*": {"origins": "*"}})
     
     # Initialize extensions
     db.init_app(app)
