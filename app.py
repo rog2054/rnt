@@ -19,6 +19,8 @@ from sqlalchemy import func
 from utils import format_datetime_with_ordinal, set_netmiko_logger, get_netmiko_logger
 from werkzeug.middleware.proxy_fix import ProxyFix
 import os
+import ssl
+from flask_cors import CORS
 
 # Globals
 pending_test_runs = []
@@ -31,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 # Define global extensions
-socketio = SocketIO(async_mode='threading')
+socketio = SocketIO(async_mode='threading', cors_allowed_origins="*")
 login_manager = LoginManager()
 
 
@@ -47,6 +49,9 @@ def create_app():
             app.config['VERSION'] = f.read().strip()
     except FileNotFoundError:
         app.config['VERSION'] = 'x'
+    
+    # Initialize CORS for Flask routes
+    CORS(app, resources={r"/*": {"origins": "*"}})
     
     # Initialize extensions
     db.init_app(app)
@@ -114,7 +119,7 @@ def create_app():
             return redirect(url_for('index'))
         form = LoginForm()
         if form.validate_on_submit():
-            username = form.username.data
+            username = form.username.data.lower()
             password = form.password.data
             user = User.query.filter_by(username=username).first()
             if user and user.check_password(password):
@@ -129,6 +134,11 @@ def create_app():
         logout_user()
         return redirect(url_for('login'))
 
+    @app.route('/config')
+    def config():
+        use_ssl = os.getenv('USE_SSL', 'true').lower() == 'true'
+        return {'use_ssl': use_ssl}
+
     @app.route('/create_user', methods=['GET', 'POST'])
     def create_user():
         user_count = User.query.count()
@@ -139,7 +149,7 @@ def create_app():
             return redirect(url_for('login'))
 
         if form.validate_on_submit():  # Handles POST with CSRF validation
-            username = form.username.data
+            username = form.username.data.lower()
             password = form.password.data
             if User.query.filter_by(username=username).first():
                 flash('Username already exists.')
@@ -1659,12 +1669,12 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             ping_test = test.ping_test
                             passed = None
                             if device.devicetype == "cisco_ios":
-                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} repeat 100")
-                                passed = True if "100/100" in rawoutput else False
+                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} size 1500 repeat 500")
+                                passed = True if "500/500" in rawoutput else False
                             elif device.devicetype == "cisco_nxos":
-                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} count 100")
+                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} count 500")
                                 logger.debug(f"ping_test nx_os rawoutput: {rawoutput}")
-                                passed = True if "100 packets transmitted, 100 packets received" in rawoutput else False
+                                passed = True if "500 packets transmitted, 500 packets received" in rawoutput else False
                             result = pingTestResult(test_instance_id=test.id, rawoutput=rawoutput, passed=passed)
                             db.session.add(result)
                             if passed is None:
@@ -2320,5 +2330,14 @@ def handle_theme_form(form):
     return None
 
 if __name__ == '__main__':
-    # For local development only
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True)
+    use_ssl = os.getenv('USE_SSL', 'true').lower() == 'true'
+    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
+    host = os.getenv('HOST', '0.0.0.0')
+    port = int(os.getenv('PORT', '5000'))
+
+    if use_ssl:
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(certfile='certs/cert.pem', keyfile='certs/key.pem')
+        socketio.run(app, host=host, port=port, debug=debug_mode, ssl_context=context)
+    else:
+        socketio.run(app, host=host, port=port, debug=debug_mode)
