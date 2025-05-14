@@ -1669,12 +1669,12 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             ping_test = test.ping_test
                             passed = None
                             if device.devicetype == "cisco_ios":
-                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} repeat 100")
-                                passed = True if "100/100" in rawoutput else False
+                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} size 1500 repeat 500")
+                                passed = True if "500/500" in rawoutput else False
                             elif device.devicetype == "cisco_nxos":
-                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} count 100")
+                                rawoutput = conn.send_command_timing(f"ping {ping_test.destinationip} source {device.lanip} count 500")
                                 logger.debug(f"ping_test nx_os rawoutput: {rawoutput}")
-                                passed = True if "100 packets transmitted, 100 packets received" in rawoutput else False
+                                passed = True if "500 packets transmitted, 500 packets received" in rawoutput else False
                             result = pingTestResult(test_instance_id=test.id, rawoutput=rawoutput, passed=passed)
                             db.session.add(result)
                             if passed is None:
