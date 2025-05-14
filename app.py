@@ -119,7 +119,7 @@ def create_app():
             return redirect(url_for('index'))
         form = LoginForm()
         if form.validate_on_submit():
-            username = form.username.data
+            username = form.username.data.lower()
             password = form.password.data
             user = User.query.filter_by(username=username).first()
             if user and user.check_password(password):
@@ -149,7 +149,7 @@ def create_app():
             return redirect(url_for('login'))
 
         if form.validate_on_submit():  # Handles POST with CSRF validation
-            username = form.username.data
+            username = form.username.data.lower()
             password = form.password.data
             if User.query.filter_by(username=username).first():
                 flash('Username already exists.')
