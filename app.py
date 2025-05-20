@@ -8,7 +8,7 @@ import threading
 import queue
 from queue import Queue
 from extensions import db, cipher
-from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, pingTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, pingTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
+from models import Device, DeviceCredential, TestGroup, test_group_association, bgpaspathTest, tracerouteTest, pingTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, pingTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
 from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, pingTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
@@ -197,70 +197,54 @@ def create_app():
     @login_required
     def run_tests():
         form = TestRunForm()
+        group_id = request.args.get('group_id', type=int)  # Get group_id from query parameter
+
         if form.validate_on_submit():
-            test_run = TestRun(description=form.description.data, status="pending")  # Start as pending
+            test_run = TestRun(description=form.description.data, status="pending")
             test_run.created_by_id = current_user.id
             db.session.add(test_run)
             db.session.commit()
 
             test_instances = []
-            itraceroute_tests = itracerouteTest.query.filter_by(hidden=False).all()
-            for test in itraceroute_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="itraceroute_test",
-                    itraceroute_test_id=test.id
-                )
-                test_instances.append(instance)
+            test_types = [
+                ('itraceroute_test', itracerouteTest, 'itraceroute_test_id'),
+                ('traceroute_test', tracerouteTest, 'traceroute_test_id'),
+                ('ping_test', pingTest, 'ping_test_id'),
+                ('bgpaspath_test', bgpaspathTest, 'bgpaspath_test_id'),
+                ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_test_id')
+            ]
+
+            for test_type, test_model, test_id_field in test_types:
+                # Base query for non-hidden tests
+                query = test_model.query.filter_by(hidden=False)
                 
-            traceroute_tests = tracerouteTest.query.filter_by(hidden=False).all()
-            for test in traceroute_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="traceroute_test",
-                    traceroute_test_id=test.id
-                )
-                test_instances.append(instance)
+                # If group_id is provided, filter tests by group
+                if group_id:
+                    query = query.join(test_group_association, 
+                                    (test_group_association.c.test_id == test_model.id) &
+                                    (test_group_association.c.test_type == test_type))\
+                                .filter(test_group_association.c.group_id == group_id)
                 
-            ping_tests = pingTest.query.filter_by(hidden=False).all()
-            for test in ping_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="ping_test",
-                    ping_test_id=test.id
-                )
-                test_instances.append(instance)
-                
-            bgp_tests = bgpaspathTest.query.filter_by(hidden=False).all()
-            for test in bgp_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="bgpaspath_test",
-                    bgpaspath_test_id=test.id
-                )
-                test_instances.append(instance)
-                
-            txrxtransceiver_tests = txrxtransceiverTest.query.filter_by(hidden=False).all()
-            for test in txrxtransceiver_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="txrxtransceiver_test",
-                    txrxtransceiver_test_id=test.id
-                )
-                test_instances.append(instance)
+                tests = query.all()
+                for test in tests:
+                    instance = TestInstance(
+                        test_run_id=test_run.id,
+                        device_id=test.devicehostname_id,
+                        test_type=test_type,
+                        **{test_id_field: test.id}
+                    )
+                    test_instances.append(instance)
 
             db.session.bulk_save_objects(test_instances)
             db.session.commit()
 
-            # Queue the test run instead of starting it
+            # Queue the test run
             pending_test_runs.append(test_run.id)
             return redirect(url_for('test_progress', run_id=test_run.id))
-        return render_template('start_test_run.html', form=form)
+        
+        # Pass available groups to the template for the dropdown
+        groups = TestGroup.query.all() if TestGroup else []
+        return render_template('start_test_run.html', form=form, groups=groups)
 
     @app.route('/credentials', methods=['GET', 'POST'])
     @login_required

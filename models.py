@@ -69,7 +69,17 @@ class Device(db.Model):
     tests = db.relationship("TestInstance", backref="device")
     # traceroute 10.174.88.1 source 10.55.33.253 numeric
 
+test_group_association = db.Table(
+    'test_group_association',
+    db.Column('test_id', db.Integer, nullable=False),
+    db.Column('test_type', db.String(50), nullable=False),  # To differentiate test types
+    db.Column('group_id', db.Integer, db.ForeignKey('test_group.id'), nullable=False)
+)
 
+class TestGroup(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    
 class bgpaspathTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     devicehostname_id = db.Column(
@@ -86,7 +96,7 @@ class bgpaspathTest(db.Model):
     created_by = db.relationship('User', backref='bgpaspathtests')
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="bgpaspath_test")
-
+    groups = db.relationship('TestGroup', secondary=test_group_association, backref=db.backref('bgpaspath_tests', lazy='dynamic'))
 
 class tracerouteTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -102,6 +112,7 @@ class tracerouteTest(db.Model):
     created_by = db.relationship('User', backref='traceroutetests')
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="traceroute_test")
+    groups = db.relationship('TestGroup', secondary=test_group_association, backref=db.backref('traceroute_tests', lazy='dynamic'))
 
 class pingTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -117,6 +128,7 @@ class pingTest(db.Model):
     created_by = db.relationship('User', backref='pingtests')
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="ping_test")
+    groups = db.relationship('TestGroup', secondary=test_group_association, backref=db.backref('ping_tests', lazy='dynamic'))
 
 class txrxtransceiverTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -132,6 +144,7 @@ class txrxtransceiverTest(db.Model):
     created_by = db.relationship('User', backref='txrxtransceivertests')
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="txrxtransceiver_test")
+    groups = db.relationship('TestGroup', secondary=test_group_association, backref=db.backref('txrxtransceiver_tests', lazy='dynamic'))
 
 class itracerouteTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -150,6 +163,7 @@ class itracerouteTest(db.Model):
     created_by = db.relationship('User', backref='itraceroutetests')
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="itraceroute_test")
+    groups = db.relationship('TestGroup', secondary=test_group_association, backref=db.backref('itraceroute_tests', lazy='dynamic'))
 
 class TestRun(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -257,3 +271,5 @@ class itracerouteTestResult(db.Model):
     rawoutput = db.Column(db.Text)
     passed = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
