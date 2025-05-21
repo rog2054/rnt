@@ -72,11 +72,13 @@ class Device(db.Model):
 test_group_association = db.Table(
     'test_group_association',
     db.Column('test_id', db.Integer, nullable=False),
-    db.Column('test_type', db.String(50), nullable=False),  # To differentiate test types
-    db.Column('group_id', db.Integer, db.ForeignKey('test_group.id'), nullable=False)
+    db.Column('test_type', db.String(50), nullable=False),
+    db.Column('group_id', db.Integer, db.ForeignKey('test_group.id'), nullable=False),
+    db.UniqueConstraint('test_id', 'test_type', 'group_id', name='uq_test_group')
 )
 
 class TestGroup(db.Model):
+    __tablename__ = 'test_group'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     
@@ -96,7 +98,12 @@ class bgpaspathTest(db.Model):
     created_by = db.relationship('User', backref='bgpaspathtests')
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="bgpaspath_test")
-    groups = db.relationship('TestGroup', secondary=test_group_association, backref=db.backref('bgpaspath_tests', lazy='dynamic'))
+    groups = db.relationship(
+        'TestGroup',
+        secondary=test_group_association,
+        primaryjoin="and_(bgpaspathTest.id == test_group_association.c.test_id, test_group_association.c.test_type == 'bgpaspath_test')",
+        backref=db.backref('bgpaspath_tests', lazy='dynamic')
+    )
 
 class tracerouteTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -112,7 +119,12 @@ class tracerouteTest(db.Model):
     created_by = db.relationship('User', backref='traceroutetests')
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="traceroute_test")
-    groups = db.relationship('TestGroup', secondary=test_group_association, backref=db.backref('traceroute_tests', lazy='dynamic'))
+    groups = db.relationship(
+        'TestGroup',
+        secondary=test_group_association,
+        primaryjoin="and_(tracerouteTest.id == test_group_association.c.test_id, test_group_association.c.test_type == 'traceroute_test')",
+        backref=db.backref('traceroute_tests', lazy='dynamic')
+    )
 
 class pingTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -128,7 +140,12 @@ class pingTest(db.Model):
     created_by = db.relationship('User', backref='pingtests')
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="ping_test")
-    groups = db.relationship('TestGroup', secondary=test_group_association, backref=db.backref('ping_tests', lazy='dynamic'))
+    groups = db.relationship(
+        'TestGroup',
+        secondary=test_group_association,
+        primaryjoin="and_(pingTest.id == test_group_association.c.test_id, test_group_association.c.test_type == 'ping_test')",
+        backref=db.backref('ping_tests', lazy='dynamic')
+    )
 
 class txrxtransceiverTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -144,7 +161,12 @@ class txrxtransceiverTest(db.Model):
     created_by = db.relationship('User', backref='txrxtransceivertests')
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="txrxtransceiver_test")
-    groups = db.relationship('TestGroup', secondary=test_group_association, backref=db.backref('txrxtransceiver_tests', lazy='dynamic'))
+    groups = db.relationship(
+        'TestGroup',
+        secondary=test_group_association,
+        primaryjoin="and_(txrxtransceiverTest.id == test_group_association.c.test_id, test_group_association.c.test_type == 'txrxtransceiver_test')",
+        backref=db.backref('txrxtransceiver_tests', lazy='dynamic')
+    )
 
 class itracerouteTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -163,7 +185,12 @@ class itracerouteTest(db.Model):
     created_by = db.relationship('User', backref='itraceroutetests')
     hidden = db.Column(db.Boolean, default=False)
     instances = db.relationship("TestInstance", backref="itraceroute_test")
-    groups = db.relationship('TestGroup', secondary=test_group_association, backref=db.backref('itraceroute_tests', lazy='dynamic'))
+    groups = db.relationship(
+        'TestGroup',
+        secondary=test_group_association,
+        primaryjoin="and_(itracerouteTest.id == test_group_association.c.test_id, test_group_association.c.test_type == 'itraceroute_test')",
+        backref=db.backref('itraceroute_tests', lazy='dynamic')
+    )
 
 class TestRun(db.Model):
     id = db.Column(db.Integer, primary_key=True)
