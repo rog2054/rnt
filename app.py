@@ -785,7 +785,7 @@ def create_app():
                     'id': test.id,
                     'type': test_type,
                     'name': test_name,
-                    'device_hostname': test.device.hostname
+                    'device_hostname': test.devicehostname
                 })
 
         # Fetch tests in the selected group
@@ -799,7 +799,7 @@ def create_app():
                         'id': test.id,
                         'type': test_type,
                         'name': test_name,
-                        'device_hostname': test.device.hostname
+                        'device_hostname': test.devicehostname
                     })
 
         # Remove group tests from available tests to avoid duplication
