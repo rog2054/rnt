@@ -1,0 +1,245 @@
+{% extends 'base.html' %}
+{% block title %}Manage Test Groups{% endblock %}
+{% block head %}
+{{ super() }} <!-- Include any existing head content from base.html -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
+<style>
+    .container {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+    }
+
+    .box {
+        width: 40%;
+        border: 1px solid #ccc;
+        padding: 10px;
+        height: 400px;
+        overflow-y: auto;
+        background: #f9f9f9;
+    }
+
+    .controls {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 10%;
+    }
+
+    .test-item {
+        margin: 5px 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .test-item.bold {
+        font-weight: bold;
+    }
+
+    .quick-select {
+        margin-bottom: 15px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .quick-select form {
+        display: inline-block;
+    }
+
+    .quick-select button {
+        margin-right: 5px;
+    }
+
+    .select2-container {
+        width: 200px !important;
+    }
+
+    .flash-messages {
+        margin-bottom: 15px;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<h1>Manage Test Groups</h1>
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="flash-messages">
+    {% for category, message in messages %}
+    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<!-- Group Selection and Creation -->
+<div class="mb-3">
+    <form method="GET" action="{{ url_for('tests.manage_test_groups') }}">
+        <label for="group_id" class="form-label">Select Group:</label>
+        <select name="group_id" id="group_id" class="form-select">
+            <option value="">-- Select a Group --</option>
+            {% for group in groups %}
+            <option value="{{ group.id }}" {% if selected_group and selected_group.id==group.id %}selected{% endif %}>
+                {{ group.name }}
+            </option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+<form method="POST"
+    action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None, filter=filter_type, device_id=selected_device_id) }}">
+    <input type="hidden" name="action" value="create_group">
+    <div class="mb-3">
+        <label for="group_name" class="form-label">Create New Group:</label>
+        <input type="text" name="group_name" id="group_name" class="form-control" placeholder="Enter group name">
+    </div>
+    <button type="submit" class="btn btn-primary">Create Group</button>
+</form>
+{% if selected_group %}
+<form method="POST"
+    action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id, filter=filter_type, device_id=selected_device_id) }}">
+    <input type="hidden" name="action" value="update_group">
+    <div class="mb-3">
+        <label for="group_name" class="form-label">Edit Group Name:</label>
+        <input type="text" name="group_name" id="group_name" class="form-control" value="{{ selected_group.name }}">
+    </div>
+    <button type="submit" class="btn btn-primary">Update Group</button>
+</form>
+{% endif %}
+
+<!-- Quick-Select Filters -->
+<div class="quick-select">
+    <form method="GET"
+        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        <button type="submit" name="filter" value="created_by_me" class="btn btn-secondary">All Tests Created by
+            Me</button>
+    </form>
+    <form method="GET"
+        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        <button type="submit" name="filter" value="bgpaspath_test" class="btn btn-secondary">All BGP AS Path
+            Tests</button>
+    </form>
+    <form method="GET"
+        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        <button type="submit" name="filter" value="itraceroute_test" class="btn btn-secondary">All iTraceroute
+            Tests</button>
+    </form>
+    <form method="GET"
+        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        <button type="submit" name="filter" value="traceroute_test" class="btn btn-secondary">All Traceroute
+            Tests</button>
+    </form>
+    <form method="GET"
+        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        <button type="submit" name="filter" value="ping_test" class="btn btn-secondary">All Ping Tests</button>
+    </form>
+    <form method="GET"
+        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        <button type="submit" name="filter" value="txrxtransceiver_test" class="btn btn-secondary">All TxRx Transceiver
+            Tests</button>
+    </form>
+    <form method="GET"
+        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        <label for="device_id" class="form-label">All Tests for Device:</label>
+        <select name="device_id" id="device_id" class="form-select">
+            <option value="">-- Select Device --</option>
+            {% for device in devices %}
+            <option value="{{ device.id }}" {% if selected_device_id==device.id %}selected{% endif %}>
+                {{ device.hostname }}
+            </option>
+            {% endfor %}
+        </select>
+        <input type="hidden" name="filter" value="device_tests">
+    </form>
+    <form method="GET"
+        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        <button type="submit" class="btn btn-secondary">Clear Filter</button>
+    </form>
+</div>
+
+<!-- Test Management -->
+{% if selected_group %}
+<div class="container">
+    <!-- Available Tests (Left Box) -->
+    <div class="box" id="available_tests_box">
+        <h3>Available Tests</h3>
+        <button type="button" class="btn btn-outline-secondary mb-2"
+            onclick="selectAllTests('available_tests_box')">Select All</button>
+        <button type="button" class="btn btn-outline-secondary mb-2"
+            onclick="deselectAllTests('available_tests_box')">Deselect All</button>
+        <form method="POST"
+            action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id, filter=filter_type, device_id=selected_device_id) }}">
+            <input type="hidden" name="action" value="add_tests">
+            {% for test in available_tests %}
+            <div class="test-item">
+                <input type="checkbox" name="selected_tests" value="{{ test.id }}:{{ test.type }}">
+                {{ test.name }} ({{ test.device_hostname }} - {{ test.type }})
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary mt-2">></button>
+        </form>
+    </div>
+
+    <!-- Controls (Move Buttons) -->
+    <div class="controls">
+        <!-- Buttons are part of the forms -->
+    </div>
+
+    <!-- Group Tests (Right Box) -->
+    <div class="box" id="group_tests_box">
+        <h3>Tests in {{ selected_group.name }}</h3>
+        <button type="button" class="btn btn-outline-secondary mb-2" onclick="selectAllTests('group_tests_box')">Select
+            All</button>
+        <button type="button" class="btn btn-outline-secondary mb-2"
+            onclick="deselectAllTests('group_tests_box')">Deselect All</button>
+        <form method="POST"
+            action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id, filter=filter_type, device_id=selected_device_id) }}">
+            <input type="hidden" name="action" value="remove_tests">
+            {% for test in group_tests %}
+            <div
+                class="test-item {{ 'bold' if test.id|string + ':' + test.type in request.form.getlist('selected_tests') }}">
+                <input type="checkbox" name="group_tests" value="{{ test.id }}:{{ test.type }}">
+                {{ test.name }} ({{ test.device_hostname }} - {{ test.type }})
+            </div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary mt-2">
+                << /button>
+        </form>
+    </div>
+</div>
+{% else %}
+<p>Please select or create a group to manage tests.</p>
+{% endif %}
+{% endblock %}
+{% block scripts %}
+{{ super() }} <!-- Include any existing scripts from base.html -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#group_id').select2({ placeholder: "-- Select a Group --", allowClear: true });
+        $('#device_id').select2({ placeholder: "-- Select Device --", allowClear: true });
+        $('#group_id').on('change', function () {
+            $(this).closest('form').submit();
+        });
+        $('#device_id').on('change', function () {
+            $(this).closest('form').submit();
+        });
+    });
+
+    function selectAllTests(boxId) {
+        const checkboxes = document.querySelectorAll(`#${boxId} input[type='checkbox']`);
+        checkboxes.forEach(checkbox => checkbox.checked = true);
+    }
+    function deselectAllTests(boxId) {
+        const checkboxes = document.querySelectorAll(`#${boxId} input[type='checkbox']`);
+        checkboxes.forEach(checkbox => checkbox.checked = false);
+    }
+</script>
+{% endblock %}
