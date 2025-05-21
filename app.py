@@ -224,7 +224,6 @@ def create_app():
                                     (test_group_association.c.test_id == test_model.id) &
                                     (test_group_association.c.test_type == test_type))\
                                 .filter(test_group_association.c.group_id == group_id)
-                
                 tests = query.all()
                 for test in tests:
                     instance = TestInstance(
