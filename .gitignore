@@ -191,3 +191,4 @@ decrypt-password.py
 codehere.cmd
 /instance/copydbtojagent1.cmd
 notes-to-add-tests.txt
+certs/
