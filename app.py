@@ -15,7 +15,7 @@ from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticati
 import logging
 import re
 from datetime import datetime, timezone
-from sqlalchemy import func
+from sqlalchemy import func, and_
 from utils import format_datetime_with_ordinal, set_netmiko_logger, get_netmiko_logger
 from werkzeug.middleware.proxy_fix import ProxyFix
 import os
@@ -684,6 +684,138 @@ def create_app():
             return jsonify({'message': 'ACI itraceroute test removed successfully'})
         else:
             return jsonify({'message': 'You did not create this test'})
+
+    @app.route('/tests/manage_groups', methods=['GET', 'POST'])
+    @login_required
+    def manage_test_groups():
+        # Get query parameters for group selection and filters
+        group_id = request.args.get('group_id', type=int)
+        filter_type = request.args.get('filter', default=None)
+        device_id = request.args.get('device_id', type=int)  # New: Device ID for filtering
+
+        # Fetch all groups and devices for dropdowns
+        groups = TestGroup.query.order_by(TestGroup.name).all()
+        devices = Device.query.order_by(Device.hostname).all()  # Fetch devices for dropdown
+
+        # If a group is selected, fetch it; otherwise, prepare for creating a new group
+        selected_group = TestGroup.query.get(group_id) if group_id else None
+
+        # Handle form submissions
+        if request.method == 'POST':
+            action = request.form.get('action')
+            
+            if action == 'create_group':
+                group_name = request.form.get('group_name')
+                if group_name:
+                    new_group = TestGroup(name=group_name)
+                    db.session.add(new_group)
+                    db.session.commit()
+                    flash('Group created successfully!', 'success')
+                    return redirect(url_for('tests.manage_test_groups', group_id=new_group.id))
+                else:
+                    flash('Group name is required.', 'error')
+
+            elif action == 'update_group' and selected_group:
+                group_name = request.form.get('group_name')
+                if group_name:
+                    selected_group.name = group_name
+                    db.session.commit()
+                    flash('Group updated successfully!', 'success')
+                else:
+                    flash('Group name is required.', 'error')
+
+            elif action == 'add_tests' and selected_group:
+                selected_test_ids = request.form.getlist('selected_tests')
+                for test_id_type in selected_test_ids:
+                    test_id, test_type = test_id_type.split(':')
+                    test_id = int(test_id)
+                    exists = db.session.query(test_group_association).filter_by(
+                        test_id=test_id, test_type=test_type, group_id=selected_group.id
+                    ).first()
+                    if not exists:
+                        db.session.execute(
+                            test_group_association.insert().values(
+                                test_id=test_id, test_type=test_type, group_id=selected_group.id
+                            )
+                        )
+                db.session.commit()
+                flash('Tests added to group.', 'success')
+
+            elif action == 'remove_tests' and selected_group:
+                selected_test_ids = request.form.getlist('group_tests')
+                for test_id_type in selected_test_ids:
+                    test_id, test_type = test_id_type.split(':')
+                    test_id = int(test_id)
+                    db.session.execute(
+                        test_group_association.delete().where(
+                            and_(
+                                test_group_association.c.test_id == test_id,
+                                test_group_association.c.test_type == test_type,
+                                test_group_association.c.group_id == selected_group.id
+                            )
+                        )
+                    )
+                db.session.commit()
+                flash('Tests removed from group.', 'success')
+
+            return redirect(url_for('tests.manage_test_groups', group_id=group_id, filter=filter_type, device_id=device_id))
+
+        # Fetch all non-hidden tests, optionally filtered
+        test_types = [
+            ('bgpaspath_test', bgpaspathTest, 'bgpaspath_tests'),
+            ('itraceroute_test', itracerouteTest, 'itraceroute_tests'),
+            ('traceroute_test', tracerouteTest, 'traceroute_tests'),
+            ('ping_test', pingTest, 'ping_tests'),
+            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_tests')
+        ]
+
+        available_tests = []
+        for test_type, test_model, _ in test_types:
+            query = test_model.query.filter_by(hidden=False)
+            if filter_type == 'created_by_me':
+                query = query.filter_by(created_by_id=current_user.id)
+            elif filter_type == 'device_tests' and device_id:
+                query = query.filter_by(devicehostname_id=device_id)
+            elif filter_type and filter_type != test_type:
+                continue  # Skip other test types if a specific type is filtered
+            tests = query.join(Device, test_model.devicehostname_id == Device.id).all()
+            for test in tests:
+                test_name = getattr(test, 'name', f'Test {test.id}')  # Adjust if you have a name field
+                available_tests.append({
+                    'id': test.id,
+                    'type': test_type,
+                    'name': test_name,
+                    'device_hostname': test.device.hostname
+                })
+
+        # Fetch tests in the selected group
+        group_tests = []
+        if selected_group:
+            for test_type, _, backref_name in test_types:
+                tests = getattr(selected_group, backref_name).all()
+                for test in tests:
+                    test_name = getattr(test, 'name', f'Test {test.id}')
+                    group_tests.append({
+                        'id': test.id,
+                        'type': test_type,
+                        'name': test_name,
+                        'device_hostname': test.device.hostname
+                    })
+
+        # Remove group tests from available tests to avoid duplication
+        group_test_keys = {(t['id'], t['type']) for t in group_tests}
+        available_tests = [t for t in available_tests if (t['id'], t['type']) not in group_test_keys]
+
+        return render_template(
+            'manage_test_groups.html',
+            groups=groups,
+            devices=devices,  # Pass devices for dropdown
+            selected_group=selected_group,
+            available_tests=available_tests,
+            group_tests=group_tests,
+            filter_type=filter_type,
+            selected_device_id=device_id
+        )
 
     @app.route('/test_results', defaults={'user_id': None})
     @app.route('/test_results/<int:user_id>')
