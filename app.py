@@ -711,7 +711,7 @@ def create_app():
                     db.session.add(new_group)
                     db.session.commit()
                     flash('Group created successfully!', 'success')
-                    return redirect(url_for('tests.manage_test_groups', group_id=new_group.id))
+                    return redirect(url_for('manage_test_groups', group_id=new_group.id))
                 else:
                     flash('Group name is required.', 'error')
 
@@ -758,7 +758,7 @@ def create_app():
                 db.session.commit()
                 flash('Tests removed from group.', 'success')
 
-            return redirect(url_for('tests.manage_test_groups', group_id=group_id, filter=filter_type, device_id=device_id))
+            return redirect(url_for('manage_test_groups', group_id=group_id, filter=filter_type, device_id=device_id))
 
         # Fetch all non-hidden tests, optionally filtered
         test_types = [

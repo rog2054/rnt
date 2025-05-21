@@ -80,7 +80,7 @@
 
 <!-- Group Selection and Creation -->
 <div class="mb-3">
-    <form method="GET" action="{{ url_for('tests.manage_test_groups') }}">
+    <form method="GET" action="{{ url_for('manage_test_groups') }}">
         <label for="group_id" class="form-label">Select Group:</label>
         <select name="group_id" id="group_id" class="form-select">
             <option value="">-- Select a Group --</option>
@@ -93,7 +93,7 @@
     </form>
 </div>
 <form method="POST"
-    action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None, filter=filter_type, device_id=selected_device_id) }}">
+    action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None, filter=filter_type, device_id=selected_device_id) }}">
     <input type="hidden" name="action" value="create_group">
     <div class="mb-3">
         <label for="group_name" class="form-label">Create New Group:</label>
@@ -103,7 +103,7 @@
 </form>
 {% if selected_group %}
 <form method="POST"
-    action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id, filter=filter_type, device_id=selected_device_id) }}">
+    action="{{ url_for('manage_test_groups', group_id=selected_group.id, filter=filter_type, device_id=selected_device_id) }}">
     <input type="hidden" name="action" value="update_group">
     <div class="mb-3">
         <label for="group_name" class="form-label">Edit Group Name:</label>
@@ -116,36 +116,36 @@
 <!-- Quick-Select Filters -->
 <div class="quick-select">
     <form method="GET"
-        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
         <button type="submit" name="filter" value="created_by_me" class="btn btn-secondary">All Tests Created by
             Me</button>
     </form>
     <form method="GET"
-        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
         <button type="submit" name="filter" value="bgpaspath_test" class="btn btn-secondary">All BGP AS Path
             Tests</button>
     </form>
     <form method="GET"
-        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
         <button type="submit" name="filter" value="itraceroute_test" class="btn btn-secondary">All iTraceroute
             Tests</button>
     </form>
     <form method="GET"
-        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
         <button type="submit" name="filter" value="traceroute_test" class="btn btn-secondary">All Traceroute
             Tests</button>
     </form>
     <form method="GET"
-        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
         <button type="submit" name="filter" value="ping_test" class="btn btn-secondary">All Ping Tests</button>
     </form>
     <form method="GET"
-        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
         <button type="submit" name="filter" value="txrxtransceiver_test" class="btn btn-secondary">All TxRx Transceiver
             Tests</button>
     </form>
     <form method="GET"
-        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
         <label for="device_id" class="form-label">All Tests for Device:</label>
         <select name="device_id" id="device_id" class="form-select">
             <option value="">-- Select Device --</option>
@@ -158,7 +158,7 @@
         <input type="hidden" name="filter" value="device_tests">
     </form>
     <form method="GET"
-        action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
         <button type="submit" class="btn btn-secondary">Clear Filter</button>
     </form>
 </div>
@@ -174,7 +174,7 @@
         <button type="button" class="btn btn-outline-secondary mb-2"
             onclick="deselectAllTests('available_tests_box')">Deselect All</button>
         <form method="POST"
-            action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id, filter=filter_type, device_id=selected_device_id) }}">
+            action="{{ url_for('manage_test_groups', group_id=selected_group.id, filter=filter_type, device_id=selected_device_id) }}">
             <input type="hidden" name="action" value="add_tests">
             {% for test in available_tests %}
             <div class="test-item">
@@ -199,7 +199,7 @@
         <button type="button" class="btn btn-outline-secondary mb-2"
             onclick="deselectAllTests('group_tests_box')">Deselect All</button>
         <form method="POST"
-            action="{{ url_for('tests.manage_test_groups', group_id=selected_group.id, filter=filter_type, device_id=selected_device_id) }}">
+            action="{{ url_for('manage_test_groups', group_id=selected_group.id, filter=filter_type, device_id=selected_device_id) }}">
             <input type="hidden" name="action" value="remove_tests">
             {% for test in group_tests %}
             <div
