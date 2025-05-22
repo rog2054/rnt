@@ -64,6 +64,19 @@
                 </ul>
             </li>
             <li class="sb-nav-item">
+                <a href="{{ url_for('manage_test_groups') }}" class="sb-nav-link">
+                    <span class="material-symbols-rounded">category</span>
+                    <span class="sb-nav-label">Manage Test Groups</span>
+                </a>
+                <ul class="sb-dropdown-menu">
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('manage_test_groups') }}" class="sb-nav-link">
+                            <span class="sb-dropdown-title">Manage Test Groups</a>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+            <li class="sb-nav-item">
                 <a href="{{ url_for('run_tests') }}" class="sb-nav-link">
                     <span class="material-symbols-rounded">play_circle</span>
                     <span class="sb-nav-label">Run Tests</span>
