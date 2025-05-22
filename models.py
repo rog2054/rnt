@@ -81,6 +81,7 @@ class TestGroup(db.Model):
     __tablename__ = 'test_group'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_testgroup_created_by_id'), nullable=False)
     
 class bgpaspathTest(db.Model):
     id = db.Column(db.Integer, primary_key=True)
