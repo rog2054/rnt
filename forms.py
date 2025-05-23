@@ -179,7 +179,7 @@ class itracerouteTestForm(FlaskForm):
         ]
 
 class TestRunForm(FlaskForm):
-    description = StringField('Test Run Description', validators=[DataRequired()], render_kw={"placeholder": "e.g., Tests before changes"})
+    description = StringField('Test Run Description (required)', validators=[DataRequired()], render_kw={"placeholder": "e.g., Tests before changes"})
     group = SelectField('Test Group', coerce=int, validate_choice=False)  # No validators; validation handled in route
     submit = SubmitField('Run Tests')
 
