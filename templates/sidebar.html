@@ -76,16 +76,28 @@
                     </li>
                 </ul>
             </li>
-            <li class="sb-nav-item">
-                <a href="{{ url_for('run_tests') }}" class="sb-nav-link">
+            <li class="sb-nav-item sb-dropdown-container">
+                <a href="{{ url_for('run_tests') }}" class="sb-nav-link sb-dropdown-toggle">
                     <span class="material-symbols-rounded">play_circle</span>
                     <span class="sb-nav-label">Run Tests</span>
+                    <span class="sb-dropdown-icon material-symbols-rounded">keyboard_arrow_down</span>
                 </a>
+                <!-- Dropdown Menu -->
                 <ul class="sb-dropdown-menu">
                     <li class="sb-nav-item">
-                        <a href="{{ url_for('run_tests') }}" class="sb-nav-link">
-                            <span class="sb-dropdown-title">Run Tests</a>
-                        </a>
+                        <a class="sb-nav-link sb-dropdown-title">Run Tests</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('run_tests', mode='all') }}" class="sb-nav-link sb-dropdown-link">ALL
+                            Tests</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('run_tests', mode='my') }}" class="sb-nav-link sb-dropdown-link">My
+                            Tests</a>
+                    </li>
+                    <li class="sb-nav-item">
+                        <a href="{{ url_for('run_tests', mode='group') }}" class="sb-nav-link sb-dropdown-link">A
+                            Group of Tests</a>
                     </li>
                 </ul>
             </li>
