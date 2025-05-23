@@ -153,16 +153,29 @@
 
 
 <!-- Group Selection and Forms -->
-<div class="mb-3">
-    <form method="GET" action="{{ url_for('manage_test_groups') }}">
-        <label for="group_id" class="form-label">Select Group:</label>
+<div class="group-select mb-3">
+    <form method="POST"
+        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <label for="group_id" class="form-label">Test Group:</label>
         <select name="group_id" id="group_id" class="form-select">
             <option value="">-- Select a Group --</option>
-            {% for group in groups %}
-            <option value="{{ group.id }}" {% if selected_group and selected_group.id==group.id %}selected{% endif %}>
-                {{ group.name }}
-            </option>
-            {% endfor %}
+            <optgroup label="My Test Groups">
+                {% for group in groups if group.created_by_id == current_user.id %}
+                <option value="{{ group.id }}" {% if selected_group and selected_group.id==group.id %}selected{% endif
+                    %}>
+                    {{ group.name }}
+                </option>
+                {% endfor %}
+            </optgroup>
+            <optgroup label="Other Test Groups">
+                {% for group in groups if group.created_by_id != current_user.id %}
+                <option value="{{ group.id }}" {% if selected_group and selected_group.id==group.id %}selected{% endif
+                    %}>
+                    {{ group.name }}
+                </option>
+                {% endfor %}
+            </optgroup>
         </select>
     </form>
 </div>
