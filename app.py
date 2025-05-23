@@ -825,6 +825,10 @@ def create_app():
                                 )
                     db.session.commit()
                     flash(f'Filtered tests added to {selected_group.name}.', 'success')
+                    logger.info(f'Filtered tests added to {selected_group.name}')
+                    # Reset selected_device_id for device_tests
+                    if filter_type == 'device_tests':
+                        device_id = None
 
             # Re-render on error
             if 'create_group' in request.form or 'update_group' in request.form or selected_group and selected_group.created_by_id != current_user.id:
