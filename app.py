@@ -64,7 +64,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
 
     # Configure Netmiko logger
     netmiko_logger = logging.getLogger("netmiko")
@@ -198,53 +198,119 @@ def create_app():
     @login_required
     def run_tests():
         form = TestRunForm()
-        group_id = request.args.get('group_id', type=int)  # Get group_id from query parameter
+        mode = request.args.get('mode', 'all')  # Default to 'all'
+        group_id = request.args.get('group_id', type=int)  # Optional group_id for pre-selection
 
-        if form.validate_on_submit():
-            test_run = TestRun(description=form.description.data, status="pending")
-            test_run.created_by_id = current_user.id
-            db.session.add(test_run)
-            db.session.commit()
+        # Initialize variables
+        group_choices = None
+        test_count = 0
+        test_types = [
+            ('itraceroute_test', itracerouteTest, 'itraceroute_test_id'),
+            ('traceroute_test', tracerouteTest, 'traceroute_test_id'),
+            ('ping_test', pingTest, 'ping_test_id'),
+            ('bgpaspath_test', bgpaspathTest, 'bgpaspath_test_id'),
+            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_test_id')
+        ]
 
-            test_instances = []
-            test_types = [
-                ('itraceroute_test', itracerouteTest, 'itraceroute_test_id'),
-                ('traceroute_test', tracerouteTest, 'traceroute_test_id'),
-                ('ping_test', pingTest, 'ping_test_id'),
-                ('bgpaspath_test', bgpaspathTest, 'bgpaspath_test_id'),
-                ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_test_id')
-            ]
+        # Calculate test count based on mode
+        if mode == 'all':
+            test_count = sum(
+                test_model.query.filter_by(hidden=False).count()
+                for _, test_model, _ in test_types
+            )
+        elif mode == 'my':
+            test_count = sum(
+                test_model.query.filter_by(created_by_id=current_user.id, hidden=False).count()
+                for _, test_model, _ in test_types
+            )
+        elif mode == 'group':
+            group_choices = [(0, 'My Tests', f'{test_count} tests (test group owner {current_user.username})')]
+            groups = TestGroup.query.all()
+            for group in groups:
+                count = 0
+                for test_type, test_model, _ in test_types:
+                    count += db.session.query(func.count(test_group_association.c.test_id))\
+                        .filter(test_group_association.c.group_id == group.id,
+                                test_group_association.c.test_type == test_type,
+                                test_model.id == test_group_association.c.test_id,
+                                test_model.hidden == False).scalar() or 0
+                ''' owner = User.query.get(group.created_by_id) '''
+                owner = db.session.get(User, group.created_by_id)
+                owner_name = owner.username if owner else 'Unknown'
+                group_choices.append((group.id, group.name, f'{count} tests (test group owner {owner_name})'))
 
-            for test_type, test_model, test_id_field in test_types:
-                # Base query for non-hidden tests
-                query = test_model.query.filter_by(hidden=False)
-                
-                # If group_id is provided, filter tests by group
-                if group_id:
-                    query = query.join(test_group_association, 
-                                    (test_group_association.c.test_id == test_model.id) &
-                                    (test_group_association.c.test_type == test_type))\
-                                .filter(test_group_association.c.group_id == group_id)
-                tests = query.all()
-                for test in tests:
-                    instance = TestInstance(
-                        test_run_id=test_run.id,
-                        device_id=test.devicehostname_id,
-                        test_type=test_type,
-                        **{test_id_field: test.id}
-                    )
-                    test_instances.append(instance)
+            form.group.choices = [(choice[0], choice[1]) for choice in group_choices]
+            if group_id:
+                form.group.data = group_id
+            elif not form.group.data:
+                form.group.data = None
 
-            db.session.bulk_save_objects(test_instances)
-            db.session.commit()
+            # Calculate test count for selected group
+            if form.group.data == 0:
+                test_count = sum(
+                    test_model.query.filter_by(created_by_id=current_user.id, hidden=False).count()
+                    for _, test_model, _ in test_types
+                )
+            elif form.group.data:
+                for test_type, test_model, _ in test_types:
+                    test_count += db.session.query(func.count(test_group_association.c.test_id))\
+                        .filter(test_group_association.c.group_id == form.group.data,
+                                test_group_association.c.test_type == test_type,
+                                test_model.id == test_group_association.c.test_id,
+                                test_model.hidden == False).scalar() or 0
 
-            # Queue the test run
-            pending_test_runs.append(test_run.id)
-            return redirect(url_for('test_progress', run_id=test_run.id))
-        
-        # Pass available groups to the template for the dropdown
-        groups = TestGroup.query.all() if TestGroup else []
-        return render_template('start_test_run.html', form=form, groups=groups)
+        logger.debug(f"Mode={mode}, Test count={test_count}, Group selected={form.group.data}")
+
+        if request.method == 'POST':
+            logger.debug(f"Form submitted with mode={mode}, description={form.description.data}, group={form.group.data}")
+            if mode == 'group' and not form.group.data:
+                form.group.errors.append('Please select a test group or "My Tests".')
+                logger.debug("Validation failed: No group selected for mode='group'")
+                return render_template('start_test_run.html', form=form, mode=mode, group_choices=group_choices, test_count=test_count)
+
+            if form.validate():
+                test_run = TestRun(description=form.description.data, status="pending")
+                test_run.created_by_id = current_user.id
+                db.session.add(test_run)
+                db.session.commit()
+                logger.debug(f"TestRun created with ID={test_run.id}")
+
+                test_instances = []
+                for test_type, test_model, test_id_field in test_types:
+                    query = test_model.query.filter_by(hidden=False)
+                    if mode == 'my' or (mode == 'group' and form.group.data == 0):
+                        query = query.filter_by(created_by_id=current_user.id)
+                    elif mode == 'group' and form.group.data != 0:
+                        query = query.join(test_group_association,
+                                        (test_group_association.c.test_id == test_model.id) &
+                                        (test_group_association.c.test_type == test_type))\
+                                    .filter(test_group_association.c.group_id == form.group.data)
+
+                    tests = query.all()
+                    logger.debug(f"Found {len(tests)} tests for test_type={test_type}, mode={mode}")
+                    for test in tests:
+                        instance = TestInstance(
+                            test_run_id=test_run.id,
+                            device_id=test.devicehostname_id,
+                            test_type=test_type,
+                            **{test_id_field: test.id}
+                        )
+                        test_instances.append(instance)
+
+                if test_instances:
+                    db.session.bulk_save_objects(test_instances)
+                    db.session.commit()
+                    logger.debug(f"Saved {len(test_instances)} test instances")
+                    pending_test_runs.append(test_run.id)
+                    return redirect(url_for('test_progress', run_id=test_run.id))
+                else:
+                    flash('No tests found for the selected option.', 'danger')
+                    logger.debug("No test instances found; redirecting back to form")
+                    return render_template('start_test_run.html', form=form, mode=mode, group_choices=group_choices, test_count=test_count)
+            else:
+                logger.debug(f"Form validation failed: {form.errors}")
+
+        return render_template('start_test_run.html', form=form, mode=mode, group_choices=group_choices, test_count=test_count)
 
     @app.route('/credentials', methods=['GET', 'POST'])
     @login_required
