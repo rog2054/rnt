@@ -693,6 +693,10 @@ def create_app():
         group_id = request.args.get('group_id', type=int)
         filter_type = request.args.get('filter', default=None)
         device_id = request.args.get('device_id', type=int)
+        
+        # Handle group_id from POST form if present
+        if request.method == 'POST' and 'group_id' in request.form:
+            group_id = request.form.get('group_id', type=int)  
 
         # Fetch all groups and devices
         groups = TestGroup.query.order_by(TestGroup.name).all()
@@ -836,9 +840,10 @@ def create_app():
                     'manage_test_groups.html',
                     groups=groups,
                     devices=devices,
+                    device_test_counts=device_test_counts,
                     selected_group=selected_group,
                     creator=creator,
-                    available_tests=fetch_available_tests(),
+                    available_tests=fetch_available_tests(selected_group),  # Pass selected_group
                     group_tests=fetch_group_tests(selected_group),
                     filter_type=filter_type,
                     selected_device_id=device_id,
@@ -847,8 +852,7 @@ def create_app():
 
             return redirect(url_for('manage_test_groups', group_id=group_id, filter=filter_type, device_id=device_id))
 
-
-        # Fetch all non-hidden tests for available_tests (no filter applied)
+        # Fetch all non-hidden tests for available_tests, filtered by selected group
         return render_template(
             'manage_test_groups.html',
             groups=groups,
@@ -856,13 +860,13 @@ def create_app():
             device_test_counts=device_test_counts,
             selected_group=selected_group,
             creator=creator,
-            available_tests=fetch_available_tests(),
+            available_tests=fetch_available_tests(selected_group),  # Pass selected_group
             group_tests=fetch_group_tests(selected_group),
             filter_type=filter_type,
             selected_device_id=device_id
         )
 
-    def fetch_available_tests():
+    def fetch_available_tests(selected_group=None):
         test_types = [
             ('bgpaspath_test', bgpaspathTest, 'bgpaspath_tests', 'BGP AS Path'),
             ('itraceroute_test', itracerouteTest, 'itraceroute_tests', 'iTraceroute'),
@@ -873,7 +877,17 @@ def create_app():
 
         available_tests = {}
         for test_type, test_model, _, display_name in test_types:
-            tests = test_model.query.filter_by(hidden=False).options(joinedload(test_model.devicehostname)).all()
+            query = test_model.query.filter_by(hidden=False)
+            if selected_group:
+                # Subquery to get test IDs already in the selected group for this test type
+                subquery = db.session.query(test_group_association.c.test_id).filter(
+                    and_(
+                        test_group_association.c.group_id == selected_group.id,
+                        test_group_association.c.test_type == test_type
+                    )
+                ).subquery()
+                query = query.filter(~test_model.id.in_(subquery))  # Exclude tests in the group
+            tests = query.options(joinedload(test_model.devicehostname)).all()
             test_list = []
             for test in tests:
                 test_name = test.description or f"Test {test.id}"
@@ -912,19 +926,8 @@ def create_app():
                 if test_list:  # Only include test type if there are tests
                     group_tests[test_type] = {'display_name': display_name, 'tests': test_list}
 
-        # Remove group tests from available tests
-        available_tests = fetch_available_tests()
-        for test_type in group_tests:
-            if test_type in available_tests:
-                group_test_ids = {(t['id'], t['type']) for t in group_tests[test_type]['tests']}
-                available_tests[test_type]['tests'] = [
-                    t for t in available_tests[test_type]['tests'] if (t['id'], t['type']) not in group_test_ids
-                ]
-                if not available_tests[test_type]['tests']:
-                    del available_tests[test_type]
-
         return group_tests
-
+    
     @app.route('/test_results', defaults={'user_id': None})
     @app.route('/test_results/<int:user_id>')
     @login_required
