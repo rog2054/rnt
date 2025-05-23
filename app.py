@@ -698,6 +698,26 @@ def create_app():
         groups = TestGroup.query.order_by(TestGroup.name).all()
         devices = Device.query.order_by(Device.hostname).all()
         selected_group = TestGroup.query.get(group_id) if group_id else None
+        
+        # Fetch creator's User object if group is selected
+        creator = None
+        if selected_group:
+            creator = User.query.get(selected_group.created_by_id)
+
+        test_models = [
+            ('bgpaspath_test', bgpaspathTest),
+            ('itraceroute_test', itracerouteTest),
+            ('traceroute_test', tracerouteTest),
+            ('ping_test', pingTest),
+            ('txrxtransceiver_test', txrxtransceiverTest)
+        ]
+        device_test_counts = {}
+        for device in devices:
+            total_tests = 0
+            for _, test_model in test_models:
+                count = test_model.query.filter_by(devicehostname_id=device.id, hidden=False).count()
+                total_tests += count
+            device_test_counts[device.id] = total_tests
 
         # Handle form submissions
         if request.method == 'POST':
@@ -813,6 +833,7 @@ def create_app():
                     groups=groups,
                     devices=devices,
                     selected_group=selected_group,
+                    creator=creator,
                     available_tests=fetch_available_tests(),
                     group_tests=fetch_group_tests(selected_group),
                     filter_type=filter_type,
@@ -828,7 +849,9 @@ def create_app():
             'manage_test_groups.html',
             groups=groups,
             devices=devices,
+            device_test_counts=device_test_counts,
             selected_group=selected_group,
+            creator=creator,
             available_tests=fetch_available_tests(),
             group_tests=fetch_group_tests(selected_group),
             filter_type=filter_type,

@@ -37,21 +37,75 @@
 
     .quick-select {
         margin-bottom: 15px;
+        display: block;
+    }
+
+    .quick-select-buttons {
         display: flex;
         flex-wrap: wrap;
         gap: 10px;
     }
 
-    .quick-select form {
+    .quick-select-buttons form {
         display: inline-block;
     }
 
-    .quick-select button {
+    .quick-select-buttons button {
         margin-right: 5px;
     }
 
+    .device-select {
+        margin-top: 15px;
+        /* Space above device dropdown */
+        display: block;
+    }
+
+    .device-select .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.65;
+    }
+
+    .device-select .btn:disabled[data-bs-toggle="tooltip"] {
+        pointer-events: auto;
+        /* Allow tooltip on disabled button */
+    }
+
+    .device-select .btn:not(:disabled) {
+        pointer-events: auto;
+        /* Ensure normal behavior when enabled */
+    }
+
+    .tooltip {
+        z-index: 2000;
+    }
+
+    .tooltip-inner {
+        max-width: 300px;
+        text-align: left;
+    }
+
+    .device-select form {
+        display: inline-block;
+        /* Align label, select, and button horizontally */
+    }
+
+    .select2-container--default .select2-selection--single {
+        min-width: 400px;
+        /* Wider dropdown */
+    }
+
     .select2-container {
-        width: 200px !important;
+        width: auto !important;
+    }
+
+    .select2-dropdown {
+        min-width: 400px;
+        width: auto !important;
+    }
+
+    .select2-results__option {
+        white-space: nowrap;
+        /* Prevent wrapping of long hostnames */
     }
 
     .flash-messages {
@@ -141,80 +195,13 @@
     {% endif %}
 </div>
 
-<!-- Quick-Select Filters -->
 {% set can_edit = selected_group and selected_group.created_by_id == current_user.id %}
-<div class="quick-select">
-    <form method="POST"
-        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="add_filter_tests">
-        <input type="hidden" name="filter" value="created_by_me">
-        <button type="submit" class="btn btn-secondary" {% if not can_edit %}disabled{% endif %}>All Tests Created by
-            Me</button>
-    </form>
-    <form method="POST"
-        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="add_filter_tests">
-        <input type="hidden" name="filter" value="bgpaspath_test">
-        <button type="submit" class="btn btn-secondary" {% if not can_edit %}disabled{% endif %}>All BGP AS Path
-            Tests</button>
-    </form>
-    <form method="POST"
-        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="add_filter_tests">
-        <input type="hidden" name="filter" value="itraceroute_test">
-        <button type="submit" class="btn btn-secondary" {% if not can_edit %}disabled{% endif %}>All iTraceroute
-            Tests</button>
-    </form>
-    <form method="POST"
-        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="add_filter_tests">
-        <input type="hidden" name="filter" value="traceroute_test">
-        <button type="submit" class="btn btn-secondary" {% if not can_edit %}disabled{% endif %}>All Traceroute
-            Tests</button>
-    </form>
-    <form method="POST"
-        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="add_filter_tests">
-        <input type="hidden" name="filter" value="ping_test">
-        <button type="submit" class="btn btn-secondary" {% if not can_edit %}disabled{% endif %}>All Ping Tests</button>
-    </form>
-    <form method="POST"
-        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="add_filter_tests">
-        <input type="hidden" name="filter" value="txrxtransceiver_test">
-        <button type="submit" class="btn btn-secondary" {% if not can_edit %}disabled{% endif %}>All TxRx Transceiver
-            Tests</button>
-    </form>
-    <form method="POST"
-        action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input type="hidden" name="action" value="add_filter_tests">
-        <input type="hidden" name="filter" value="device_tests">
-        <label for="device_id" class="form-label">All Tests for Device:</label>
-        <select name="device_id" id="device_id" class="form-select">
-            <option value="">-- Select Device --</option>
-            {% for device in devices %}
-            <option value="{{ device.id }}" {% if selected_device_id==device.id %}selected{% endif %}>
-                {{ device.hostname }}
-            </option>
-            {% endfor %}
-        </select>
-        <button type="submit" class="btn btn-secondary" {% if not can_edit %}disabled{% endif %}>Add Device
-            Tests</button>
-    </form>
-
-</div>
 
 <!-- Test Management -->
 {% if selected_group %}
 <div class="testgroup-container">
     <!-- Available Tests (Left Box) -->
+    {% if can_edit %}
     <div class="box" id="available_tests_box">
         <h3>Available Tests</h3>
         <button type="button" class="btn btn-outline-secondary mb-2" onclick="selectAllTests('available_tests_box')" {%
@@ -244,8 +231,8 @@
             </div>
         </form>
     </div>
-
     <!-- Controls (Move Buttons) -->
+
     <div class="controls">
         <button type="submit" form="add-tests-form" class="btn btn-primary" {% if not can_edit %}disabled{% endif
             %}>&gt;</button>
@@ -253,13 +240,18 @@
             %}>&lt;</button>
     </div>
 
+    {% endif %}
+
     <!-- Group Tests (Right Box) -->
     <div class="box" id="group_tests_box">
         <h3>Tests in {{ selected_group.name }}</h3>
+        {% if not can_edit %}Group Editor: {{creator.username}}{% endif %}
+        {% if can_edit %}
         <button type="button" class="btn btn-outline-secondary mb-2" onclick="selectAllTests('group_tests_box')" {% if
             not can_edit %}disabled{% endif %}>Select All</button>
         <button type="button" class="btn btn-outline-secondary mb-2" onclick="deselectAllTests('group_tests_box')" {% if
             not can_edit %}disabled{% endif %}>Deselect All</button>
+        {% endif %}
         <form method="POST"
             action="{{ url_for('manage_test_groups', group_id=selected_group.id, filter=filter_type, device_id=selected_device_id) }}"
             id="remove-tests-form">
@@ -288,6 +280,90 @@
 {% else %}
 <p>Please select or create a group to manage tests.</p>
 {% endif %}
+
+<!-- Quick-Select Filters -->
+{% if can_edit %}
+<div class="quick-select mt-3">
+    <h2>Bulk Add to Group</h2>
+    <div class="quick-select-buttons">
+        <form method="POST"
+            action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add_filter_tests">
+            <input type="hidden" name="filter" value="created_by_me">
+            <button type="submit" class="btn btn-primary" {% if not can_edit %}disabled{% endif %}>All Tests Created
+                by
+                Me</button>
+        </form>
+        <form method="POST"
+            action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add_filter_tests">
+            <input type="hidden" name="filter" value="bgpaspath_test">
+            <button type="submit" class="btn btn-primary" {% if not can_edit %}disabled{% endif %}>All BGP AS Path
+                Tests</button>
+        </form>
+        <form method="POST"
+            action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add_filter_tests">
+            <input type="hidden" name="filter" value="itraceroute_test">
+            <button type="submit" class="btn btn-primary" {% if not can_edit %}disabled{% endif %}>All iTraceroute
+                Tests</button>
+        </form>
+        <form method="POST"
+            action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add_filter_tests">
+            <input type="hidden" name="filter" value="traceroute_test">
+            <button type="submit" class="btn btn-primary" {% if not can_edit %}disabled{% endif %}>All Traceroute
+                Tests</button>
+        </form>
+        <form method="POST"
+            action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add_filter_tests">
+            <input type="hidden" name="filter" value="ping_test">
+            <button type="submit" class="btn btn-primary" {% if not can_edit %}disabled{% endif %}>All Ping
+                Tests</button>
+        </form>
+        <form method="POST"
+            action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add_filter_tests">
+            <input type="hidden" name="filter" value="txrxtransceiver_test">
+            <button type="submit" class="btn btn-primary" {% if not can_edit %}disabled{% endif %}>All TxRx
+                Transceiver
+                Tests</button>
+        </form>
+    </div>
+    <div class="device-select">
+        <form method="POST"
+            action="{{ url_for('manage_test_groups', group_id=selected_group.id if selected_group else None) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="add_filter_tests">
+            <input type="hidden" name="filter" value="device_tests">
+            <label for="device_id" class="form-label">All Tests for Device:</label>
+            <select name="device_id" id="device_id" class="form-select">
+                <option value="">-- Select Device --</option>
+                {% for device in devices %}
+                <option value="{{ device.id }}" data-tooltip="{{ device.siteinfo or '' }}" {% if
+                    selected_device_id==device.id %}selected{% endif %}>
+                    {{ device.hostname }} ({{ device_test_counts[device.id] }} tests)
+                </option>
+                {% endfor %}
+            </select>
+            <button type="submit" id="add-device-tests-btn" class="btn btn-primary" disabled data-bs-toggle="tooltip"
+                title="Please select a device to enable this button" {% if not can_edit
+                %}data-disabled-by-permission="true" {% endif %}>
+                Add Device Tests
+            </button>
+        </form>
+    </div>
+
+</div>
+{% endif %}
+
 {% endblock %}
 {% block scripts %}
 {{ super() }}
@@ -295,14 +371,83 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
 <script>
     $(document).ready(function () {
-        $('#group_id').select2({ placeholder: "-- Select a Group --", allowClear: true });
-        $('#device_id').select2({ placeholder: "-- Select Device --", allowClear: true });
+        // Initialize Select2 for group dropdown
+        $('#group_id').select2({
+            placeholder: "-- Select a Group --",
+            allowClear: true
+        });
+
+        // Initialize Select2 for device dropdown
+        $('#device_id').select2({
+            placeholder: "-- Select Device --",
+            allowClear: true,
+            width: 'resolve',
+            templateResult: function (data) {
+                if (!data.element) {
+                    return data.text;
+                }
+                var $element = $(data.element);
+                var $wrapper = $('<span></span>');
+                $wrapper.text(data.text);
+                $wrapper.attr('title', $element.data('tooltip'));
+                $wrapper.attr('data-bs-toggle', 'tooltip');
+                $wrapper.attr('data-bs-placement', 'top');
+                return $wrapper;
+            }
+        });
+
+        // Auto-submit on group change
         $('#group_id').on('change', function () {
+            console.log('Group changed:', $(this).val());
             $(this).closest('form').submit();
         });
+
+        // Handle device dropdown change
         $('#device_id').on('change', function () {
-            $(this).closest('form').submit();
+            var selectedValue = $(this).val();
+            var $button = $('#add-device-tests-btn');
+            var isDisabled = !selectedValue;
+            console.log('Device changed:', selectedValue, 'Disabled:', isDisabled, 'Permission:', $button.data('disabled-by-permission'));
+
+            $button.prop('disabled', isDisabled);
+            if (isDisabled) {
+                $button.attr('title', 'Please select a device to enable this button');
+                $button.attr('data-bs-toggle', 'tooltip');
+                $button.tooltip('dispose').tooltip({ placement: 'top', container: 'body' });
+            } else {
+                $button.removeAttr('title').removeAttr('data-bs-toggle');
+                $button.tooltip('dispose');
+            }
         });
+
+        // Initialize tooltips for dropdown options
+        $('#device_id').on('select2:open', function () {
+            setTimeout(function () {
+                $('.select2-results__option').each(function () {
+                    $(this).tooltip({
+                        placement: 'top',
+                        container: 'body'
+                    });
+                });
+            }, 0);
+        });
+
+        // Initialize button state and tooltip
+        var $deviceSelect = $('#device_id');
+        var $addButton = $('#add-device-tests-btn');
+        var selectedValue = $deviceSelect.val();
+        var isDisabled = !selectedValue || $addButton.data('disabled-by-permission');
+        console.log('Initial state - Device:', selectedValue, 'Disabled:', isDisabled, 'Permission:', $addButton.data('disabled-by-permission'));
+
+        $addButton.prop('disabled', isDisabled);
+        if (isDisabled) {
+            $addButton.attr('title', 'Please select a device to enable this button');
+            $addButton.attr('data-bs-toggle', 'tooltip');
+            $addButton.tooltip({ placement: 'top', container: 'body' });
+        } else {
+            $addButton.removeAttr('title').removeAttr('data-bs-toggle');
+            $addButton.tooltip('dispose');
+        }
 
         // Initialize all test branches as collapsed
         $('.test-branch').addClass('collapsed');
@@ -318,8 +463,13 @@
     });
 
     function selectAllTests(boxId) {
-        const checkboxes = document.querySelectorAll(`#${boxId} input[type='checkbox']`);
+        const box = document.getElementById(boxId);
+        const checkboxes = box.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(checkbox => checkbox.checked = true);
+        const collapses = box.querySelectorAll('.test-tree .collapse');
+        collapses.forEach(collapse => {
+            $(collapse).collapse('show');
+        });
     }
 
     function deselectAllTests(boxId) {
