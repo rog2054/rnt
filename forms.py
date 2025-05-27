@@ -5,6 +5,7 @@ from models import DeviceCredential, Device, TestRun
 import ipaddress
 from extensions import db
 from utils import format_datetime_with_ordinal
+import pytz
 
 def validate_ipv4_prefix(form, field):
     try:
@@ -242,3 +243,9 @@ class ThemeForm(FlaskForm):
         # Set default theme if provided (for GET requests)
         if current_theme and current_theme in [choice[0] for choice in self.theme.choices]:
             self.theme.default = current_theme
+            
+class TimezoneForm(FlaskForm):
+    timezone = SelectField('Timezone', choices=[(tz, tz) for tz in pytz.common_timezones], default='UTC')
+    submit = SubmitField('Update Timezone')
+    form_name = HiddenField(default='timezone')
+    
