@@ -126,6 +126,8 @@ pipeline {
             }
         }
         
+    }
+
     post {
         always {
             // Clean up dangling images (optional)
@@ -168,4 +170,3 @@ pipeline {
 
 }
 
-}
