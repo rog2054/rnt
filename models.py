@@ -14,7 +14,7 @@ class User(UserMixin, db.Model):
     created_by_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_user_created_by_id'), nullable=True)
     created_by = db.relationship('User', remote_side=[id], backref='created_users')
     theme = db.Column(db.String(20), nullable=True, default='calmblue')  # set a default theme
-    user_timezone = db.Column(db.String(100), default="UTC", nullable=False)
+    user_timezone = db.Column(db.String(100), default="UTC", nullable=True)
     
     def __repr__(self):
         return f'<User {self.username}>'
