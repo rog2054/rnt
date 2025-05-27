@@ -7,8 +7,21 @@
 <div>
     <h1>Results: {{ run_description }}</h1>
     {% if run_timestamp is not none and run_endtimestamp is not none %}
-    <p class="text-muted">Tests Start: {{ run_timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
-    <p class="text-muted">Tests Ended: {{ run_endtimestamp.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+
+    {% if run_timestamp %}
+    <p class="text-muted">Start Time: {{ run_timestamp.strftime('%d')|format_ordinal }} {{ run_timestamp.strftime('%B %Y
+        %H:%M %Z') }}</p>
+    {% else %}
+    <p class="text-muted">Start Time: N/A</p>
+    {% endif %}
+
+    {% if run_endtimestamp %}
+    <p class="text-muted">End Time: {{ run_endtimestamp.strftime('%d')|format_ordinal }} {{
+        run_endtimestamp.strftime('%B %Y %H:%M %Z') }}</p>
+    {% else %}
+    <p class="text-muted">End Time: N/A</p>
+    {% endif %}
+
     {% else %}
     <p class="text-muted">Test execution timestamp not available</p>
     {% endif %}

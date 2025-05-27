@@ -9,7 +9,7 @@ import queue
 from queue import Queue
 from extensions import db, cipher
 from models import Device, DeviceCredential, TestGroup, test_group_association, bgpaspathTest, tracerouteTest, pingTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, pingTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
-from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, pingTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm
+from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, pingTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm, TimezoneForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
@@ -22,6 +22,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import os
 import ssl
 from flask_cors import CORS
+import pytz
 
 # Globals
 pending_test_runs = []
@@ -1120,18 +1121,21 @@ def create_app():
         # Format start_time and end_time for each test run
         for test_run in test_runs:
             test_run.total_tests = total_counts_dict.get(test_run.id, 0)
+            user_timezone = get_user_timezone(current_user.id)  # Replace with your method to get current user ID
 
             if test_run.start_time:
-                day = test_run.start_time.day
+                start_time_local = test_run.start_time.replace(tzinfo=pytz.UTC).astimezone(user_timezone)
+                day = start_time_local.day
                 suffix = 'th' if 10 <= day % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
-                test_run.formatted_start_time = test_run.start_time.strftime(f'{day}{suffix} %B %Y %H:%M')
+                test_run.formatted_start_time = start_time_local.strftime(f'{day}{suffix} %B %Y %H:%M %Z')
             else:
                 test_run.formatted_start_time = 'N/A'
-            
+
             if test_run.end_time:
-                day = test_run.end_time.day
+                end_time_local = test_run.end_time.replace(tzinfo=pytz.UTC).astimezone(user_timezone)
+                day = end_time_local.day
                 suffix = 'th' if 10 <= day % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
-                test_run.formatted_end_time = test_run.end_time.strftime(f'{day}{suffix} %B %Y %H:%M')
+                test_run.formatted_end_time = end_time_local.strftime(f'{day}{suffix} %B %Y %H:%M %Z')
             else:
                 test_run.formatted_end_time = 'N/A'
 
@@ -1272,8 +1276,17 @@ def create_app():
 
             # Fetch test run details
             test_instance = db.session.query(TestInstance).filter_by(test_run_id=run_id).first()
-            run_timestamp = test_instance.test_run.start_time if test_instance else None
-            run_endtimestamp = test_instance.test_run.end_time if test_instance else None
+            
+            user_timezone = get_user_timezone(current_user.id)
+            run_timestamp = None
+            run_endtimestamp = None
+
+            if test_instance and test_instance.test_run:
+                if test_instance.test_run.start_time:
+                    run_timestamp = test_instance.test_run.start_time.replace(tzinfo=pytz.UTC).astimezone(user_timezone)
+                if test_instance.test_run.end_time:
+                    run_endtimestamp = test_instance.test_run.end_time.replace(tzinfo=pytz.UTC).astimezone(user_timezone)
+
 
             test_run = db.session.query(TestRun).filter_by(id=run_id).first()
             if test_run:
@@ -1609,6 +1622,7 @@ def create_app():
         # Initialize forms
         password_form = ChangePasswordForm()
         theme_form = ThemeForm(current_theme=current_user.theme)
+        timezone_form = TimezoneForm() 
 
         # Set dropdown to current theme for GET requests or after failed POST
         if request.method == 'GET' or (request.method == 'POST' and not theme_form.validate()):
@@ -1619,6 +1633,15 @@ def create_app():
                 logging.debug(f"Invalid current theme: {current_user.theme}, falling back to default")
                 theme_form.theme.data = 'default'
 
+        # Set timezone dropdown to current user_timezone
+        if request.method == 'GET' or (request.method == 'POST' and not timezone_form.validate()):
+            if current_user.user_timezone in pytz.all_timezones:
+                timezone_form.timezone.data = current_user.user_timezone
+                logging.debug(f"Set dropdown timezone to: {current_user.user_timezone}")
+            else:
+                logging.debug(f"Invalid current timezone: {current_user.user_timezone}, falling back to UTC")
+                timezone_form.timezone.data = 'UTC'
+
         if request.method == 'POST':
             logging.debug(f"POST request received with form data: {request.form}")
             form_name = request.form.get('form_name')
@@ -1628,17 +1651,27 @@ def create_app():
             handlers = {
                 'userpassword': handle_password_form,
                 'theme': handle_theme_form,
+                'timezone': handle_timezone_form,
             }
             handler = handlers.get(form_name)
             if handler:
-                result = handler(password_form if form_name == 'userpassword' else theme_form)
+                result = handler(
+                    password_form if form_name == 'userpassword' else
+                    theme_form if form_name == 'theme' else
+                    timezone_form
+                )
                 if result:
                     return result
             else:
                 logging.debug(f"Unknown form_name: {form_name}")
                 flash('Invalid form submission.', 'danger')
 
-        return render_template('usersettings.html', password_form=password_form, theme_form=theme_form)
+        return render_template(
+            'usersettings.html',
+            password_form=password_form,
+            theme_form=theme_form,
+            timezone_form=timezone_form  # Pass new form to template
+        )
 
     @app.route('/faq')
     def faq():
@@ -2620,6 +2653,32 @@ def handle_theme_form(form):
         logging.debug(f"Theme form errors: {form.errors}")
         flash(f"Error updating theme: {form.errors.get('theme', ['Unknown error'])[0]}", 'danger')
     return None
+
+def handle_timezone_form(form):
+    if form.validate_on_submit():
+        timezone = form.timezone.data
+        if timezone in pytz.all_timezones:
+            current_user.user_timezone = timezone
+            db.session.commit()
+            logging.debug(f"Updated user timezone to: {timezone}")
+            flash('Timezone updated successfully!', 'success')
+        else:
+            logging.debug(f"Invalid timezone submitted: {timezone}")
+            flash('Invalid timezone selected.', 'danger')
+        return redirect(url_for('usersettings'))
+    return None
+
+def get_user_timezone(user_id):
+    user = db.session.get(User, user_id)
+    return pytz.timezone(user.user_timezone if user and user.user_timezone in pytz.all_timezones else 'UTC')
+
+def format_ordinal(day):
+    day = int(day)  # Convert string to integer
+    suffix = 'th' if 10 <= day % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+    return f"{day}{suffix}"
+
+# Ensure the filter is registered
+app.jinja_env.filters['format_ordinal'] = format_ordinal
 
 if __name__ == '__main__':
     use_ssl = os.getenv('USE_SSL', 'true').lower() == 'true'

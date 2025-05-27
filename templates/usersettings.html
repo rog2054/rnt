@@ -64,5 +64,25 @@
             </div>
         </div>
     </div>
+
+    <!-- Timezone Panel -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Change Timezone</div>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    {{ timezone_form.hidden_tag() }}
+                    <div class="mb-3">
+                        {{ timezone_form.timezone.label }}<br>
+                        {{ timezone_form.timezone(class="form-control") }}
+                    </div>
+                    {{ timezone_form.submit(class="btn btn-primary") }}
+                </form>
+            </div>
+        </div>
+    </div>
+
 </div>
 {% endblock %}
