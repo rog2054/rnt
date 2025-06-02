@@ -7,7 +7,7 @@ from threading import Thread
 import threading
 import queue
 from queue import Queue
-from extensions import db, cipher
+from extensions import db, cipher, babel
 from models import Device, DeviceCredential, TestGroup, test_group_association, bgpaspathTest, tracerouteTest, pingTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, pingTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
 from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, pingTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm, TimezoneForm
 import netmiko
@@ -57,6 +57,7 @@ def create_app():
     
     # Initialize extensions
     db.init_app(app)
+    babel.init_app(app)
     migrate = Migrate(app, db)
     socketio.init_app(app)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
