@@ -125,6 +125,9 @@ I may implement some of these improvements at some point however others are welc
 
 With that said here are some future improvements I can think of. These are listed in no particular order.
 
+- [X] Per User timezone preference and timezone-adaptive results pages.
+- [X] Assign tests into custom Test Groups and run tests for just that Test Group, rather than ALL Tests (All Tests remains a valid method).
+- [ ] Make the UI multi-lingual, so each user can set their preferred language.
 - [ ] Add other types of test. This project is evolving. It started off as a cli tool with just 1 type of test, and is now a multi-threaded web tool with <s>3</s> <s>4</s> 5 test types, so i'm sure more will be added as the need arises. If you have any ideas for different tests please drop me a note and we can maybe collaborate on adding that functionality (don't worry if you're not a coder, i also need things like cli output examples to add a new test)
 - [ ] Support for other vendors. This isn't currently a high-priority to me as our environment is mainly Cisco so this app obviously focuses on Cisco initially, however it has been written in a way to allow adding tests for other vendors equipment also (basically any that netmiko supports - which is a lot of the main vendors) so i'm not against working on this as a lower-priority addition if enough people will benefit from it.
 

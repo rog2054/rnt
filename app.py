@@ -7,20 +7,22 @@ from threading import Thread
 import threading
 import queue
 from queue import Queue
-from extensions import db, cipher
-from models import Device, DeviceCredential, bgpaspathTest, tracerouteTest, pingTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, pingTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
-from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, pingTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm
+from extensions import db, cipher, babel
+from models import Device, DeviceCredential, TestGroup, test_group_association, bgpaspathTest, tracerouteTest, pingTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, pingTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
+from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, pingTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm, TimezoneForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
 import re
 from datetime import datetime, timezone
-from sqlalchemy import func
+from sqlalchemy import func, and_
+from sqlalchemy.orm import joinedload
 from utils import format_datetime_with_ordinal, set_netmiko_logger, get_netmiko_logger
 from werkzeug.middleware.proxy_fix import ProxyFix
 import os
 import ssl
 from flask_cors import CORS
+import pytz
 
 # Globals
 pending_test_runs = []
@@ -55,6 +57,7 @@ def create_app():
     
     # Initialize extensions
     db.init_app(app)
+    babel.init_app(app)
     migrate = Migrate(app, db)
     socketio.init_app(app)
     app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1, x_for=1)
@@ -63,7 +66,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        return User.query.get(int(user_id))
+        return db.session.get(User, int(user_id))
 
     # Configure Netmiko logger
     netmiko_logger = logging.getLogger("netmiko")
@@ -197,70 +200,119 @@ def create_app():
     @login_required
     def run_tests():
         form = TestRunForm()
-        if form.validate_on_submit():
-            test_run = TestRun(description=form.description.data, status="pending")  # Start as pending
-            test_run.created_by_id = current_user.id
-            db.session.add(test_run)
-            db.session.commit()
+        mode = request.args.get('mode', 'all')  # Default to 'all'
+        group_id = request.args.get('group_id', type=int)  # Optional group_id for pre-selection
 
-            test_instances = []
-            itraceroute_tests = itracerouteTest.query.filter_by(hidden=False).all()
-            for test in itraceroute_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="itraceroute_test",
-                    itraceroute_test_id=test.id
-                )
-                test_instances.append(instance)
-                
-            traceroute_tests = tracerouteTest.query.filter_by(hidden=False).all()
-            for test in traceroute_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="traceroute_test",
-                    traceroute_test_id=test.id
-                )
-                test_instances.append(instance)
-                
-            ping_tests = pingTest.query.filter_by(hidden=False).all()
-            for test in ping_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="ping_test",
-                    ping_test_id=test.id
-                )
-                test_instances.append(instance)
-                
-            bgp_tests = bgpaspathTest.query.filter_by(hidden=False).all()
-            for test in bgp_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="bgpaspath_test",
-                    bgpaspath_test_id=test.id
-                )
-                test_instances.append(instance)
-                
-            txrxtransceiver_tests = txrxtransceiverTest.query.filter_by(hidden=False).all()
-            for test in txrxtransceiver_tests:
-                instance = TestInstance(
-                    test_run_id=test_run.id,
-                    device_id=test.devicehostname_id,
-                    test_type="txrxtransceiver_test",
-                    txrxtransceiver_test_id=test.id
-                )
-                test_instances.append(instance)
+        # Initialize variables
+        group_choices = None
+        test_count = 0
+        test_types = [
+            ('itraceroute_test', itracerouteTest, 'itraceroute_test_id'),
+            ('traceroute_test', tracerouteTest, 'traceroute_test_id'),
+            ('ping_test', pingTest, 'ping_test_id'),
+            ('bgpaspath_test', bgpaspathTest, 'bgpaspath_test_id'),
+            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_test_id')
+        ]
 
-            db.session.bulk_save_objects(test_instances)
-            db.session.commit()
+        # Calculate test count based on mode
+        if mode == 'all':
+            test_count = sum(
+                test_model.query.filter_by(hidden=False).count()
+                for _, test_model, _ in test_types
+            )
+        elif mode == 'my':
+            test_count = sum(
+                test_model.query.filter_by(created_by_id=current_user.id, hidden=False).count()
+                for _, test_model, _ in test_types
+            )
+        elif mode == 'group':
+            group_choices = [(0, 'My Tests', f'{test_count} tests (test group owner {current_user.username})')]
+            groups = TestGroup.query.all()
+            for group in groups:
+                count = 0
+                for test_type, test_model, _ in test_types:
+                    count += db.session.query(func.count(test_group_association.c.test_id))\
+                        .filter(test_group_association.c.group_id == group.id,
+                                test_group_association.c.test_type == test_type,
+                                test_model.id == test_group_association.c.test_id,
+                                test_model.hidden == False).scalar() or 0
+                ''' owner = User.query.get(group.created_by_id) '''
+                owner = db.session.get(User, group.created_by_id)
+                owner_name = owner.username if owner else 'Unknown'
+                group_choices.append((group.id, group.name, f'{count} tests (test group owner {owner_name})'))
 
-            # Queue the test run instead of starting it
-            pending_test_runs.append(test_run.id)
-            return redirect(url_for('test_progress', run_id=test_run.id))
-        return render_template('start_test_run.html', form=form)
+            form.group.choices = [(choice[0], choice[1]) for choice in group_choices]
+            if group_id:
+                form.group.data = group_id
+            elif not form.group.data:
+                form.group.data = None
+
+            # Calculate test count for selected group
+            if form.group.data == 0:
+                test_count = sum(
+                    test_model.query.filter_by(created_by_id=current_user.id, hidden=False).count()
+                    for _, test_model, _ in test_types
+                )
+            elif form.group.data:
+                for test_type, test_model, _ in test_types:
+                    test_count += db.session.query(func.count(test_group_association.c.test_id))\
+                        .filter(test_group_association.c.group_id == form.group.data,
+                                test_group_association.c.test_type == test_type,
+                                test_model.id == test_group_association.c.test_id,
+                                test_model.hidden == False).scalar() or 0
+
+        logger.debug(f"Mode={mode}, Test count={test_count}, Group selected={form.group.data}")
+
+        if request.method == 'POST':
+            logger.debug(f"Form submitted with mode={mode}, description={form.description.data}, group={form.group.data}")
+            if mode == 'group' and not form.group.data:
+                form.group.errors.append('Please select a test group or "My Tests".')
+                logger.debug("Validation failed: No group selected for mode='group'")
+                return render_template('start_test_run.html', form=form, mode=mode, group_choices=group_choices, test_count=test_count)
+
+            if form.validate():
+                test_run = TestRun(description=form.description.data, status="pending")
+                test_run.created_by_id = current_user.id
+                db.session.add(test_run)
+                db.session.commit()
+                logger.debug(f"TestRun created with ID={test_run.id}")
+
+                test_instances = []
+                for test_type, test_model, test_id_field in test_types:
+                    query = test_model.query.filter_by(hidden=False)
+                    if mode == 'my' or (mode == 'group' and form.group.data == 0):
+                        query = query.filter_by(created_by_id=current_user.id)
+                    elif mode == 'group' and form.group.data != 0:
+                        query = query.join(test_group_association,
+                                        (test_group_association.c.test_id == test_model.id) &
+                                        (test_group_association.c.test_type == test_type))\
+                                    .filter(test_group_association.c.group_id == form.group.data)
+
+                    tests = query.all()
+                    logger.debug(f"Found {len(tests)} tests for test_type={test_type}, mode={mode}")
+                    for test in tests:
+                        instance = TestInstance(
+                            test_run_id=test_run.id,
+                            device_id=test.devicehostname_id,
+                            test_type=test_type,
+                            **{test_id_field: test.id}
+                        )
+                        test_instances.append(instance)
+
+                if test_instances:
+                    db.session.bulk_save_objects(test_instances)
+                    db.session.commit()
+                    logger.debug(f"Saved {len(test_instances)} test instances")
+                    pending_test_runs.append(test_run.id)
+                    return redirect(url_for('test_progress', run_id=test_run.id))
+                else:
+                    flash('No tests found for the selected option.', 'danger')
+                    logger.debug("No test instances found; redirecting back to form")
+                    return render_template('start_test_run.html', form=form, mode=mode, group_choices=group_choices, test_count=test_count)
+            else:
+                logger.debug(f"Form validation failed: {form.errors}")
+
+        return render_template('start_test_run.html', form=form, mode=mode, group_choices=group_choices, test_count=test_count)
 
     @app.route('/credentials', methods=['GET', 'POST'])
     @login_required
@@ -702,6 +754,248 @@ def create_app():
         else:
             return jsonify({'message': 'You did not create this test'})
 
+    @app.route('/tests/manage_groups', methods=['GET', 'POST'])
+    @login_required
+    def manage_test_groups():
+        # Get query parameters
+        group_id = request.args.get('group_id', type=int)
+        filter_type = request.args.get('filter', default=None)
+        device_id = request.args.get('device_id', type=int)
+        
+        # Handle group_id from POST form if present
+        if request.method == 'POST' and 'group_id' in request.form:
+            group_id = request.form.get('group_id', type=int)  
+
+        # Fetch all groups and devices
+        groups = TestGroup.query.order_by(TestGroup.name).all()
+        devices = Device.query.order_by(Device.hostname).all()
+        selected_group = TestGroup.query.get(group_id) if group_id else None
+        
+        # Fetch creator's User object if group is selected
+        creator = None
+        if selected_group:
+            creator = User.query.get(selected_group.created_by_id)
+
+        test_models = [
+            ('bgpaspath_test', bgpaspathTest),
+            ('itraceroute_test', itracerouteTest),
+            ('traceroute_test', tracerouteTest),
+            ('ping_test', pingTest),
+            ('txrxtransceiver_test', txrxtransceiverTest)
+        ]
+        device_test_counts = {}
+        for device in devices:
+            total_tests = 0
+            for _, test_model in test_models:
+                count = test_model.query.filter_by(devicehostname_id=device.id, hidden=False).count()
+                total_tests += count
+            device_test_counts[device.id] = total_tests
+
+        # Handle form submissions
+        if request.method == 'POST':
+            action = request.form.get('action')
+
+            if action == 'create_group':
+                group_name = request.form.get('group_name')
+                if not group_name:
+                    flash('Group name is required.', 'error')
+                elif TestGroup.query.filter_by(name=group_name).first():
+                    flash('Group name already exists.', 'error')
+                else:
+                    new_group = TestGroup(name=group_name, created_by_id=current_user.id)
+                    db.session.add(new_group)
+                    db.session.commit()
+                    flash('Group created successfully!', 'success')
+                    return redirect(url_for('manage_test_groups', group_id=new_group.id))
+
+            elif action == 'update_group' and selected_group:
+                if selected_group.created_by_id != current_user.id:
+                    flash('You can only edit groups you created.', 'error')
+                else:
+                    group_name = request.form.get('group_name')
+                    if not group_name:
+                        flash('Group name is required.', 'error')
+                    elif TestGroup.query.filter(TestGroup.name == group_name, TestGroup.id != selected_group.id).first():
+                        flash('Group name already exists.', 'error')
+                    else:
+                        selected_group.name = group_name
+                        db.session.commit()
+                        flash('Group updated successfully!', 'success')
+                        return redirect(url_for('manage_test_groups', group_id=selected_group.id))
+
+            elif action == 'add_tests' and selected_group:
+                if selected_group.created_by_id != current_user.id:
+                    flash('You can only edit groups you created.', 'error')
+                else:
+                    selected_test_ids = request.form.getlist('selected_tests')
+                    for test_id_type in selected_test_ids:
+                        test_id, test_type = test_id_type.split(':')
+                        test_id = int(test_id)
+                        exists = db.session.query(test_group_association).filter_by(
+                            test_id=test_id, test_type=test_type, group_id=selected_group.id
+                        ).first()
+                        if not exists:
+                            db.session.execute(
+                                test_group_association.insert().values(
+                                    test_id=test_id, test_type=test_type, group_id=selected_group.id
+                                )
+                            )
+                    db.session.commit()
+                    flash('Tests added to group.', 'success')
+
+            elif action == 'remove_tests' and selected_group:
+                if selected_group.created_by_id != current_user.id:
+                    flash('You can only edit groups you created.', 'error')
+                else:
+                    selected_test_ids = request.form.getlist('group_tests')
+                    for test_id_type in selected_test_ids:
+                        test_id, test_type = test_id_type.split(':')
+                        test_id = int(test_id)
+                        db.session.execute(
+                            test_group_association.delete().where(
+                                and_(
+                                    test_group_association.c.test_id == test_id,
+                                    test_group_association.c.test_type == test_type,
+                                    test_group_association.c.group_id == selected_group.id
+                                )
+                            )
+                        )
+                    db.session.commit()
+                    flash('Tests removed from group.', 'success')
+
+            elif action == 'add_filter_tests' and selected_group:
+                if selected_group.created_by_id != current_user.id:
+                    flash('You can only edit groups you created.', 'error')
+                else:
+                    filter_type = request.form.get('filter')
+                    device_id = request.form.get('device_id', type=int)
+                    test_types = [
+                        ('bgpaspath_test', bgpaspathTest),
+                        ('itraceroute_test', itracerouteTest),
+                        ('traceroute_test', tracerouteTest),
+                        ('ping_test', pingTest),
+                        ('txrxtransceiver_test', txrxtransceiverTest)
+                    ]
+                    for test_type, test_model in test_types:
+                        query = test_model.query.filter_by(hidden=False)
+                        if filter_type == 'created_by_me':
+                            query = query.filter_by(created_by_id=current_user.id)
+                        elif filter_type == 'device_tests' and device_id:
+                            query = query.filter_by(devicehostname_id=device_id)
+                        elif filter_type and filter_type in [t[0] for t in test_types] and filter_type != test_type:
+                            continue
+                        tests = query.options(joinedload(test_model.devicehostname)).all()
+                        for test in tests:
+                            exists = db.session.query(test_group_association).filter_by(
+                                test_id=test.id, test_type=test_type, group_id=selected_group.id
+                            ).first()
+                            if not exists:
+                                db.session.execute(
+                                    test_group_association.insert().values(
+                                        test_id=test.id, test_type=test_type, group_id=selected_group.id
+                                    )
+                                )
+                    db.session.commit()
+                    flash(f'Filtered tests added to {selected_group.name}.', 'success')
+                    logger.info(f'Filtered tests added to {selected_group.name}')
+                    # Reset selected_device_id for device_tests
+                    if filter_type == 'device_tests':
+                        device_id = None
+
+            # Re-render on error
+            if 'create_group' in request.form or 'update_group' in request.form or selected_group and selected_group.created_by_id != current_user.id:
+                return render_template(
+                    'manage_test_groups.html',
+                    groups=groups,
+                    devices=devices,
+                    device_test_counts=device_test_counts,
+                    selected_group=selected_group,
+                    creator=creator,
+                    available_tests=fetch_available_tests(selected_group),  # Pass selected_group
+                    group_tests=fetch_group_tests(selected_group),
+                    filter_type=filter_type,
+                    selected_device_id=device_id,
+                    group_name=request.form.get('group_name')
+                )
+
+            return redirect(url_for('manage_test_groups', group_id=group_id, filter=filter_type, device_id=device_id))
+
+        # Fetch all non-hidden tests for available_tests, filtered by selected group
+        return render_template(
+            'manage_test_groups.html',
+            groups=groups,
+            devices=devices,
+            device_test_counts=device_test_counts,
+            selected_group=selected_group,
+            creator=creator,
+            available_tests=fetch_available_tests(selected_group),  # Pass selected_group
+            group_tests=fetch_group_tests(selected_group),
+            filter_type=filter_type,
+            selected_device_id=device_id
+        )
+
+    def fetch_available_tests(selected_group=None):
+        test_types = [
+            ('bgpaspath_test', bgpaspathTest, 'bgpaspath_tests', 'BGP AS Path'),
+            ('itraceroute_test', itracerouteTest, 'itraceroute_tests', 'iTraceroute'),
+            ('traceroute_test', tracerouteTest, 'traceroute_tests', 'Traceroute'),
+            ('ping_test', pingTest, 'ping_tests', 'Ping'),
+            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_tests', 'TxRx Transceiver')
+        ]
+
+        available_tests = {}
+        for test_type, test_model, _, display_name in test_types:
+            query = test_model.query.filter_by(hidden=False)
+            if selected_group:
+                # Subquery to get test IDs already in the selected group for this test type
+                subquery = db.session.query(test_group_association.c.test_id).filter(
+                    and_(
+                        test_group_association.c.group_id == selected_group.id,
+                        test_group_association.c.test_type == test_type
+                    )
+                ).subquery()
+                query = query.filter(~test_model.id.in_(subquery))  # Exclude tests in the group
+            tests = query.options(joinedload(test_model.devicehostname)).all()
+            test_list = []
+            for test in tests:
+                test_name = test.description or f"Test {test.id}"
+                test_list.append({
+                    'id': test.id,
+                    'type': test_type,
+                    'name': test_name,
+                    'device_hostname': test.devicehostname.hostname if test.devicehostname else f"Device ID {test.devicehostname_id}"
+                })
+            if test_list:  # Only include test type if there are tests
+                available_tests[test_type] = {'display_name': display_name, 'tests': test_list}
+        return available_tests
+
+    def fetch_group_tests(selected_group):
+        test_types = [
+            ('bgpaspath_test', bgpaspathTest, 'bgpaspath_tests', 'BGP AS Path'),
+            ('itraceroute_test', itracerouteTest, 'itraceroute_tests', 'iTraceroute'),
+            ('traceroute_test', tracerouteTest, 'traceroute_tests', 'Traceroute'),
+            ('ping_test', pingTest, 'ping_tests', 'Ping'),
+            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_tests', 'TxRx Transceiver')
+        ]
+
+        group_tests = {}
+        if selected_group:
+            for test_type, _, backref_name, display_name in test_types:
+                tests = getattr(selected_group, backref_name).options(joinedload(getattr(TestGroup, backref_name).property.mapper.class_.devicehostname)).all()
+                test_list = []
+                for test in tests:
+                    test_name = test.description or f"Test {test.id}"
+                    test_list.append({
+                        'id': test.id,
+                        'type': test_type,
+                        'name': test_name,
+                        'device_hostname': test.devicehostname.hostname if test.devicehostname else f"Device ID {test.devicehostname_id}"
+                    })
+                if test_list:  # Only include test type if there are tests
+                    group_tests[test_type] = {'display_name': display_name, 'tests': test_list}
+
+        return group_tests
+    
     @app.route('/test_results', defaults={'user_id': None})
     @app.route('/test_results/<int:user_id>')
     @login_required
@@ -828,18 +1122,21 @@ def create_app():
         # Format start_time and end_time for each test run
         for test_run in test_runs:
             test_run.total_tests = total_counts_dict.get(test_run.id, 0)
+            user_timezone = get_user_timezone(current_user.id)  # Replace with your method to get current user ID
 
             if test_run.start_time:
-                day = test_run.start_time.day
+                start_time_local = test_run.start_time.replace(tzinfo=pytz.UTC).astimezone(user_timezone)
+                day = start_time_local.day
                 suffix = 'th' if 10 <= day % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
-                test_run.formatted_start_time = test_run.start_time.strftime(f'{day}{suffix} %B %Y %H:%M')
+                test_run.formatted_start_time = start_time_local.strftime(f'{day}{suffix} %B %Y %H:%M %Z')
             else:
                 test_run.formatted_start_time = 'N/A'
-            
+
             if test_run.end_time:
-                day = test_run.end_time.day
+                end_time_local = test_run.end_time.replace(tzinfo=pytz.UTC).astimezone(user_timezone)
+                day = end_time_local.day
                 suffix = 'th' if 10 <= day % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
-                test_run.formatted_end_time = test_run.end_time.strftime(f'{day}{suffix} %B %Y %H:%M')
+                test_run.formatted_end_time = end_time_local.strftime(f'{day}{suffix} %B %Y %H:%M %Z')
             else:
                 test_run.formatted_end_time = 'N/A'
 
@@ -980,8 +1277,17 @@ def create_app():
 
             # Fetch test run details
             test_instance = db.session.query(TestInstance).filter_by(test_run_id=run_id).first()
-            run_timestamp = test_instance.test_run.start_time if test_instance else None
-            run_endtimestamp = test_instance.test_run.end_time if test_instance else None
+            
+            user_timezone = get_user_timezone(current_user.id)
+            run_timestamp = None
+            run_endtimestamp = None
+
+            if test_instance and test_instance.test_run:
+                if test_instance.test_run.start_time:
+                    run_timestamp = test_instance.test_run.start_time.replace(tzinfo=pytz.UTC).astimezone(user_timezone)
+                if test_instance.test_run.end_time:
+                    run_endtimestamp = test_instance.test_run.end_time.replace(tzinfo=pytz.UTC).astimezone(user_timezone)
+
 
             test_run = db.session.query(TestRun).filter_by(id=run_id).first()
             if test_run:
@@ -1317,6 +1623,7 @@ def create_app():
         # Initialize forms
         password_form = ChangePasswordForm()
         theme_form = ThemeForm(current_theme=current_user.theme)
+        timezone_form = TimezoneForm() 
 
         # Set dropdown to current theme for GET requests or after failed POST
         if request.method == 'GET' or (request.method == 'POST' and not theme_form.validate()):
@@ -1327,6 +1634,15 @@ def create_app():
                 logging.debug(f"Invalid current theme: {current_user.theme}, falling back to default")
                 theme_form.theme.data = 'default'
 
+        # Set timezone dropdown to current user_timezone
+        if request.method == 'GET' or (request.method == 'POST' and not timezone_form.validate()):
+            if current_user.user_timezone in pytz.all_timezones:
+                timezone_form.timezone.data = current_user.user_timezone
+                logging.debug(f"Set dropdown timezone to: {current_user.user_timezone}")
+            else:
+                logging.debug(f"Invalid current timezone: {current_user.user_timezone}, falling back to UTC")
+                timezone_form.timezone.data = 'UTC'
+
         if request.method == 'POST':
             logging.debug(f"POST request received with form data: {request.form}")
             form_name = request.form.get('form_name')
@@ -1336,17 +1652,27 @@ def create_app():
             handlers = {
                 'userpassword': handle_password_form,
                 'theme': handle_theme_form,
+                'timezone': handle_timezone_form,
             }
             handler = handlers.get(form_name)
             if handler:
-                result = handler(password_form if form_name == 'userpassword' else theme_form)
+                result = handler(
+                    password_form if form_name == 'userpassword' else
+                    theme_form if form_name == 'theme' else
+                    timezone_form
+                )
                 if result:
                     return result
             else:
                 logging.debug(f"Unknown form_name: {form_name}")
                 flash('Invalid form submission.', 'danger')
 
-        return render_template('usersettings.html', password_form=password_form, theme_form=theme_form)
+        return render_template(
+            'usersettings.html',
+            password_form=password_form,
+            theme_form=theme_form,
+            timezone_form=timezone_form  # Pass new form to template
+        )
 
     @app.route('/faq')
     def faq():
@@ -2328,6 +2654,32 @@ def handle_theme_form(form):
         logging.debug(f"Theme form errors: {form.errors}")
         flash(f"Error updating theme: {form.errors.get('theme', ['Unknown error'])[0]}", 'danger')
     return None
+
+def handle_timezone_form(form):
+    if form.validate_on_submit():
+        timezone = form.timezone.data
+        if timezone in pytz.all_timezones:
+            current_user.user_timezone = timezone
+            db.session.commit()
+            logging.debug(f"Updated user timezone to: {timezone}")
+            flash('Timezone updated successfully!', 'success')
+        else:
+            logging.debug(f"Invalid timezone submitted: {timezone}")
+            flash('Invalid timezone selected.', 'danger')
+        return redirect(url_for('usersettings'))
+    return None
+
+def get_user_timezone(user_id):
+    user = db.session.get(User, user_id)
+    return pytz.timezone(user.user_timezone if user and user.user_timezone in pytz.all_timezones else 'UTC')
+
+def format_ordinal(day):
+    day = int(day)  # Convert string to integer
+    suffix = 'th' if 10 <= day % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(day % 10, 'th')
+    return f"{day}{suffix}"
+
+# Ensure the filter is registered
+app.jinja_env.filters['format_ordinal'] = format_ordinal
 
 if __name__ == '__main__':
     use_ssl = os.getenv('USE_SSL', 'true').lower() == 'true'

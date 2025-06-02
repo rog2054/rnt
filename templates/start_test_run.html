@@ -1,9 +1,22 @@
 {% extends 'base.html' %}
 {% block title %}Start Test Run{% endblock %}
 {% block content %}
-<h1>Start a New Test Run</h1>
+<h1>
+    {% if mode == 'all' %}Start All Tests
+    {% elif mode == 'my' %}Start My Tests
+    {% else %}Start Group Tests{% endif %}
+</h1>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+{% for category, message in messages %}
+<div class="alert alert-{{ category }}">{{ message }}</div>
+{% endfor %}
+{% endif %}
+{% endwith %}
+
 <form method="POST" class="mb-4">
-    {{ form.hidden_tag() }} <!-- Adds CSRF token -->
+    {{ form.hidden_tag() }}
 
     <div class="mb-3">
         {{ form.description.label(class="form-label") }}
@@ -17,6 +30,38 @@
         {% endif %}
     </div>
 
+    {% if mode == 'group' %}
+    <div class="mb-3">
+        {{ form.group.label(class="form-label") }}
+        <select name="{{ form.group.name }}" class="form-select w-50" id="{{ form.group.id }}"
+            onchange="updateTestCount()">
+            <option value="" disabled {% if not form.group.data %}selected{% endif %}>Select a group</option>
+            {% for choice_id, choice_name, choice_hover in group_choices %}
+            <option value="{{ choice_id }}" {% if form.group.data==choice_id %}selected{% endif %}
+                title="{{ choice_hover }}" data-test-count="{{ choice_hover.split(' ')[0] }}">{{ choice_name }}</option>
+            {% endfor %}
+        </select>
+        {% if form.group.errors %}
+        <div class="text-danger">
+            {% for error in form.group.errors %}
+            {{ error }}<br>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    <p>Number of tests to run: <span id="test-count">{{ test_count }}</span></p>
     {{ form.submit(class="btn btn-primary") }}
 </form>
+
+{% if mode == 'group' %}
+<script>
+    function updateTestCount() {
+        const select = document.getElementById('{{ form.group.id }}');
+        const selectedOption = select.options[select.selectedIndex];
+        const testCount = selectedOption ? selectedOption.getAttribute('data-test-count') : 0;
+        document.getElementById('test-count').textContent = testCount;
+    }
+</script>
+{% endif %}
 {% endblock %}
