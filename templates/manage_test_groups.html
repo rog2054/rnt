@@ -281,7 +281,8 @@
                         class="test-item {{ 'bold' if test.id|string + ':' + test.type in request.form.getlist('selected_tests') }}">
                         <input type="checkbox" name="group_tests" value="{{ test.id }}:{{ test.type }}" {% if not
                             can_edit %}disabled{% endif %}>
-                        <span title="Test {{ test.id }}: {{ test.device_hostname }}">{{ test.name }}</span>
+                        <span title="{{test_type}} Test {{ test.id }}: {{ test.device_hostname }}">{{ test.name
+                            }}</span>
                     </div>
                     {% endfor %}
                 </div>
