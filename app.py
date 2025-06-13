@@ -8,8 +8,8 @@ import threading
 import queue
 from queue import Queue
 from extensions import db, cipher, babel
-from models import Device, DeviceCredential, TestGroup, test_group_association, bgpaspathTest, tracerouteTest, pingTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, pingTestResult, User, txrxtransceiverTest, itracerouteTest, txrxtransceiverTestResult, itracerouteTestResult
-from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, pingTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm, TimezoneForm
+from models import Device, DeviceCredential, TestGroup, test_group_association, bgpaspathTest, tracerouteTest, pingTest, TestRun, TestInstance, bgpaspathTestResult, tracerouteTestResult, pingTestResult, User, txrxtransceiverTest, itracerouteTest, customshowcommandTest, txrxtransceiverTestResult, itracerouteTestResult, customshowcommandTest, customshowcommandTestResult
+from forms import DeviceForm, CredentialForm, bgpaspathTestForm, tracerouteTestForm, pingTestForm, TestRunForm, CreateUserForm, LoginForm, txrxtransceiverTestForm, itracerouteTestForm, customshowcommandTestForm, CompareTestRunsForm, ThemeForm, ChangePasswordForm, TimezoneForm
 import netmiko
 from netmiko import ConnectHandler, NetmikoTimeoutException, NetmikoAuthenticationException
 import logging
@@ -485,7 +485,7 @@ def create_app():
                     return redirect(url_for('showtests_bgpaspath'))
                 except Exception as e:
                     db.session.rollback()  # In case of any error, rollback the session
-                    print("Error adding device:", str(e))
+                    print("Error adding BGP AS-path test:", str(e))
                     return jsonify({'message': 'Database error: ' + str(e)}), 500
             # If form validation fails, return specific errors
             error_messages = {field: error for field,
@@ -666,7 +666,7 @@ def create_app():
                     return redirect(url_for('showtests_txrxtransceiver'))
                 except Exception as e:
                     db.session.rollback()  # In case of any error, rollback the session
-                    print("Error adding device:", str(e))
+                    print("Error adding TXRX test:", str(e))
                     return jsonify({'message': 'Database error: ' + str(e)}), 500
             # If form validation fails, return specific errors
             error_messages = {field: error for field,
@@ -675,7 +675,7 @@ def create_app():
         # If GET request, render form
         return render_template("addtest_txrxtransceiver.html", form=form)
 
-    # Delete Traceroute Test
+    # Delete TXRX Test
     @app.route('/tests/delete_txrxtransceivertest/<int:test_id>', methods=['POST'])
     @login_required
     def delete_txrxtransceivertest(test_id):
@@ -733,7 +733,7 @@ def create_app():
                     return redirect(url_for('showtests_itraceroute'))
                 except Exception as e:
                     db.session.rollback()  # In case of any error, rollback the session
-                    print("Error adding device:", str(e))
+                    print("Error adding itraceroute test:", str(e))
                     return jsonify({'message': 'Database error: ' + str(e)}), 500
             # If form validation fails, return specific errors
             error_messages = {field: error for field,
@@ -751,6 +751,71 @@ def create_app():
             test.hidden = True
             db.session.commit()
             return jsonify({'message': 'ACI itraceroute test removed successfully'})
+        else:
+            return jsonify({'message': 'You did not create this test'})
+        
+    # Display all customshowcommand tests
+    @app.route('/tests/customshowcommand', methods=['GET'])
+    @login_required
+    def showtests_customshowcommand():
+         # Query all non-hidden customshowcommand tests
+        customshowcommandtests = customshowcommandTest.query.filter_by(hidden=False).all()
+        
+        # Create a list of dictionaries with test data and owner flag
+        tests_with_owner = []
+        for test in customshowcommandtests:
+            test_data = {
+                'id': test.id,
+                'devicehostname': test.devicehostname,
+                'customshowcommand': test.customshowcommand,
+                'description': test.description,
+                'created_by': test.created_by,
+                'owner': test.created_by_id == current_user.id,  # True if item creator = current user, otherwise False
+                'owner_name': test.created_by.username if test.created_by else 'Unknown'
+            }
+            tests_with_owner.append(test_data)
+        
+        # Pass the modified dataset to the template
+        return render_template('showtests_customshowcommand.html', customshowcommandtests=tests_with_owner)
+
+    # Add AS-path test
+    @app.route('/tests/addtest_customshowcommand', methods=['GET', 'POST'])
+    @login_required
+    def addtest_customshowcommand():
+        form = customshowcommandTestForm()
+        if request.method == 'POST':
+            if form.validate_on_submit():  # Form validation
+                try:
+                    # Create a new bgp as-path test using the form data
+                    new_test = customshowcommandTest(
+                        devicehostname_id=form.test_device_hostname.data,
+                        customshowcommand=form.test_customshowcommand.data,
+                        description=form.test_description.data,
+                        created_by_id=current_user.id
+                    )
+                    db.session.add(new_test)
+                    db.session.commit()
+                    return redirect(url_for('showtests_customshowcommand'))
+                except Exception as e:
+                    db.session.rollback()  # In case of any error, rollback the session
+                    print("Error adding customshowcommand test:", str(e))
+                    return jsonify({'message': 'Database error: ' + str(e)}), 500
+            # If form validation fails, return specific errors
+            error_messages = {field: error for field,
+                              error in form.errors.items()}
+            return jsonify({'message': 'Form validation failed', 'errors': error_messages}), 400
+        # If GET request, render form
+        return render_template("addtest_customshowcommand.html", form=form)
+
+    # Delete AS-path Test
+    @app.route('/tests/delete_customshowcommandtest/<int:test_id>', methods=['POST'])
+    @login_required
+    def delete_customshowcommandtest(test_id):
+        test = customshowcommandTest.query.get_or_404(test_id)
+        if test.created_by_id == current_user.id:
+            test.hidden = True
+            db.session.commit()
+            return jsonify({'message': 'Custom show Test removed successfully'})
         else:
             return jsonify({'message': 'You did not create this test'})
 
@@ -1093,6 +1158,21 @@ def create_app():
             )
             .group_by(TestRun.id)
         )
+        
+        customshowcommand_counts = (
+            db.session.query(
+                TestRun.id.label('test_run_id'),
+                func.count(TestInstance.id).label('test_count')
+            )
+            .join(TestInstance, TestRun.id == TestInstance.test_run_id)
+            .join(customshowcommandTestResult, TestInstance.id == customshowcommandTestResult.test_instance_id)
+            .filter(
+                TestRun.hidden == False,
+                TestInstance.test_type == "customshowcommand_test",
+                TestInstance.device_active_at_run == True
+            )
+            .group_by(TestRun.id)
+        )
 
         # Combine counts using UNION ALL and wrap in a subquery
         total_counts_subquery = (
@@ -1100,7 +1180,8 @@ def create_app():
                 traceroute_counts,
                 ping_counts,
                 txrxtransceiver_counts,
-                itraceroute_counts
+                itraceroute_counts,
+                customshowcommand_counts
             )
             .subquery()
         )
@@ -1193,6 +1274,12 @@ def create_app():
                                 .join(itracerouteTest, TestInstance.itraceroute_test_id == itracerouteTest.id)
                                 .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "itraceroute_test"))
             
+            customshowcommand_base_query = (db.session.query(TestInstance, customshowcommandTestResult, Device, customshowcommandTest)
+                                .join(customshowcommandTestResult, TestInstance.id == customshowcommandTestResult.test_instance_id)
+                                .join(Device, TestInstance.device_id == Device.id)
+                                .join(customshowcommandTest, TestInstance.customshowcommand_test_id == customshowcommandTest.id)
+                                .filter(TestInstance.test_run_id == run_id, TestInstance.test_type == "customshowcommand_test"))
+            
             # Calculate totals from unfiltered data
             bgp_totals = {
                 'pass': sum(1 for _, r, _, _ in bgp_base_query.filter(bgpaspathTestResult.passed == True).all()),
@@ -1228,12 +1315,19 @@ def create_app():
                 'incomplete': sum(1 for ti, r, _, _ in itraceroute_base_query.filter(itracerouteTestResult.passed == None, TestInstance.device_active_at_run == True).all()),
                 'skipped': sum(1 for ti, _, _, _ in itraceroute_base_query.filter(TestInstance.device_active_at_run == False).all())
             }
+            
+            customshowcommand_totals = {
+                'pass': sum(1 for _, r, _, _ in customshowcommand_base_query.filter(customshowcommandTestResult.passed == True).all()),
+                'fail': sum(1 for _, r, _, _ in customshowcommand_base_query.filter(customshowcommandTestResult.passed == False).all()),
+                'incomplete': sum(1 for ti, r, _, _ in customshowcommand_base_query.filter(customshowcommandTestResult.passed == None, TestInstance.device_active_at_run == True).all()),
+                'skipped': sum(1 for ti, _, _, _ in customshowcommand_base_query.filter(TestInstance.device_active_at_run == False).all())
+            }
 
             totals = {
-                'pass': bgp_totals['pass'] + traceroute_totals['pass'] + ping_totals['pass'] + txrxtransceiver_totals['pass'] + itraceroute_totals['pass'],
-                'fail': bgp_totals['fail'] + traceroute_totals['fail'] + ping_totals['fail'] + txrxtransceiver_totals['fail'] + itraceroute_totals['fail'],
-                'incomplete': bgp_totals['incomplete'] + traceroute_totals['incomplete'] + ping_totals['incomplete'] + txrxtransceiver_totals['incomplete'] + itraceroute_totals['incomplete'],
-                'skipped': bgp_totals['skipped'] + traceroute_totals['skipped'] + ping_totals['skipped'] + txrxtransceiver_totals['skipped'] + itraceroute_totals['skipped']
+                'pass': bgp_totals['pass'] + traceroute_totals['pass'] + ping_totals['pass'] + txrxtransceiver_totals['pass'] + itraceroute_totals['pass'] + customshowcommand_totals['pass'],
+                'fail': bgp_totals['fail'] + traceroute_totals['fail'] + ping_totals['fail'] + txrxtransceiver_totals['fail'] + itraceroute_totals['fail'] + customshowcommand_totals['fail'],
+                'incomplete': bgp_totals['incomplete'] + traceroute_totals['incomplete'] + ping_totals['incomplete'] + txrxtransceiver_totals['incomplete'] + itraceroute_totals['incomplete'] + customshowcommand_totals['incomplete'],
+                'skipped': bgp_totals['skipped'] + traceroute_totals['skipped'] + ping_totals['skipped'] + txrxtransceiver_totals['skipped'] + itraceroute_totals['skipped'] + customshowcommand_totals['skipped']
             }
 
             # Filtered queries for display
@@ -1242,6 +1336,7 @@ def create_app():
             ping_query = ping_base_query
             txrxtransceiver_query = txrxtransceiver_base_query
             itraceroute_query = itraceroute_base_query
+            customshowcommand_query = customshowcommand_base_query
 
             # Apply filters to display results
             if filter_type == 'pass':
@@ -1250,30 +1345,36 @@ def create_app():
                 ping_query = ping_query.filter(pingTestResult.passed == True)
                 txrxtransceiver_query = txrxtransceiver_query.filter(txrxtransceiverTestResult.passed == True)
                 itraceroute_query = itraceroute_query.filter(itracerouteTestResult.passed == True)
+                customshowcommand_query = customshowcommand_query.filter(customshowcommandTestResult.passed == True)
             elif filter_type == 'fail':
                 bgp_query = bgp_query.filter(bgpaspathTestResult.passed == False)
                 traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == False)
                 ping_query = ping_query.filter(pingTestResult.passed == False)
                 txrxtransceiver_query = txrxtransceiver_query.filter(txrxtransceiverTestResult.passed == False)
                 itraceroute_query = itraceroute_query.filter(itracerouteTestResult.passed == False)
+                customshowcommand_query = customshowcommand_query.filter(customshowcommandTestResult.passed == False)
             elif filter_type == 'incomplete':
                 bgp_query = bgp_query.filter(bgpaspathTestResult.passed == None, TestInstance.device_active_at_run == True)
                 traceroute_query = traceroute_query.filter(tracerouteTestResult.passed == None, TestInstance.device_active_at_run == True)
                 ping_query = ping_query.filter(pingTestResult.passed == None, TestInstance.device_active_at_run == True)
                 txrxtransceiver_query = txrxtransceiver_query.filter(txrxtransceiverTestResult.passed == None, TestInstance.device_active_at_run == True)
                 itraceroute_query = itraceroute_query.filter(itracerouteTestResult.passed == None, TestInstance.device_active_at_run == True)
+                customshowcommand_query = customshowcommand_query.filter(customshowcommandTestResult.passed == None, TestInstance.device_active_at_run == True)
             elif filter_type == 'skipped':
                 bgp_query = bgp_query.filter(TestInstance.device_active_at_run == False)
                 traceroute_query = traceroute_query.filter(TestInstance.device_active_at_run == False)
                 ping_query = ping_query.filter(TestInstance.device_active_at_run == False)
                 txrxtransceiver_query = txrxtransceiver_query.filter(TestInstance.device_active_at_run == False)
                 itraceroute_query = itraceroute_query.filter(TestInstance.device_active_at_run == False)
+                customshowcommand_query = customshowcommand_query.filter(TestInstance.device_active_at_run == False)
 
+            # Get query results
             bgp_results = bgp_query.all()
             traceroute_results = traceroute_query.all()
             ping_results = ping_query.all()
             txrxtransceiver_results = txrxtransceiver_query.all()
             itraceroute_results = itraceroute_query.all()
+            customshowcommand_results = customshowcommand_query.all()
 
             # Fetch test run details
             test_instance = db.session.query(TestInstance).filter_by(test_run_id=run_id).first()
@@ -1305,6 +1406,7 @@ def create_app():
                             ping_results=ping_results,
                             txrxtransceiver_results=txrxtransceiver_results,
                             itraceroute_results=itraceroute_results,
+                            customshowcommand_results=customshowcommand_results,
                             run_timestamp=run_timestamp,
                             run_endtimestamp=run_endtimestamp,
                             run_description=run_description,
@@ -1461,6 +1563,7 @@ def create_app():
         ping_results = get_comparison_data('ping_test', pingTest, pingTestResult)
         txrxtransceiver_results = get_comparison_data('txrxtransceiver_test', txrxtransceiverTest, txrxtransceiverTestResult)
         itraceroute_results = get_comparison_data('itraceroute_test', itracerouteTest, itracerouteTestResult)
+        customshowcommand_results = get_comparison_data('customshowcommand_test', customshowcommandTest, customshowcommandTestResult)
         
         return render_template(
             'compare_byresult.html',
@@ -1472,7 +1575,8 @@ def create_app():
             traceroute_results=traceroute_results,
             ping_results=ping_results,
             txrxtransceiver_results=txrxtransceiver_results,
-            itraceroute_results=itraceroute_results
+            itraceroute_results=itraceroute_results,
+            customshowcommand_results=customshowcommand_results
         )
 
     @app.route('/compare_results/byrawoutput', methods=['GET'])
@@ -1603,6 +1707,7 @@ def create_app():
         ping_results = get_comparison_data('ping_test', pingTest, pingTestResult)
         txrxtransceiver_results = get_comparison_data('txrxtransceiver_test', txrxtransceiverTest, txrxtransceiverTestResult)
         itraceroute_results = get_comparison_data('itraceroute_test', itracerouteTest, itracerouteTestResult)
+        customshowcommand_results = get_comparison_data('customshowcommand_test', customshowcommandTest, customshowcommandTestResult)
 
         return render_template(
             'compare_byrawoutput.html',
@@ -1614,7 +1719,8 @@ def create_app():
             traceroute_results=traceroute_results,
             ping_results=ping_results,
             txrxtransceiver_results=txrxtransceiver_results,
-            itraceroute_results=itraceroute_results
+            itraceroute_results=itraceroute_results,
+            customshowcommand_results=customshowcommand_results
         )
 
     @app.route('/usersettings', methods=['GET','POST'])
@@ -1719,6 +1825,7 @@ def create_app():
             'ping': pingTest,
             'txrxtransceiver': txrxtransceiverTest,
             'itraceroute': itracerouteTest,
+            'customshowcommand': customshowcommandTest,
             'device' : Device,
         }
         
@@ -1841,6 +1948,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
             "ping_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "txrxtransceiver_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "itraceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
+            "customshowcommand_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
         }
         for inst in instances:
             stats[inst.test_type]["total"] += 1
@@ -2085,6 +2193,24 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                                 log_lines.append(log_msg)
                             socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
 
+                        elif test.test_type == "customshowcommand_test":
+                            customshowcommand_test = test.customshowcommand_test
+                            
+                            command_to_execute = test.customshowcommand # load test command from db
+                            rawoutput = conn.send_command(command)
+                            netmiko_logger.debug(f"Sent: {command}")
+                            netmiko_logger.debug(f"Received: {rawoutput}")
+                            
+                            logger.info (f"customshowcommand_test rawoutput: {rawoutput} for run_id: {test_run_id}")
+                            passed = len(output.splitlines()) > 1  # TRUE if 2+ lines in output (a command execution error message is typically 1 line)
+                        
+                            result = customshowcommandTestResult(test_instance_id=test.id, rawoutput=rawoutput, passed=passed, command_executed=command_to_execute)
+                            db.session.add(result)
+                            log_msg = f"Device {device.hostname}: itraceroute test ID {test.id} completed - {'Passed' if passed else 'Failed'}"
+                            with log_lock:
+                                log_lines.append(log_msg)
+                            socketio.emit('status_update', {'message': log_msg, 'run_id': test_run_id, 'level': 'child', 'device_id': device_id})
+
                         test.status = "completed"
 
                     except NetmikoTimeoutException as e:
@@ -2128,11 +2254,25 @@ def skip_tests_for_device(device_id, test_run_id, reason, log_lines, log_lock):
 
         bgp_count = sum(1 for t in tests if t.test_type == "bgpaspath_test")
         traceroute_count = sum(1 for t in tests if t.test_type == "traceroute_test")
+        ping_count = sum(1 for t in tests if t.test_type == "ping_test")
+        txrxtransceiver_count = sum(1 for t in tests if t.test_type == "txrxtransceiver_test")
+        itraceroute_count = sum(1 for t in tests if t.test_type == "itraceroute_test")
+        customshowcommand_count = sum(1 for t in tests if t.test_type == "customshowcommand_test")
+        
         skip_summary = []
         if bgp_count:
             skip_summary.append(f"{bgp_count} BGP test{'s' if bgp_count > 1 else ''}")
         if traceroute_count:
             skip_summary.append(f"{traceroute_count} Traceroute test{'s' if traceroute_count > 1 else ''}")
+        if ping_count:
+            skip_summary.append(f"{ping_count} Ping test{'s' if ping_count > 1 else ''}")
+        if txrxtransceiver_count:
+            skip_summary.append(f"{txrxtransceiver_count} TXRX test{'s' if txrxtransceiver_count > 1 else ''}")
+        if itraceroute_count:
+            skip_summary.append(f"{itraceroute_count} iTraceroute test{'s' if itraceroute_count > 1 else ''}")
+        if customshowcommand_count:
+            skip_summary.append(f"{customshowcommand_count} other test{'s' if customshowcommand_count > 1 else ''}")
+            
         summary_msg = f"Device {device.hostname}: Skipping {', '.join(skip_summary)} - {reason}"
 
         for test in tests:
@@ -2152,6 +2292,8 @@ def skip_tests_for_device(device_id, test_run_id, reason, log_lines, log_lock):
                     db.session.add(result)
                 elif test.test_type == "itraceroute_test":
                     result = itracerouteTestResult(test_instance_id=test.id, rawoutput=reason, passed=None)
+                elif test.test_type == "customshowcommand_test":
+                    result = customshowcommandTestResult(test_instance_id=test.id, rawoutput=reason, passed=None)
         db.session.commit()
 
         with log_lock:
@@ -2200,6 +2342,13 @@ TEST_TYPE_CONFIG = {
     },
     "itraceroute_test": {
         "model": itracerouteTestResult,
+        "default_fields": {
+            "rawoutput": lambda e: f"Error: {str(e)}",
+            "passed": None
+        }
+    },
+    "customshowcommand_test": {
+        "model": customshowcommandTestResult,
         "default_fields": {
             "rawoutput": lambda e: f"Error: {str(e)}",
             "passed": None

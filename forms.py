@@ -178,6 +178,25 @@ class itracerouteTestForm(FlaskForm):
             .order_by(Device.hostname)
             .all()
         ]
+        
+class customshowcommandTestForm(FlaskForm):
+    test_device_hostname = SelectField(
+        "Test from Device", choices=[], coerce=int)
+    test_customshowcommand = StringField("The test command you want to execute (show ...)", validators=[
+                                     DataRequired()])
+    test_description = StringField("What is the purpose of doing this test")
+
+    submit = SubmitField("Save Test")
+
+    def __init__(self, *args, **kwargs):
+        super(customshowcommandTestForm, self).__init__(*args, **kwargs)
+        self.test_device_hostname.choices = [
+        (device.id, device.hostname)
+        for device in Device.query
+            .filter(Device.devicetype.in_(["cisco_ios", "cisco_nxos"]))
+            .order_by(Device.hostname)
+            .all()
+        ]
 
 class TestRunForm(FlaskForm):
     description = StringField('Test Run Description (required)', validators=[DataRequired()], render_kw={"placeholder": "e.g., Tests before changes"})

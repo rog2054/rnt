@@ -329,6 +329,59 @@
     </table>
     {% endif %}
 
+    <!-- Custom Show Command Tests Table -->
+    {% if customshowcommand_results|length > 0 %}
+    <h2>BGP Tests</h2>
+    <table class="table table-striped" id="bgp-table">
+        <thead>
+            <tr>
+                <th>Test ID</th>
+                <th>Tested from Device</th>
+                <th>Test Description</th>
+                <th>Result</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for test_instance, result, device, customshowcommand_test in customshowcommand_results %}
+            <tr class="summary-row" data-toggle-id="bgp-{{ test_instance.id }}">
+                <td>{{ customshowcommand_test.id }}</td>
+                <td>{{ device.siteinfo or device.hostname }}</td>
+                <td>{{ customshowcommand_test.description }}</td>
+                <td>
+                    {% if result and result.passed is not none %}
+                    {% if result.passed %}
+                    <span class="pass">✅</span>
+                    {% else %}
+                    <span class="fail">❌</span>
+                    {% endif %}
+                    {% elif not test_instance.device_active_at_run %}
+                    <span class="text-muted" title="Device inactive at run time">⏸️</span>
+                    {% else %}
+                    <span class="text-warning" title="Connection error">⚠️</span>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr class="details-row" id="customshowcommand-{{ test_instance.id }}" style="display: none;">
+                <td colspan="5">
+                    <strong>Device:</strong> {{ device.hostname }} ({{ device.mgmtip }})<br>
+                    <strong>Status:</strong>
+                    {% if result and result.passed is not none %}
+                    {{ "Passed" if result.passed else "Failed" }}
+                    {% elif not test_instance.device_active_at_run %}
+                    Skipped (Device Inactive at Run Time)
+                    {% else %}
+                    Skipped (Connection Error)
+                    {% endif %}<br>
+                    <strong>Command Executed:</strong> {{ customshowcommand_test.customshowcommand }}<br>
+                    <strong>Raw Output:</strong><br>
+                    <pre>{{ result.rawoutput if result else "No output" }}</pre>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
     <br />
     <!-- Run Log Section -->
     <h2>Run Log</h2>
