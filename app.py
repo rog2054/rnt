@@ -1043,7 +1043,8 @@ def create_app():
             ('itraceroute_test', itracerouteTest, 'itraceroute_tests', 'iTraceroute'),
             ('traceroute_test', tracerouteTest, 'traceroute_tests', 'Traceroute'),
             ('ping_test', pingTest, 'ping_tests', 'Ping'),
-            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_tests', 'TxRx Transceiver')
+            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_tests', 'TxRx Transceiver'),
+            ('customshowcommand_test', customshowcommandTest, 'customshowcommand_tests', 'Custom Show Command')
         ]
 
         group_tests = {}
