@@ -846,7 +846,8 @@ def create_app():
             ('itraceroute_test', itracerouteTest),
             ('traceroute_test', tracerouteTest),
             ('ping_test', pingTest),
-            ('txrxtransceiver_test', txrxtransceiverTest)
+            ('txrxtransceiver_test', txrxtransceiverTest),
+            ('customshowcommand_test', customshowcommandTest)
         ]
         device_test_counts = {}
         for device in devices:
@@ -939,7 +940,8 @@ def create_app():
                         ('itraceroute_test', itracerouteTest),
                         ('traceroute_test', tracerouteTest),
                         ('ping_test', pingTest),
-                        ('txrxtransceiver_test', txrxtransceiverTest)
+                        ('txrxtransceiver_test', txrxtransceiverTest),
+                        ('customshowcommand_test', customshowcommandTest)
                     ]
                     for test_type, test_model in test_types:
                         query = test_model.query.filter_by(hidden=False)
@@ -1005,7 +1007,8 @@ def create_app():
             ('itraceroute_test', itracerouteTest, 'itraceroute_tests', 'iTraceroute'),
             ('traceroute_test', tracerouteTest, 'traceroute_tests', 'Traceroute'),
             ('ping_test', pingTest, 'ping_tests', 'Ping'),
-            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_tests', 'TxRx Transceiver')
+            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_tests', 'TxRx Transceiver'),
+            ('customshowcommand_test', customshowcommandTest, 'customshowcommand_tests', 'Custom Show Commands')
         ]
 
         available_tests = {}
