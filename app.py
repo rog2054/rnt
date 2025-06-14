@@ -185,6 +185,7 @@ def create_app():
             "ping_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "txrxtransceiver_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             "itraceroute_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
+            "customshowcommand_test": {"completed": 0, "running": 0, "skipped": 0, "total": 0},
             }
         for inst in instances:
             stats[inst.test_type]["total"] += 1
