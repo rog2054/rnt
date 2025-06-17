@@ -2208,7 +2208,7 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             netmiko_logger.debug(f"Received: {rawoutput}")
                             
                             logger.info (f"customshowcommand_test rawoutput: {rawoutput} for run_id: {test_run_id}")
-                            passed = len(output.splitlines()) > 1  # TRUE if 2+ lines in output (a command execution error message is typically 1 line)
+                            passed = len(rawoutput.splitlines()) > 1  # TRUE if 2+ lines in output (a command execution error message is typically 1 line)
                         
                             result = customshowcommandTestResult(test_instance_id=test.id, rawoutput=rawoutput, passed=passed, command_executed=command_to_execute)
                             db.session.add(result)
