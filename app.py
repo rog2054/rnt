@@ -212,7 +212,8 @@ def create_app():
             ('traceroute_test', tracerouteTest, 'traceroute_test_id'),
             ('ping_test', pingTest, 'ping_test_id'),
             ('bgpaspath_test', bgpaspathTest, 'bgpaspath_test_id'),
-            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_test_id')
+            ('txrxtransceiver_test', txrxtransceiverTest, 'txrxtransceiver_test_id'),
+            ('customshowcommand_test', customshowcommandTest, 'customshowcommand_test_id')
         ]
 
         # Calculate test count based on mode
