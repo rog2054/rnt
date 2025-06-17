@@ -2203,8 +2203,8 @@ def run_tests_for_device(device_id, test_run_id, log_lines, log_lock):
                             customshowcommand_test = test.customshowcommand_test
                             
                             command_to_execute = customshowcommand_test.customshowcommand
-                            rawoutput = conn.send_command(command)
-                            netmiko_logger.debug(f"Sent: {command}")
+                            rawoutput = conn.send_command(command_to_execute)
+                            netmiko_logger.debug(f"Sent: {command_to_execute}")
                             netmiko_logger.debug(f"Received: {rawoutput}")
                             
                             logger.info (f"customshowcommand_test rawoutput: {rawoutput} for run_id: {test_run_id}")
