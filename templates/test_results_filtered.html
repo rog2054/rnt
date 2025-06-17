@@ -331,8 +331,8 @@
 
     <!-- Custom Show Command Tests Table -->
     {% if customshowcommand_results|length > 0 %}
-    <h2>BGP Tests</h2>
-    <table class="table table-striped" id="bgp-table">
+    <h2>Custom Show Command Tests</h2>
+    <table class="table table-striped" id="customshowcommand-table">
         <thead>
             <tr>
                 <th>Test ID</th>
@@ -343,7 +343,7 @@
         </thead>
         <tbody>
             {% for test_instance, result, device, customshowcommand_test in customshowcommand_results %}
-            <tr class="summary-row" data-toggle-id="bgp-{{ test_instance.id }}">
+            <tr class="summary-row" data-toggle-id="customshowcommand-{{ test_instance.id }}">
                 <td>{{ customshowcommand_test.id }}</td>
                 <td>{{ device.siteinfo or device.hostname }}</td>
                 <td>{{ customshowcommand_test.description }}</td>
