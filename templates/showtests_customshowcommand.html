@@ -1,0 +1,147 @@
+{% extends 'base.html' %}
+{% block title %}Custom Show Command Tests{% endblock %}
+{% block head %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
+{% endblock %}
+{% block content %}
+<h1>Custom Show Command Tests</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th class="text-center">ID</th>
+            <th>Connect to device</th>
+            <th class="text-center">Show Command</th>
+            <th>Description of Test</th>
+            <th class="text-center">Remove</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for test in customshowcommandtests %}
+        <tr>
+            <td class="text-center">{{ test.id }}</td>
+            <td>{{ test.devicehostname.hostname }}</td>
+            <td class="text-center">{{ test.customshowcommand }}</td>
+            <td>
+                <span class="description-text" data-id="{{ test.id }}">{{ test.description }}</span>
+                {% if test.owner %}
+                <span class="material-symbols-rounded edit-description" title="Edit description"
+                    style="cursor: pointer;">stylus</span>
+                {% endif %}
+            </td>
+            <td class="text-center">
+                {% if test.owner %}
+                <button class="delete-test" data-id="{{ test.id }}" style="background: none; border: none; padding: 0;">
+                    <span class="material-symbols-rounded" title="Click to delete">delete</span>
+                </button>
+                {% else %}
+                <span class="material-symbols-rounded delete-locked"
+                    title="Created by {{ test.owner_name }}">lock</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{{ url_for('addtest_customshowcommand') }}" class="btn btn-primary">Create Test</a>
+
+
+{% endblock %}
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#deviceForm').submit(function (e) {
+            e.preventDefault();
+            $.ajax({
+                url: '/tests/customshowcommand',
+                type: 'POST',
+                data: $(this).serialize(),
+                success: function (response) {
+                    alert(response.message);
+                    location.reload();
+                },
+                error: function () {
+                    alert('Error adding device');
+                }
+            });
+        });
+
+        // Delete test
+        $('.delete-test').click(function () {
+            const deviceId = $(this).data('id');
+            if (confirm('Are you sure you want to remove this test?')) {
+                $.ajax({
+                    url: '/tests/delete_customshowcommand/' + deviceId,
+                    type: 'POST',
+                    headers: {
+                        'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')  // Include CSRF token
+                    },
+                    success: function (response) {
+                        alert(response.message);
+                        location.reload();
+                    },
+                    error: function (xhr) {
+                        alert('Error removing test: ' + xhr.responseText);
+                    }
+                });
+            }
+        });
+
+        // Edit description
+        $('.edit-description').click(function () {
+            const descriptionSpan = $(this).prev('.description-text'); // Changed from next() to prev()
+            const testId = descriptionSpan.data('id');
+            const currentDescription = descriptionSpan.text();
+
+            // Replace span with input field
+            const input = $('<input>', {
+                type: 'text',
+                class: 'description-input',
+                value: currentDescription
+            });
+            descriptionSpan.replaceWith(input);
+            input.focus();
+
+            // Save on blur or Enter key
+            input.on('blur', function () {
+                saveDescription(testId, input.val(), input, descriptionSpan);
+            });
+            input.on('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    saveDescription(testId, input.val(), input, descriptionSpan);
+                }
+            });
+        });
+    });
+
+    function saveDescription(testId, newDescription, inputElement, originalSpan) {
+        fetch('/update_description/customshowcommand', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': $('meta[name="csrf-token"]').attr('content')
+            },
+            body: JSON.stringify({
+                test_id: testId,
+                description: newDescription
+            })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    originalSpan.text(newDescription);
+                    inputElement.replaceWith(originalSpan);
+                } else {
+                    alert('Failed to update description: ' + data.message);
+                    inputElement.replaceWith(originalSpan);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the description.');
+                inputElement.replaceWith(originalSpan);
+            });
+    }
+</script>
+{% endblock %}

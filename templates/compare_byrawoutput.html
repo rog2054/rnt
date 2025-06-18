@@ -312,6 +312,74 @@
         {% endif %}
     </div>
 
+    <!-- Custom Show Command Tests Table -->
+    <div class="cbr-test-type" id="cbr-customshowcommand-section">
+        <h3>Custom Show Command Tests</h3>
+        {% if customshowcommand_results %}
+        <table class="cbr-table cbr-table-bordered cbr-table-striped">
+            <thead>
+                <tr>
+                    <th>Test ID</th>
+                    <th>Device</th>
+                    <th>Description</th>
+                    <th>Raw Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in customshowcommand_results %}
+                <tr class="cbr-summary-row" data-toggle-id="customshowcommand-{{ result.test_id }}"
+                    data-status="{{ result.status }}">
+                    <td>{{ result.test_id }}</td>
+                    <td>{{ result.device_hostname }}</td>
+                    <td>{{ result.description }}</td>
+                    <td>
+                        {% if '‼️' in result.icon_status %}
+                        {{ result.icon_status | replace('‼️', '<span class="cbr-icon-skipped">!!</span>') | safe }}
+                        {% else %}
+                        {{ result.icon_status }}
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr class="cbr-details-row" id="customshowcommand-{{ result.test_id }}">
+                    <td colspan="4">
+                        <table class="cbr-output-table">
+                            <tr>
+                                <td>
+                                    <strong>Test Run {{ test_run_1.id }}:</strong><br>
+                                    {% if result.passed_1 is not none %}
+                                    <strong>Status:</strong> {{ 'Passed' if result.passed_1 else 'Failed' }}<br>
+                                    <strong>Raw Output:</strong><br>
+                                    <pre>{{ result.rawoutput_1 or 'No output' }}</pre>
+                                    {% elif not result.active_1 %}
+                                    Skipped (Device Inactive)<br>
+                                    {% else %}
+                                    No Result<br>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>Test Run {{ test_run_2.id }}:</strong><br>
+                                    {% if result.passed_2 is not none %}
+                                    <strong>Status:</strong> {{ 'Passed' if result.passed_2 else 'Failed' }}<br>
+                                    <strong>Raw Output:</strong><br>
+                                    <pre>{{ result.rawoutput_2 or 'No output' }}</pre>
+                                    {% elif not result.active_2 %}
+                                    Skipped (Device Inactive)<br>
+                                    {% else %}
+                                    No Result<br>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No results for Custom Show Command Tests.</p>
+        {% endif %}
+    </div>
+
     <!-- Back Button -->
     <div class="cbr-button-container">
         <a href="{{ url_for('compare_test_runs_picker') }}" class="btn btn-primary">Back to Results Comparison
@@ -326,7 +394,8 @@
             'cbr-bgp-section',
             'cbr-traceroute-section',
             'cbr-txrxtransceiver-section',
-            'cbr-itraceroute-section'
+            'cbr-itraceroute-section',
+            'cbr-customshowcommand-section'
         ];
 
         testTypes.forEach(sectionId => {
@@ -364,7 +433,8 @@
             'cbr-bgp-section',
             'cbr-traceroute-section',
             'cbr-txrxtransceiver-section',
-            'cbr-itraceroute-section'
+            'cbr-itraceroute-section',
+            'cbr-customshowcommand-section'
         ];
         const allHidden = testTypes.every(sectionId => {
             const section = document.getElementById(sectionId);

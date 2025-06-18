@@ -194,6 +194,29 @@ class itracerouteTest(db.Model):
         backref=db.backref('itraceroute_tests', lazy='dynamic')
     )
 
+class customshowcommandTest(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    devicehostname_id = db.Column(
+        db.Integer,
+        db.ForeignKey('device.id', name='fk_customshowcommand_device_hostname'),
+        nullable=True
+    )
+    devicehostname = db.relationship('Device',backref='customshowcommand_tests')
+    customshowcommand = db.Column(db.String(200))
+    description = db.Column(db.String(200))
+    created_by_id = db.Column(db.Integer, db.ForeignKey('user.id', name='fk_customshowcommandtest_created_by_id'), nullable=True)
+    created_by = db.relationship('User', backref='customshowcommandtests')
+    hidden = db.Column(db.Boolean, default=False)
+    instances = db.relationship("TestInstance", backref="customshowcommand_test")
+    groups = db.relationship(
+        'TestGroup',
+        secondary=test_group_association,
+        primaryjoin="and_(customshowcommandTest.id == test_group_association.c.test_id, test_group_association.c.test_type == 'customshowcommand_test')",
+        backref=db.backref('customshowcommand_tests', lazy='dynamic')
+    )
+     
+
+
 class TestRun(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     start_time = db.Column(db.DateTime, default=datetime.utcnow)
@@ -228,6 +251,7 @@ class TestInstance(db.Model):
     ping_test_id = db.Column(db.Integer, db.ForeignKey("ping_test.id", name='fk_test_instance_ping_test'), nullable=True)
     txrxtransceiver_test_id = db.Column(db.Integer, db.ForeignKey("txrxtransceiver_test.id", name='fk_test_instance_txrxtransceiver_test'), nullable=True)
     itraceroute_test_id = db.Column(db.Integer, db.ForeignKey("itraceroute_test.id", name='fk_test_instance_itraceroute_test'), nullable=True)
+    customshowcommand_test_id = db.Column(db.Integer, db.ForeignKey("customshowcommand_test.id", name='fk_test_instance_customshowcommand_test'), nullable=True)
     device_active_at_run = db.Column(db.Boolean, nullable=False, default=True)
 
 
@@ -301,4 +325,10 @@ class itracerouteTestResult(db.Model):
     passed = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
 
-
+class customshowcommandTestResult(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    test_instance_id = db.Column(db.Integer, db.ForeignKey("test_instance.id", name='fk_customshowcommand_result_test_instance'), nullable=False)
+    rawoutput = db.Column(db.Text)
+    passed = db.Column(db.Boolean)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    command_executed = db.Column(db.String(250))

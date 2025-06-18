@@ -15,7 +15,7 @@ Think of this as a way to quickly verify the things that your team might usually
 
 Some suggested use cases are:
 1. Run a RNT test suite Before & After making a configuration change to verify that nothing else has been accidentally impacted as a side-effect.
-2. Run RNT tests when a WAN circuit or network device fails to give you a quick idea of the impact so you can focus your efforts on any workarounds that might be needed to restore service/performance to the business (or pat yourselves on the back because everything failed over flawlessly, for once!).
+2. Run RNT tests when a WAN circuit or network device fails to give you a quick idea of the impact so you can focus your efforts on any workarounds that might be needed to restore service/performance to the business (or pat yourselves on the back because everything failed over flawlessly, yey!).
 
 It is provided as a ready-built docker image 🐳 and can be run on either Windows or Linux.
 
@@ -25,12 +25,12 @@ Once installed you and your team can access it via a simple web interface.
 
 ## Features
 
-* Define once, run-many approach to reduce overall effort
+* Define once, run-many approach to reduce duplicated effort
 * Only requires read-only SSH access (using a read-only account is strongly recommended)
 * Passwords stored in the RNT database are encrypted as standard
-* The RNT Database (app configuration and test results) is a single file which can be easily backed up by copy/paste - no SQL knowledge or tools are required
+* The RNT Database (app configuration and test results) is a single file which can be easily backed up by copy/paste or standard backup tools - no SQL-specific tools or knowledge are required
 * Multi-threaded concurrent SSH sessions for awesome performance
-* View a simple Pass/Fail AND the actual cli output that was taken during the test execution - so your technical team can still give a technical opinion on what is happening on your network, just now they can do it faster!
+* View the cli output from the test execution - so your technical team can still give a technical opinion on what is happening on your network, just now they can do it faster!
 * Simple-mode comparison of previous test outcomes (by Pass/Fail results)
 * Exact-mode comparison of previous test outcomes (by Actual CLI output)
 * Easy web-interface, ideal for your network engineers who love a Cisco device but who are not programmers...
@@ -73,6 +73,10 @@ Once installed you and your team can access it via a simple web interface.
 3. Identify your machine IP address `ip a` (eg 10.10.10.24)
 4. Build and run the docker image `docker-compose up -d`
 
+### Optional Setup suggestion to make things nicer
+Put this behind a load balancer/WAF/proxy of your choice (F5, nginx, NPM, etc) so it can have a nice url and also so people don't need to put the port number on the end.
+eg: https://rnt.yourdomain.com instead of https://10.10.10.24:5000
+
 ***
 
 ## 👪 User Guide
@@ -80,7 +84,8 @@ Once installed you and your team can access it via a simple web interface.
 ### The RNT web interface
 
 
-From a web browser go to http://ipaddress:5000 from step 3 above, eg `http://10.10.10.24:5000` 
+From a web browser go to https://ipaddress:5000 from step 3 above, eg `https://10.10.10.24:5000` 
+Note HTTPS not HTTP.
 
 *For simplicity the ip address 10.10.10.24 will be used throughout the remainder of this Readme but remember to replace it with your own ip!*
 
@@ -99,6 +104,7 @@ The 'demo' user is intended to be used for demonstrating the utility. Most of it
 If you don't feel the need for this, just create a demo user and then don't use it :)
 
 Ensure your actual users start with user no 3.
+
 
 ### Overview of the RNT stages
 
@@ -127,8 +133,8 @@ With that said here are some future improvements I can think of. These are liste
 
 - [X] Per User timezone preference and timezone-adaptive results pages.
 - [X] Assign tests into custom Test Groups and run tests for just that Test Group, rather than ALL Tests (All Tests remains a valid method).
+- [X] New test category 'Custom Show Command' to allow tests to be created that aren't the predefined as-path/ping/traceroute etc.
 - [ ] Make the UI multi-lingual, so each user can set their preferred language.
-- [ ] Add other types of test. This project is evolving. It started off as a cli tool with just 1 type of test, and is now a multi-threaded web tool with <s>3</s> <s>4</s> 5 test types, so i'm sure more will be added as the need arises. If you have any ideas for different tests please drop me a note and we can maybe collaborate on adding that functionality (don't worry if you're not a coder, i also need things like cli output examples to add a new test)
 - [ ] Support for other vendors. This isn't currently a high-priority to me as our environment is mainly Cisco so this app obviously focuses on Cisco initially, however it has been written in a way to allow adding tests for other vendors equipment also (basically any that netmiko supports - which is a lot of the main vendors) so i'm not against working on this as a lower-priority addition if enough people will benefit from it.
 
 
